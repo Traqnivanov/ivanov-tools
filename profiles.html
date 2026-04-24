@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Профили — Ivanov Remonti</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:system-ui,-apple-system,sans-serif;background:#0f172a;color:#e2e8f0;padding:16px;min-height:100vh;}
+h1{font-size:1.1rem;font-weight:700;color:#d9a441;margin-bottom:4px;}
+.sub{font-size:0.78rem;color:#64748b;margin-bottom:20px;}
+.back{display:inline-flex;align-items:center;gap:6px;color:#64748b;font-size:0.8rem;text-decoration:none;margin-bottom:16px;padding:6px 12px;background:#1e293b;border-radius:8px;border:1px solid #334155;}
+.back:hover{color:#e2e8f0;}
+.room-block{margin-bottom:32px;}
+.room-title{font-size:1rem;font-weight:700;color:#d9a441;border-bottom:1px solid #1e293b;padding-bottom:6px;margin-bottom:16px;}
+.surface-block{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:16px;margin-bottom:12px;}
+.surface-title{font-size:0.78rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:12px;}
+/* SVG diagrams */
+.diagram-wrap{width:100%;overflow-x:auto;margin-bottom:14px;}
+/* Cutting breakdown */
+.cut-section{margin-top:10px;}
+.cut-label{font-size:0.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
+.cut-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;}
+.cut-num{font-size:0.7rem;color:#475569;min-width:20px;text-align:right;}
+.cut-bar{flex:1;height:18px;border-radius:4px;overflow:hidden;display:flex;background:#0f172a;position:relative;}
+.cut-used{height:100%;border-radius:4px 0 0 4px;display:flex;align-items:center;padding-left:4px;}
+.cut-used-label{font-size:0.65rem;font-weight:700;white-space:nowrap;overflow:hidden;}
+.cut-waste{height:100%;border-radius:0 4px 4px 0;display:flex;align-items:center;padding-left:4px;opacity:0.35;}
+.cut-waste-label{font-size:0.65rem;white-space:nowrap;overflow:hidden;}
+.stats-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;}
+.stat-box{background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:8px 12px;min-width:90px;}
+.stat-label{font-size:0.65rem;color:#475569;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:2px;}
+.stat-val{font-size:1rem;font-weight:700;}
+.stat-val.ud{color:#378ADD;}
+.stat-val.cd{color:#BA7517;}
+.no-data{text-align:center;color:#475569;padding:40px;font-size:0.9rem;}
+@media print{body{background:#fff;color:#000;} .back{display:none;}}
+</style>
+</head>
+<body>
+<a class="back" href="calculator.html">← Калкулатор</a>
+<div id="content"><div class="no-data">Зареждане...</div></div>
+
+<script>
+const STEP=0.6, MAX_GAP=0.7, COL_UD='#378ADD', COL_CD='#BA7517';
+
+function cdCols(size){
+  const reg=Math.max(0,Math.floor(size/STEP)-1);
+  const rem=Math.round((size-reg*STEP)*1000)/1000;
+  return rem>=MAX_GAP?reg+1:reg;
+}
+function cdPositions(size){
+  const n=cdCols(size);
+  const pos=[];
+  for(let i=1;i<=n;i++) pos.push(Math.round(i*STEP*100)/100);
+  return pos;
+}
+function udProfiles(perimeter,pLen){
+  return Math.ceil((perimeter/pLen)*1.1);
+}
+function cdProfiles(cols,colLen,pLen){
+  return Math.ceil((cols*colLen/pLen)*1.1);
+}
+
+// Cutting breakdown: given pieces[], show how they pack into pLen profiles
+function cuttingPlan(totalM,pLen){
+  const n=Math.ceil((totalM/pLen)*1.1);
+  const used=totalM/n; // avg used per profile
+  const plans=[];
+  let remaining=totalM;
+  for(let i=0;i<n;i++){
+    const u=Math.min(pLen,Math.round(remaining*100)/100);
+    const w=Math.round((pLen-u)*100)/100;
+    plans.push({used:u,waste:w});
+    remaining-=u;
+    if(remaining<=0) break;
+  }
+  // pad to n
+  while(plans.length<n) plans.push({used:0,waste:pLen});
+  return plans;
+}
+
+function renderCutBars(plans,pLen,color){
+  return plans.map((p,i)=>{
+    const usedPct=(p.used/pLen*100).toFixed(1);
+    const wastePct=(p.waste/pLen*100).toFixed(1);
+    return `<div class="cut-row">
+      <div class="cut-num">${i+1}</div>
+      <div class="cut-bar">
+        <div class="cut-used" style="width:${usedPct}%;background:${color};">
+          <span class="cut-used-label" style="color:#fff;">${p.used>0.15?p.used.toFixed(2)+'м':''}</span>
+        </div>
+        ${p.waste>0.05?`<div class="cut-waste" style="width:${wastePct}%;background:${color};">
+          <span class="cut-waste-label" style="color:#94a3b8;">${p.waste>0.2?p.waste.toFixed(2)+'м':''}</span>
+        </div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function svgCeiling(L,W,pLen,name){
+  const short=Math.min(L,W), long=Math.max(L,W);
+  const isLandscape=L>=W;
+  const pos=cdPositions(short);
+  // SVG: ceiling viewed from below
+  // short side = Y axis (top-bottom), long side = X axis (left-right)
+  const SVG_W=500, SVG_H=260;
+  const UD=10, PAD=40;
+  const innerW=SVG_W-PAD*2, innerH=SVG_H-PAD*2;
+  // scale
+  const scX=innerW/long, scY=innerH/short;
+  const ox=PAD, oy=PAD;
+  const w=long*scX, h=short*scY;
+
+  // UD labels
+  let cdLines='';
+  pos.forEach(p=>{
+    const y=oy+p*scY;
+    cdLines+=`<rect x="${ox+UD}" y="${y-3}" width="${w-UD*2}" height="6" rx="2" fill="${COL_CD}" opacity="0.9"/>
+    <text x="${ox-4}" y="${y+4}" text-anchor="end" font-size="10" fill="${COL_CD}" font-family="system-ui">${p}м</text>`;
+  });
+  // last gap label
+  const lastPos=pos.length>0?pos[pos.length-1]:0;
+  const gap=Math.round((short-lastPos)*100)/100;
+  const yLast=oy+lastPos*scY;
+  const yUD=oy+short*scY;
+
+  return `<svg width="100%" viewBox="0 0 ${SVG_W} ${SVG_H}" style="max-height:280px;">
+    <rect x="${ox}" y="${oy}" width="${w}" height="${h}" fill="#1a2744" stroke="#334155" stroke-width="0.5"/>
+    <!-- UD -->
+    <rect x="${ox}" y="${oy}" width="${w}" height="${UD}" fill="${COL_UD}" opacity="0.9"/>
+    <rect x="${ox}" y="${oy+h-UD}" width="${w}" height="${UD}" fill="${COL_UD}" opacity="0.9"/>
+    <rect x="${ox}" y="${oy}" width="${UD}" height="${h}" fill="${COL_UD}" opacity="0.9"/>
+    <rect x="${ox+w-UD}" y="${oy}" width="${UD}" height="${h}" fill="${COL_UD}" opacity="0.9"/>
+    <!-- CD lines -->
+    ${cdLines}
+    <!-- gap annotation -->
+    ${gap>0?`<line x1="${ox+w+8}" y1="${yLast}" x2="${ox+w+8}" y2="${yUD}" stroke="#64748b" stroke-width="0.7" stroke-dasharray="3 2" marker-start="url(#arr)" marker-end="url(#arr)"/>
+    <text x="${ox+w+14}" y="${(yLast+yUD)/2+4}" font-size="10" fill="${gap>=MAX_GAP?'#ef4444':'#22c55e'}" font-family="system-ui">${gap}м ${gap>=MAX_GAP?'→+CD':''}</text>`:''}
+    <!-- dimensions -->
+    <text x="${ox+w/2}" y="${oy+h+18}" text-anchor="middle" font-size="11" fill="#64748b" font-family="system-ui">${long}м</text>
+    <text x="${ox-18}" y="${oy+h/2+4}" text-anchor="middle" font-size="11" fill="#64748b" font-family="system-ui" transform="rotate(-90 ${ox-18} ${oy+h/2})">${short}м</text>
+    <defs><marker id="arr" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 2L8 5L2 8" fill="none" stroke="#64748b" stroke-width="1.5"/></marker></defs>
+  </svg>`;
+}
+
+function svgWall(wl,H,pLen,label){
+  const pos=cdPositions(wl);
+  const SVG_W=500, SVG_H=220;
+  const UD=8, PAD_X=50, PAD_Y=30;
+  const scX=(SVG_W-PAD_X*2)/wl, scY=(SVG_H-PAD_Y*2)/H;
+  const ox=PAD_X, oy=PAD_Y;
+  const w=wl*scX, h=H*scY;
+
+  let cdLines='';
+  pos.forEach(p=>{
+    const x=ox+p*scX;
+    cdLines+=`<rect x="${x-3}" y="${oy+UD}" width="6" height="${h-UD*2}" rx="2" fill="${COL_CD}" opacity="0.9"/>
+    <text x="${x}" y="${oy-6}" text-anchor="middle" font-size="10" fill="${COL_CD}" font-family="system-ui">${p}м</text>`;
+  });
+
+  const lastPos=pos.length>0?pos[pos.length-1]:0;
+  const gap=Math.round((wl-lastPos)*100)/100;
+  const xLast=ox+lastPos*scX;
+  const xUD=ox+w;
+
+  return `<svg width="100%" viewBox="0 0 ${SVG_W} ${SVG_H}" style="max-height:240px;">
+    <rect x="${ox}" y="${oy}" width="${w}" height="${h}" fill="#1a2744" stroke="#334155" stroke-width="0.5"/>
+    <!-- UD all 4 sides -->
+    <rect x="${ox}" y="${oy}" width="${w}" height="${UD}" fill="${COL_UD}" opacity="0.9"/>
+    <rect x="${ox}" y="${oy+h-UD}" width="${w}" height="${UD}" fill="${COL_UD}" opacity="0.9"/>
+    <rect x="${ox}" y="${oy}" width="${UD}" height="${h}" fill="${COL_UD}" opacity="0.9"/>
+    <rect x="${ox+w-UD}" y="${oy}" width="${UD}" height="${h}" fill="${COL_UD}" opacity="0.9"/>
+    <!-- CD lines -->
+    ${cdLines}
+    <!-- gap annotation -->
+    ${gap>0?`<line x1="${xLast}" y1="${oy+h+10}" x2="${xUD}" y2="${oy+h+10}" stroke="#64748b" stroke-width="0.7" stroke-dasharray="3 2" marker-start="url(#arr2)" marker-end="url(#arr2)"/>
+    <text x="${(xLast+xUD)/2}" y="${oy+h+24}" text-anchor="middle" font-size="10" fill="${gap>=MAX_GAP?'#ef4444':'#22c55e'}" font-family="system-ui">${gap}м ${gap>=MAX_GAP?'→+CD':''}</text>`:''}
+    <!-- dimensions -->
+    <text x="${ox+w/2}" y="${oy+h+42}" text-anchor="middle" font-size="11" fill="#64748b" font-family="system-ui">${wl}м</text>
+    <text x="${ox-14}" y="${oy+h/2+4}" text-anchor="middle" font-size="11" fill="#64748b" font-family="system-ui" transform="rotate(-90 ${ox-14} ${oy+h/2})">${H}м</text>
+    <defs><marker id="arr2" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 2L8 5L2 8" fill="none" stroke="#64748b" stroke-width="1.5"/></marker></defs>
+  </svg>`;
+}
+
+function renderSurface(label,svgHtml,udM,cdM,cdCols,colLen,pLen){
+  const udProf=udProfiles(udM,pLen);
+  const cdProf=cdProfiles(cdCols,colLen,pLen);
+  const udPlan=cuttingPlan(udM*1.1,pLen);
+  const cdPlan=cuttingPlan(cdCols*colLen*1.1,pLen);
+
+  return `<div class="surface-block">
+    <div class="surface-title">${label}</div>
+    <div class="diagram-wrap">${svgHtml}</div>
+    <div class="stats-row">
+      <div class="stat-box"><div class="stat-label">UD периметър</div><div class="stat-val ud">${udM.toFixed(1)}м</div></div>
+      <div class="stat-box"><div class="stat-label">UD профили</div><div class="stat-val ud">${udProf} бр</div></div>
+      <div class="stat-box"><div class="stat-label">CD колони</div><div class="stat-val cd">${cdCols}</div></div>
+      <div class="stat-box"><div class="stat-label">CD профили</div><div class="stat-val cd">${cdProf} бр</div></div>
+    </div>
+    <div class="cut-section" style="margin-top:14px;">
+      <div style="display:flex;gap:24px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:200px;">
+          <div class="cut-label" style="color:${COL_UD};">UD нарязване (${udProf} × ${pLen}м)</div>
+          ${renderCutBars(udPlan,pLen,COL_UD)}
+        </div>
+        <div style="flex:1;min-width:200px;">
+          <div class="cut-label" style="color:${COL_CD};">CD нарязване (${cdProf} × ${pLen}м)</div>
+          ${renderCutBars(cdPlan,pLen,COL_CD)}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function render(){
+  const raw=localStorage.getItem('ir_profiles_data');
+  if(!raw){document.getElementById('content').innerHTML='<div class="no-data">Няма данни. Върни се в калкулатора и натисни 📐 Профили.</div>';return;}
+  const d=JSON.parse(raw);
+  const pLen=d.pLen||3;
+  let html=`<h1>📐 Профили${d.project?' — '+d.project:''}</h1><div class="sub">Профил ${pLen}м · ${d.date||''}</div>`;
+
+  d.rooms.forEach(rm=>{
+    let roomHtml=`<div class="room-block"><div class="room-title">🏠 ${rm.name} &nbsp;<span style="color:#64748b;font-size:0.8rem;font-weight:400;">${rm.L}×${rm.W}м, В${rm.H}м</span></div>`;
+
+    if(rm.ceil){
+      const short=Math.min(rm.L,rm.W), long=Math.max(rm.L,rm.W);
+      const cols=cdCols(short);
+      const perim=2*(rm.L+rm.W);
+      roomHtml+=renderSurface('🟦 ТАВАН',svgCeiling(rm.L,rm.W,pLen,rm.name),perim,perim,cols,long,pLen);
+    }
+
+    const wallLabels={N:'Север',S:'Юг',W:'Запад',E:'Изток'};
+    Object.entries(rm.walls).forEach(([dir,state])=>{
+      if(!state||state==='off') return;
+      const wl=(dir==='N'||dir==='S')?rm.L:rm.W;
+      const cols=cdCols(wl);
+      const perim=2*wl+2*rm.H;
+      roomHtml+=renderSurface(`🟧 СТЕНА ${wallLabels[dir]} (${wl}×${rm.H}м)`,svgWall(wl,rm.H,pLen,dir),perim,perim,cols,rm.H,pLen);
+    });
+
+    roomHtml+='</div>';
+    html+=roomHtml;
+  });
+
+  document.getElementById('content').innerHTML=html;
+}
+
+render();
+</script>
+</body>
+</html>
