@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Калкулатор ГК + Шпакловка</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #0f172a;
+  background-image: radial-gradient(circle at 20% 30%, rgba(217,164,65,0.08) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 70%, rgba(217,164,65,0.05) 0%, transparent 50%);
+  min-height: 100vh; padding: 15px; color: #e2e8f0;
+}
+.main { display: flex; gap: 18px; max-width: 1320px; margin: 0 auto; flex-wrap: wrap; }
+.left { flex: 1 1 640px; background: #1e293b; border: 1px solid #334155; border-radius: 18px; padding: 22px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+.right { flex: 0 0 430px; background: #1e293b; border: 1px solid #334155; border-radius: 18px; padding: 20px; position: sticky; top: 15px; max-height: 94vh; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+h1 { font-size: 1.4rem; color: #d9a441; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; }
+.sub { font-size: 0.85rem; color: #94a3b8; margin-bottom: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
+.row label { font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; color: #cbd5e1; }
+input, select { padding: 9px 11px; border: 1px solid #475569; border-radius: 8px; font-size: 0.9rem; background: #0f172a; color: #e2e8f0; transition: border 0.2s; }
+input:focus, select:focus { border-color: #d9a441; outline: none; box-shadow: 0 0 0 2px rgba(217,164,65,0.2); }
+input[type="number"] { width: 80px; }
+input[type="text"] { width: 170px; }
+.card { background: #0f172a; border: 1px solid #334155; border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+.card h2 { font-size: 1rem; margin-bottom: 12px; color: #d9a441; display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.mat-checks { display: flex; flex-wrap: wrap; gap: 8px; }
+.mat-checks label { font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: #1e293b; border: 1px solid #334155; border-radius: 8px; font-size: 0.85rem; transition: all 0.15s; }
+.mat-checks label:hover { border-color: #d9a441; }
+.mat-checks input[type="checkbox"] { accent-color: #d9a441; }
+
+/* TAB */
+.tab-switcher { display: flex; margin-bottom: 18px; background: #0f172a; border-radius: 12px; padding: 4px; border: 1px solid #334155; }
+.tab-btn { flex: 1; padding: 10px; border: none; border-radius: 9px; font-weight: 700; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; background: transparent; color: #64748b; box-shadow: none; transform: none !important; }
+.tab-btn:hover { color: #cbd5e1; background: #1e293b; box-shadow: none !important; }
+.tab-btn.active { background: linear-gradient(135deg, #d9a441, #b8862d); color: #0f172a; box-shadow: 0 2px 8px rgba(217,164,65,0.3) !important; }
+.tab-section { display: none; }
+.tab-section.active { display: block; }
+
+/* ROOMS */
+.room { background: #0f172a; border: 1px solid #334155; padding: 16px; border-radius: 14px; margin-bottom: 14px; animation: fadeIn 0.25s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);} }
+.room-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; }
+.room-header .title-input { flex: 1; max-width: none; width: auto; }
+.room-badge { font-size: 0.7rem; padding: 4px 10px; border-radius: 20px; font-weight: 700; letter-spacing: 0.5px; flex-shrink: 0; }
+.badge-room  { background: #1e40af; color: #dbeafe; }
+.badge-part  { background: #7e22ce; color: #f3e8ff; }
+.badge-putty { background: #7c2d12; color: #fed7aa; }
+.remove-room { background: #7f1d1d; color: #fecaca; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem; transition: 0.15s; flex-shrink: 0; }
+.remove-room:hover { background: #b91c1c; color: #fff; }
+
+/* GK CEILING */
+.ceil-card { background: #1e293b; border: 2px solid #334155; border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; margin: 14px 0; cursor: pointer; transition: all 0.2s; user-select: none; }
+.ceil-card.disabled { opacity: 0.4; cursor: not-allowed; }
+.ceil-card:hover:not(.disabled) { border-color: #64748b; }
+.ceil-card.active { background: linear-gradient(135deg, #3d2f0f, #5a4418); border-color: #d9a441; box-shadow: 0 0 0 1px #d9a441, 0 4px 12px rgba(217,164,65,0.25); }
+.ceil-card .left-side { display: flex; align-items: center; gap: 10px; }
+.ceil-card .icon { font-size: 1.6rem; }
+.ceil-card .title { font-weight: 700; color: #cbd5e1; }
+.ceil-card.active .title { color: #f5d581; }
+.ceil-card .area { font-size: 0.85rem; color: #94a3b8; }
+.ceil-card.active .area { color: #f5d581; font-weight: 600; }
+.ceil-card .check-indicator { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #475569; display: flex; align-items: center; justify-content: center; font-weight: bold; color: transparent; transition: 0.2s; }
+.ceil-card.active .check-indicator { background: #d9a441; border-color: #d9a441; color: #0f172a; }
+.ceil-card.active .check-indicator::before { content: '✓'; }
+
+/* PUTTY CEILING stack */
+.pceil-stack { margin: 14px 0; display: flex; flex-direction: column; gap: 4px; }
+.pceil-card { border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.2s; user-select: none; border: 2px solid #334155; background: #1e293b; }
+.pceil-card.disabled { opacity:0.4; cursor:not-allowed; }
+.pceil-card:hover:not(.disabled) { border-color: #64748b; }
+.pceil-card .pleft { display: flex; align-items: center; gap: 10px; }
+.pceil-card .picon { font-size: 1.2rem; }
+.pceil-card .ptitle { font-weight: 700; font-size: 0.85rem; }
+.pceil-card .parea { font-size: 0.78rem; color: #94a3b8; margin-left: 8px; }
+.pceil-card .psvc { font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 5px; }
+.pceil-add-row { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+.pceil-plus { width: 18px; height: 18px; border-radius: 50%; background: #d9a441; color: #0f172a; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; line-height: 1; }
+
+/* SCHEMA */
+.schema-label { font-size: 0.85rem; color: #94a3b8; margin: 14px 0 4px; font-weight: 500; }
+.schema-hint  { font-size: 0.72rem; color: #64748b; margin-bottom: 8px; font-style: italic; }
+.schema-wrap  { display: flex; justify-content: center; padding: 55px 28px 28px; background: #0a0f1c; border-radius: 12px; border: 1px dashed #334155; margin-bottom: 10px; min-height: 120px; align-items: center; overflow: visible; }
+.schema-wrap.empty { color: #475569; font-size: 0.85rem; font-style: italic; }
+.schema { position: relative; background: repeating-linear-gradient(45deg, #1e293b, #1e293b 4px, #162033 4px, #162033 8px); border: 1px solid #475569; border-radius: 4px; }
+
+/* GK wall states */
+.wall-btn { position: absolute; background: #1e293b; border: 2px solid #475569; border-radius: 6px; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; user-select: none; color: #94a3b8; overflow: visible; }
+.wall-reset { position: absolute; width: 14px; height: 14px; border-radius: 50%; background: #7f1d1d; border: none; color: #fecaca; font-size: 9px; font-weight: 900; cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 20; line-height: 1; padding: 0; top: -5px; left: -5px; right: auto; }
+.wall-btn.active-wall .wall-reset { display: flex; }
+.wall-extra .wall-reset { display: flex; }
+.wall-reset:hover { background: #b91c1c; }
+.wall-btn:hover { border-color: #64748b; color: #cbd5e1; transform: scale(1.02); }
+.wall-btn .dim   { font-size: 0.62rem; font-weight: 600; opacity: 0.85; }
+.wall-btn .m2    { font-size: 0.68rem; font-weight: 700; margin-top: 1px; }
+.wall-btn .state { font-size: 0.58rem; font-weight: 800; letter-spacing: 0.3px; margin-top: 2px; padding: 1px 4px; border-radius: 3px; text-transform: uppercase; line-height: 1.3; text-align:center; }
+.wall-btn.s-wall { background: linear-gradient(135deg,#3d2f0f,#5a4418); border-color:#d9a441; color:#f5d581; box-shadow:0 0 0 1px #d9a441,0 2px 8px rgba(217,164,65,.25); }
+.wall-btn.s-wall .state { background:#d9a441;color:#0f172a; }
+.wall-btn.s-glue { background: linear-gradient(135deg,#0f2a1a,#14532d); border-color:#16a34a; color:#a7f3d0; box-shadow:0 0 0 1px #16a34a,0 2px 8px rgba(22,163,74,.25); }
+.wall-btn.s-glue .state { background:#16a34a;color:#0f172a; }
+
+/* PUTTY wall states */
+.wall-btn.ps-osnovna { background:linear-gradient(135deg,#451a03,#78350f); border-color:#d97706; color:#fde68a; box-shadow:0 0 0 1px #d97706,0 2px 8px rgba(217,119,6,.25); }
+.wall-btn.ps-osnovna .state { background:#d97706;color:#0f172a; }
+.wall-btn.ps-gipsova { background:linear-gradient(135deg,#022c22,#064e3b); border-color:#10b981; color:#a7f3d0; box-shadow:0 0 0 1px #059669,0 2px 8px rgba(16,185,129,.25); }
+.wall-btn.ps-gipsova .state { background:#059669;color:#0f172a; }
+.wall-btn.ps-gipsova_mesh { background:linear-gradient(135deg,#022c22,#065f46); border-color:#34d399; color:#6ee7b7; box-shadow:0 0 0 1px #34d399,0 2px 8px rgba(52,211,153,.3); }
+.wall-btn.ps-gipsova_mesh .state { background:#34d399;color:#0f172a; }
+.wall-btn.ps-fina { background:linear-gradient(135deg,#2e1065,#4c1d95); border-color:#a78bfa; color:#ddd6fe; box-shadow:0 0 0 1px #7c3aed,0 2px 8px rgba(124,58,237,.25); }
+.wall-btn.ps-fina .state { background:#7c3aed;color:#fff; }
+.wall-btn.ps-fugi { background:linear-gradient(135deg,#0c1a3a,#1e3a5f); border-color:#60a5fa; color:#bfdbfe; box-shadow:0 0 0 1px #2563eb,0 2px 8px rgba(37,99,235,.25); }
+.wall-btn.ps-fugi .state { background:#2563eb;color:#fff; }
+
+/* Putty ceiling card service colors */
+.pceil-card.ps-osnovna { background:linear-gradient(135deg,#451a03,#78350f); border-color:#d97706; }
+.pceil-card.ps-osnovna .ptitle { color:#fde68a; }
+.pceil-card.ps-osnovna .psvc { background:#d97706;color:#0f172a; }
+.pceil-card.ps-gipsova { background:linear-gradient(135deg,#022c22,#064e3b); border-color:#059669; }
+.pceil-card.ps-gipsova .ptitle { color:#a7f3d0; }
+.pceil-card.ps-gipsova .psvc { background:#059669;color:#0f172a; }
+.pceil-card.ps-gipsova_mesh { background:linear-gradient(135deg,#022c22,#065f46); border-color:#34d399; }
+.pceil-card.ps-gipsova_mesh .ptitle { color:#6ee7b7; }
+.pceil-card.ps-gipsova_mesh .psvc { background:#34d399;color:#0f172a; }
+.pceil-card.ps-fina { background:linear-gradient(135deg,#2e1065,#4c1d95); border-color:#7c3aed; }
+.pceil-card.ps-fina .ptitle { color:#ddd6fe; }
+.pceil-card.ps-fina .psvc { background:#7c3aed;color:#fff; }
+.pceil-card.ps-fugi { background:linear-gradient(135deg,#0c1a3a,#1e3a5f); border-color:#2563eb; }
+.pceil-card.ps-fugi .ptitle { color:#bfdbfe; }
+.pceil-card.ps-fugi .psvc { background:#2563eb;color:#fff; }
+
+.room-center { position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#475569;font-size:0.75rem;font-weight:600;text-align:center;pointer-events:none; }
+.room-center .dims { color:#64748b;font-size:0.7rem;margin-top:2px; }
+.wall-legend { display:flex;gap:10px;font-size:0.7rem;color:#94a3b8;margin-top:10px;justify-content:center;flex-wrap:wrap; }
+
+/* Wall stacks — multiple service layers per wall */
+.wall-stack-h { display:flex;flex-direction:column;gap:4px;align-items:flex-start; }
+.wall-stack-v { display:flex;flex-direction:row;gap:4px;align-items:flex-start; }
+.wall-plus { width:18px;height:18px;border-radius:50%;background:#d9a441;color:#0f172a;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;line-height:1;flex-shrink:0;transition:0.15s; }
+.wall-plus:hover { background:#f59e0b; }
+.wall-plus.disabled { opacity:0.2;cursor:default;pointer-events:none; }
+.wall-legend span { display:inline-flex;align-items:center;gap:4px; }
+.legend-dot { width:9px;height:9px;border-radius:2px;border:1.5px solid; }
+.legend-dot.off      { background:#1e293b;border-color:#475569; }
+.legend-dot.wall     { background:#5a4418;border-color:#d9a441; }
+.legend-dot.glue     { background:#14532d;border-color:#16a34a; }
+.legend-dot.osnovna  { background:#78350f;border-color:#d97706; }
+.legend-dot.gipsova  { background:#064e3b;border-color:#059669; }
+.legend-dot.gip_mesh { background:#065f46;border-color:#34d399; }
+.legend-dot.fina     { background:#4c1d95;border-color:#7c3aed; }
+.legend-dot.fugi     { background:#1e3a5f;border-color:#2563eb; }
+
+/* LAYERS TABLE */
+.layers-table-wrap { margin-top: 12px; background: #0a0f1c; border-radius: 10px; border: 1px solid #1e293b; overflow: hidden; }
+.layers-table-wrap.empty { display: none; }
+.layers-header { font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; padding: 6px 10px; border-bottom: 1px solid #1e293b; }
+.layers-row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid #0f172a; }
+.layers-row:last-child { border-bottom: none; }
+.layers-name { flex: 1; font-size: 0.82rem; color: #cbd5e1; }
+.layers-area { font-size: 0.75rem; color: #64748b; white-space: nowrap; }
+.layers-btns { display: flex; gap: 3px; flex-shrink: 0; }
+.lbtn { width: 28px; height: 28px; border-radius: 6px; border: 1.5px solid #334155; background: #1e293b; color: #64748b; font-weight: 700; font-size: 0.8rem; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; box-shadow: none; transform: none !important; padding: 0; }
+.lbtn:hover { border-color: #d9a441; color: #d9a441; box-shadow: none !important; }
+.lbtn.active { background: #d9a441; border-color: #d9a441; color: #0f172a; box-shadow: none !important; }
+
+/* BUTTONS */
+.add-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.add-buttons button { background:#334155;color:#cbd5e1;box-shadow:none;font-size:0.85rem;padding:10px 14px; }
+.add-buttons button:hover { background:#d9a441;color:#0f172a; }
+.add-buttons button.primary { background:linear-gradient(135deg,#d9a441,#b8862d);color:#0f172a;box-shadow:0 2px 8px rgba(217,164,65,0.2); }
+button { background:linear-gradient(135deg,#d9a441,#b8862d);color:#0f172a;border:none;padding:11px 20px;border-radius:10px;font-weight:700;cursor:pointer;transition:0.2s;display:inline-flex;align-items:center;gap:8px;font-size:0.9rem;box-shadow:0 2px 8px rgba(217,164,65,0.2); }
+button:hover { transform:translateY(-1px);box-shadow:0 4px 12px rgba(217,164,65,0.35); }
+button.sec { background:#334155;color:#cbd5e1;box-shadow:none; }
+button.sec:hover { background:#475569; }
+.simple-input-row { background:#1e293b;padding:12px;border-radius:10px;border:1px solid #334155; }
+
+/* RIGHT PANEL */
+.panel-title { font-size:1.1rem;color:#d9a441;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #334155;font-weight:600; }
+.summary-box { background:linear-gradient(135deg,#3d2f0f,#5a4418);border:1px solid #d9a441;padding:12px 14px;border-radius:10px;margin-bottom:14px;color:#f5d581;font-size:0.85rem;line-height:1.5; }
+.summary-box strong { color:#fff;font-size:1rem;display:block;margin-bottom:4px; }
+.section-divider { font-size:0.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;margin:16px 0 8px;padding-bottom:4px;border-bottom:1px solid #1e293b; }
+.mat-group { margin-bottom:10px;border-radius:10px;overflow:hidden;border:1px solid #334155; }
+.mat-group-header { padding:8px 12px;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#fff;display:flex;align-items:center;gap:6px; }
+.g-boards .mat-group-header { background:#1e40af; }
+.g-struct .mat-group-header { background:#c2410c; }
+.g-fix    .mat-group-header { background:#b91c1c; }
+.g-finish .mat-group-header { background:#15803d; }
+.g-extra  .mat-group-header { background:#7e22ce; }
+.g-osnovna .mat-group-header { background:#92400e; }
+.g-gipsova .mat-group-header { background:#065f46; }
+.g-fina    .mat-group-header { background:#4c1d95; }
+.g-fugi    .mat-group-header { background:#1e3a5f; }
+.mat-group table { width:100%;border-collapse:collapse;background:#0f172a; }
+.mat-group tr:hover td { background:#1a2535; }
+.mat-group tr:last-child td { border-bottom:none; }
+.mat-group td { padding:8px 10px;border-bottom:1px solid #1e293b;font-size:0.84rem;color:#cbd5e1;vertical-align:middle; }
+td.col-pkg { text-align:right;font-weight:700;white-space:nowrap; }
+td.col-pkg .n { color:#d9a441;font-size:0.95rem; }
+td.col-pkg .u { color:#94a3b8;font-size:0.8rem;margin-left:3px; }
+td.col-raw { text-align:right;color:#64748b;font-size:0.78rem;white-space:nowrap;font-family:"SF Mono",Consolas,monospace;min-width:60px; }
+td.col-edit { width:26px;text-align:center;padding:4px 5px; }
+.edit-btn { background:none;border:none;color:#475569;cursor:pointer;font-size:0.75rem;padding:3px 4px;border-radius:4px;transition:0.15s;display:inline-flex;align-items:center;box-shadow:none;transform:none !important; }
+.edit-btn:hover { color:#d9a441;background:#1e293b;box-shadow:none !important; }
+.qty-edit { width:65px;padding:3px 6px;font-size:0.82rem;background:#0f172a;border:1px solid #d9a441;color:#d9a441;border-radius:5px;text-align:right;font-family:"SF Mono",Consolas,monospace; }
+.qty-edit:focus { outline:none; }
+tr.overridden td.col-name::after { content:' ✎';font-size:0.6rem;color:#f59e0b;vertical-align:super; }
+tr.overridden td.col-pkg .n { color:#f59e0b; }
+.override-note { font-size:0.72rem;color:#f59e0b;text-align:right;margin-top:6px;display:none; }
+.override-note.on { display:block; }
+.waste-note { text-align:right;font-size:0.72rem;color:#64748b;margin-top:8px;font-style:italic; }
+.action-row { display:flex;gap:8px;margin-top:16px;flex-wrap:wrap; }
+.empty-state { text-align:center;padding:40px 20px;color:#64748b; }
+.empty-state .big-icon { font-size:3rem;display:block;margin-bottom:10px;opacity:0.4; }
+
+/* Positions summary table */
+.pos-table-wrap { margin: 8px 0 4px; background: #0a0f1c; border-radius: 10px; border: 1px solid #1e293b; overflow: hidden; }
+.pos-table-wrap table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+.pos-table-wrap th { color: #64748b; font-weight: 600; text-transform: uppercase; font-size: 0.65rem; letter-spacing: 0.5px; padding: 5px 8px; border-bottom: 1px solid #1e293b; text-align: left; }
+.pos-table-wrap td { padding: 4px 8px; border-bottom: 1px solid #0f172a; color: #cbd5e1; }
+.pos-table-wrap tr:last-child td { border-bottom: none; }
+.pos-table-wrap td.col-m2 { text-align: right; color: #94a3b8; white-space: nowrap; font-family: "SF Mono",Consolas,monospace; font-size: 0.75rem; }
+.pos-svc-pill { display: inline-block; font-size: 0.62rem; font-weight: 700; padding: 1px 5px; border-radius: 3px; margin-left: 4px; vertical-align: middle; }
+.p-osnovna-pill { background:#d97706;color:#0f172a; }
+.p-gipsova-pill { background:#059669;color:#0f172a; }
+.p-gipsova_mesh-pill { background:#34d399;color:#0f172a; }
+.p-fina-pill { background:#7c3aed;color:#fff; }
+.p-fugi-pill { background:#2563eb;color:#fff; }
+@media(max-width:900px){.main{flex-direction:column;}.right{position:static;flex:1 1 auto;max-height:none;}}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+<div class="main">
+  <div class="left">
+    <h1>🏗️ Калкулатор</h1>
+    <p class="sub">Гипсокартон + Шпакловка</p>
+    <div class="row">
+      <label>📂 <input type="text" id="pName" placeholder="Обект" oninput="calcAll()"></label>
+      <label>📅 <input type="date" id="pDate"></label>
+    </div>
+    <div class="tab-switcher">
+      <button class="tab-btn active" onclick="switchTab('gk')">🏗️ Гипсокартон</button>
+      <button class="tab-btn" onclick="switchTab('putty')">🔨 Шпакловка</button>
+    </div>
+
+    <!-- GK -->
+    <div class="tab-section active" id="tab-gk">
+      <div class="row">
+        <label>📏 Профили <select id="pLen" onchange="clearOvr();calcAll()">
+          <option value="3">3.00 м</option><option value="4">4.00 м</option>
+        </select></label>
+      </div>
+      <div class="card">
+        <h2>🧰 Материали ГК</h2>
+        <div class="mat-checks">
+          <label><input type="checkbox" id="mBoard" checked onchange="calcAll()"> ГК</label>
+          <label><input type="checkbox" id="mProfile" checked onchange="calcAll()"> Профили</label>
+          <label><input type="checkbox" id="mHanger" checked onchange="calcAll()"> Окачвачи</label>
+          <label><input type="checkbox" id="mButton" checked onchange="calcAll()"> Копчета</label>
+          <label><input type="checkbox" id="mScrews" checked onchange="calcAll()"> Винтове</label>
+          <label><input type="checkbox" id="mDowel" checked onchange="calcAll()"> Дюбели</label>
+          <label><input type="checkbox" id="mJoint" checked onchange="calcAll()"> Фуги</label>
+          <label><input type="checkbox" id="mFinish" checked onchange="calcAll()"> Шпакловка</label>
+          <label><input type="checkbox" id="mTape" checked onchange="calcAll()"> Лента</label>
+          <label><input type="checkbox" id="mIns" onchange="calcAll()"> Изолация</label>
+          <label><input type="checkbox" id="mPrimer" onchange="calcAll()"> Грунд</label>
+          <label><input type="checkbox" id="mGlue" checked onchange="calcAll()"> Лепило</label>
+          <label><input type="checkbox" id="mFoam" checked onchange="calcAll()"> Монт. пяна</label>
+        </div>
+        <div class="row" style="margin-top:14px;">
+          <label>Размер ГК <select id="bSize" onchange="clearOvr();calcAll()">
+            <option value="2.4">1200×2000 мм</option><option value="3">1200×2500 мм</option>
+          </select></label>
+          <label>Дебелина <select id="bThick" onchange="clearOvr();calcAll()">
+            <option value="12.5">12.5 мм</option><option value="9.5">9.5 мм</option>
+          </select></label>
+          <label><input type="checkbox" id="hasGreen" onchange="toggleGreen();calcAll()"> Зелен ГК</label>
+          <span id="greenWrap" style="display:none;">
+            <label>бр <input type="number" id="greenManual" value="0" min="0" oninput="calcAll()"></label>
+          </span>
+        </div>
+      </div>
+      <div class="card">
+        <h2>📐 Позиции ГК</h2>
+        <div id="roomsContainer"></div>
+        <div class="add-buttons">
+          <button class="primary" onclick="addRoom()">➕ Помещение</button>
+          <button onclick="addPartition()">➕ Преградна стена</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PUTTY -->
+    <div class="tab-section" id="tab-putty">
+      <div class="card">
+        <h2>🔨 Позиции Шпакловка</h2>
+        <div id="puttyContainer"></div>
+        <div class="add-buttons">
+          <button class="primary" onclick="addPuttyRoom()">➕ Помещение</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="panel-title">📊 Спецификация</div>
+    <div id="resContent">
+      <div class="empty-state"><span class="big-icon">📋</span>Добави позиции<br>за да видиш сметката</div>
+    </div>
+    <div id="ovrNote" class="override-note">✎ Има ръчно коригирани стойности</div>
+    <div class="action-row" id="actionRow" style="display:none;">
+      <button onclick="pdf()">📤 PDF</button>
+      <button onclick="sendToOffer()" style="background:linear-gradient(135deg,#16a34a,#15803d);">📋 Прати в оферта</button>
+      <button class="sec" onclick="clearOvr();renderResults()">↺ Корекции</button>
+      <button class="sec" onclick="resetAll()">🔄 Нов</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let rc=0, pc=0;
+let ovr={};
+let GKD={}, PD={};
+
+// PKG config
+const PKG={
+  board_std:{ps:0,  pu:'бр',   pp:'бр',   sz:''},
+  board_grn:{ps:0,  pu:'бр',   pp:'бр',   sz:''},
+  prof_ud:  {ps:0,  pu:'бр',   pp:'бр',   sz:''},
+  prof_cd:  {ps:0,  pu:'бр',   pp:'бр',   sz:''},
+  hangers:  {ps:0,  pu:'бр',   pp:'бр',   sz:''},
+  buttons:  {ps:1000,pu:'кутия',pp:'кутии',sz:'(1000бр)'},
+  screws:   {ps:1000,pu:'кутия',pp:'кутии',sz:'(1000бр)'},
+  dowels:   {ps:100, pu:'кутия',pp:'кутии',sz:'(100бр)'},
+  joint:    {ps:25,  pu:'чувал',pp:'чувала',sz:'(25кг)'},
+  finish:   {ps:20,  pu:'бака', pp:'баки',  sz:'(20кг)'},
+  tape:     {ps:90,  pu:'ролка',pp:'ролки', sz:'(90м)'},
+  primer:   {ps:5,   pu:'туба', pp:'туби',  sz:'(5кг)'},
+  ins:      {ps:0,   pu:'м²',  pp:'м²',   sz:''},
+  glue:     {ps:25,  pu:'чувал',pp:'чувала',sz:'(25кг)'},
+  foam:     {ps:1,   pu:'бр',   pp:'бр',   sz:'(750мл)'},
+  p_osnovna:{ps:30,  pu:'чувал',pp:'чувала',sz:'(30кг)'},
+  p_gipsova:{ps:20,  pu:'чувал',pp:'чувала',sz:'(20кг)'},
+  p_mreja:  {ps:50,  pu:'ролка',pp:'ролки', sz:'(50м²)'},
+  p_fina:   {ps:20,  pu:'кофа', pp:'кофи',  sz:'(20кг)'},
+  p_fugi:   {ps:25,  pu:'чувал',pp:'чувала',sz:'(25кг)'},
+};
+
+// Putty services config
+const PSVC={
+  osnovna:     {label:'Основна мазилка',   cls:'ps-osnovna',     norm:9,   mesh:false},
+  gipsova:     {label:'Гипсова',           cls:'ps-gipsova',     norm:1.0, mesh:false},
+  gipsova_mesh:{label:'Гипсова + мрежа',  cls:'ps-gipsova_mesh',norm:1.5, mesh:true},
+  fina:        {label:'Фина шпакловка',    cls:'ps-fina',        norm:0.8, mesh:false},
+  fugi:        {label:'Фуги',    cls:'ps-fugi',        norm:0.4, mesh:false},
+};
+const PCYCLE=['off','osnovna','gipsova','gipsova_mesh','fugi','fina'];
+
+function switchTab(t){
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',(t==='gk'&&i===0)||(t==='putty'&&i===1)));
+  document.getElementById('tab-gk').classList.toggle('active',t==='gk');
+  document.getElementById('tab-putty').classList.toggle('active',t==='putty');
+}
+function toggleGreen(){document.getElementById('greenWrap').style.display=document.getElementById('hasGreen').checked?'inline-flex':'none';}
+function clearOvr(){ovr={};}
+
+// ═══ GK ROOMS ═══
+function addRoom(){
+  const id=rc++;
+  document.getElementById('roomsContainer').insertAdjacentHTML('beforeend',`
+    <div class="room" data-kind="room" id="r-${id}">
+      <div class="room-header">
+        <span class="room-badge badge-room">🏠 ПОМЕЩЕНИЕ</span>
+        <input type="text" class="title-input" placeholder="Хол, Спалня..." oninput="calcAll()">
+        <button class="remove-room" onclick="removeEl('r-${id}')">✕</button>
+      </div>
+      <div class="row">
+        <label>Дължина (м): <input type="number" class="rLen" placeholder="0" min="0" step="0.1" oninput="clearOvr();updateGKSchema('${id}');calcAll()"></label>
+        <label>Ширина (м): <input type="number" class="rWid" placeholder="0" min="0" step="0.1" oninput="clearOvr();updateGKSchema('${id}');calcAll()"></label>
+        <label>Височина (м): <input type="number" class="rHgt" placeholder="0" min="0" step="0.1" oninput="clearOvr();updateGKSchema('${id}');calcAll()"></label>
+      </div>
+      <div class="ceil-card disabled" data-on="0" onclick="toggleGKCeil(this);calcAll()">
+        <div class="left-side"><span class="icon">🏠</span><span class="title">ТАВАН</span></div>
+        <div style="display:flex;align-items:center;gap:12px;"><span class="area">—</span><span class="check-indicator"></span></div>
+      </div>
+      <div class="schema-label">🧱 Стени:</div>
+      <div class="schema-hint">1× предстена (златно) → 2× лепене (зелено) → 3× изключена</div>
+      <div class="schema-wrap empty" id="gkWrap-${id}"><span>Въведи размери за да се появи схемата</span></div>
+      <div class="wall-legend">
+        <span><span class="legend-dot off"></span> Изкл.</span>
+        <span><span class="legend-dot wall"></span> Предстена</span>
+        <span><span class="legend-dot glue"></span> Лепене</span>
+      </div>
+    </div>`);
+  calcAll();
+}
+
+function addPartition(){
+  const id=rc++;
+  document.getElementById('roomsContainer').insertAdjacentHTML('beforeend',`
+    <div class="room" data-kind="part" id="r-${id}">
+      <div class="room-header">
+        <span class="room-badge badge-part">🚪 ПРЕГРАДНА</span>
+        <input type="text" class="title-input" placeholder="Описание..." oninput="calcAll()">
+        <button class="remove-room" onclick="removeEl('r-${id}')">✕</button>
+      </div>
+      <div class="simple-input-row">
+        <div class="row" style="margin:0;">
+          <label>Дължина (м): <input type="number" class="pLen2" placeholder="0" min="0" step="0.1" oninput="clearOvr();calcAll()"></label>
+          <label>Височина (м): <input type="number" class="pHgt" placeholder="0" min="0" step="0.1" oninput="clearOvr();calcAll()"></label>
+          <span style="color:#94a3b8;font-size:0.8rem;">(двустранна: ×2 ГК)</span>
+        </div>
+      </div>
+    </div>`);
+  calcAll();
+}
+
+function toggleGKCeil(el){
+  if(el.classList.contains('disabled')) return;
+  const on=el.dataset.on==='1';
+  el.dataset.on=on?'0':'1';
+  el.classList.toggle('active',!on);
+}
+
+function cycleGKWall(el){
+  let s=el.dataset.state||'off';
+  s=s==='off'?'wall':s==='wall'?'glue':'off';
+  el.dataset.state=s;
+  el.classList.remove('s-wall','s-glue','active-wall');
+  const st=el.querySelector('.state');
+  if(s==='wall'){el.classList.add('s-wall','active-wall');st.textContent='предст.';}
+  else if(s==='glue'){el.classList.add('s-glue','active-wall');st.textContent='лепене';}
+  else{st.textContent='';}
+  clearOvr();calcAll();
+}
+
+function resetGKWall(btn){
+  const el=btn.closest('.wall-btn');
+  el.dataset.state='off';
+  el.classList.remove('s-wall','s-glue','active-wall');
+  el.querySelector('.state').textContent='';
+  clearOvr();calcAll();
+}
+
+function updateGKSchema(id){
+  const root=document.getElementById(`r-${id}`);
+  if(!root) return;
+  const L=parseFloat(root.querySelector('.rLen').value)||0;
+  const W=parseFloat(root.querySelector('.rWid').value)||0;
+  const H=parseFloat(root.querySelector('.rHgt').value)||0;
+  const cc=root.querySelector('.ceil-card');
+  const ca=L*W;
+  if(L>0&&W>0){cc.classList.remove('disabled');cc.querySelector('.area').textContent=ca.toFixed(1)+' м²';}
+  else{cc.classList.add('disabled');cc.querySelector('.area').textContent='—';if(cc.dataset.on==='1'){cc.dataset.on='0';cc.classList.remove('active');}}
+  const wrap=document.getElementById(`gkWrap-${id}`);
+  if(!wrap) return;
+  if(L<=0||W<=0||H<=0){wrap.classList.add('empty');wrap.innerHTML='<span>Въведи размери за да се появи схемата</span>';return;}
+  wrap.classList.remove('empty');
+  const maxPx=240,minPx=110,ratio=L/W;
+  const sW=ratio>=1?maxPx:Math.max(minPx,maxPx*ratio);
+  const sH=ratio>=1?Math.max(minPx,maxPx/ratio):maxPx;
+  const prev={};
+  wrap.querySelectorAll('.wall-btn').forEach(b=>{prev[b.dataset.wall]=b.dataset.state||'off';});
+  const wt=36,aL=(L*H).toFixed(1),aS=(W*H).toFixed(1);
+  wrap.innerHTML=`<div class="schema" style="width:${sW}px;height:${sH}px;">
+    <div class="wall-btn" data-wall="N" data-state="off" style="top:-${wt+4}px;left:0;width:${sW}px;height:${wt}px;" onclick="cycleGKWall(this)"><span class="dim">${L}×${H}м</span><span class="m2">${aL}м²</span><span class="state"></span><button class="wall-reset" onclick="event.stopPropagation();resetGKWall(this)">✕</button></div>
+    <div class="wall-btn" data-wall="S" data-state="off" style="bottom:-${wt+4}px;left:0;width:${sW}px;height:${wt}px;" onclick="cycleGKWall(this)"><span class="dim">${L}×${H}м</span><span class="m2">${aL}м²</span><span class="state"></span><button class="wall-reset" onclick="event.stopPropagation();resetGKWall(this)">✕</button></div>
+    <div class="wall-btn" data-wall="W" data-state="off" style="left:-${wt+4}px;top:0;width:${wt}px;height:${sH}px;" onclick="cycleGKWall(this)"><span class="dim">${W}×${H}</span><span class="m2">${aS}м²</span><span class="state"></span><button class="wall-reset" onclick="event.stopPropagation();resetGKWall(this)">✕</button></div>
+    <div class="wall-btn" data-wall="E" data-state="off" style="right:-${wt+4}px;top:0;width:${wt}px;height:${sH}px;" onclick="cycleGKWall(this)"><span class="dim">${W}×${H}</span><span class="m2">${aS}м²</span><span class="state"></span><button class="wall-reset" onclick="event.stopPropagation();resetGKWall(this)">✕</button></div>
+    <div class="room-center">${L}×${W}м<div class="dims">${ca.toFixed(1)}м²</div><div style="font-size:0.6rem;color:#d9a441;margin-top:5px;line-height:1.6;">ivanov-remonti.com<br>0877 810 418</div></div>
+  </div>`;
+  wrap.querySelectorAll('.wall-btn').forEach(b=>{
+    const s=prev[b.dataset.wall]||'off';
+    if(s!=='off'){b.dataset.state=s;b.classList.add(s==='wall'?'s-wall':'s-glue','active-wall');b.querySelector('.state').textContent=s==='wall'?'предст.':'лепене';}
+  });
+}
+
+// ═══ PUTTY ROOMS ═══
+function addPuttyRoom(){
+  const id=pc++;
+  document.getElementById('puttyContainer').insertAdjacentHTML('beforeend',`
+    <div class="room" data-kind="putty" id="p-${id}">
+      <div class="room-header">
+        <span class="room-badge badge-putty">🔨 ШПАКЛОВКА</span>
+        <input type="text" class="title-input" placeholder="Хол, Баня..." oninput="calcAll()">
+        <button class="remove-room" onclick="removeEl('p-${id}')">✕</button>
+      </div>
+      <div class="row">
+        <label>Дължина (м): <input type="number" class="pL" placeholder="0" min="0" step="0.1" oninput="clearOvr();updatePuttySchema('${id}');calcAll()"></label>
+        <label>Ширина (м): <input type="number" class="pW" placeholder="0" min="0" step="0.1" oninput="clearOvr();updatePuttySchema('${id}');calcAll()"></label>
+        <label>Височина (м): <input type="number" class="pH" placeholder="0" min="0" step="0.1" oninput="clearOvr();updatePuttySchema('${id}');calcAll()"></label>
+      </div>
+      <div class="pceil-stack" id="pceilStack-${id}">
+        <div class="pceil-card disabled" data-pservice="off" data-layer-idx="0" onclick="cyclePCeil(this,'${id}')" id="pceil-${id}">
+          <div class="pleft"><span class="picon">🏠</span><span class="ptitle">ТАВАН</span><span class="parea">—</span></div>
+          <span class="psvc">цъкни за услуга</span>
+        </div>
+        <div class="pceil-add-row" id="pceilAdd-${id}" style="display:none;">
+          <div class="pceil-plus" onclick="addCeilLayer('${id}')">+</div>
+        </div>
+      </div>
+      <div class="schema-label">🧱 Стени (цъкни за услуга):</div>
+      <div class="schema-hint">→ Основна → Гипсова → Гипсова+мрежа → Фина → Фуги → Изкл.</div>
+      <div style="display:flex;gap:10px;align-items:center;overflow:visible;">
+        <div id="pInfo-${id}" style="display:none;flex-direction:column;gap:5px;min-width:68px;flex-shrink:0;">
+          <div style="background:#0a0f1c;border:1px solid #1e293b;border-radius:7px;padding:5px 8px;text-align:center;">
+            <div style="font-size:0.6rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:2px;">Таван</div>
+            <div id="pInfoCeil-${id}" style="font-size:0.82rem;font-weight:700;color:#a7f3d0;">—</div>
+            <div style="font-size:0.6rem;color:#475569;">м²</div>
+          </div>
+          <div style="background:#0a0f1c;border:1px solid #1e293b;border-radius:7px;padding:5px 8px;text-align:center;">
+            <div style="font-size:0.6rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:2px;">Стени</div>
+            <div id="pInfoWall-${id}" style="font-size:0.82rem;font-weight:700;color:#fde68a;">—</div>
+            <div style="font-size:0.6rem;color:#475569;">м²</div>
+          </div>
+          <div style="background:#0a0f1c;border:1px solid #334155;border-radius:7px;padding:5px 8px;text-align:center;">
+            <div style="font-size:0.6rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:2px;">Общо</div>
+            <div id="pInfoTotal-${id}" style="font-size:0.82rem;font-weight:700;color:#e2e8f0;">—</div>
+            <div style="font-size:0.6rem;color:#475569;">м²</div>
+          </div>
+        </div>
+        <div class="schema-wrap empty" id="pWrap-${id}" style="flex:1;min-width:0;"><span>Въведи размери за да се появи схемата</span></div>
+      </div>
+      <div class="wall-legend">
+        <span><span class="legend-dot osnovna"></span> Основна</span>
+        <span><span class="legend-dot gipsova"></span> Гипсова</span>
+        <span><span class="legend-dot gip_mesh"></span> Гипс+мрежа</span>
+        <span><span class="legend-dot fina"></span> Фина</span>
+        <span><span class="legend-dot fugi"></span> Фуги</span>
+      </div>
+      <div class="layers-table-wrap empty" id="lt-${id}">
+        <div class="layers-header">Слоеве по повърхност</div>
+        <div id="ltBody-${id}"></div>
+      </div>
+    </div>`);
+  calcAll();
+}
+
+function getCeilLayers(roomId){
+  const result=[];
+  // Main card is a div with id "pceil-{roomId}"
+  const mainCard=document.getElementById(`pceil-${roomId}`);
+  if(mainCard&&mainCard.dataset.pservice&&mainCard.dataset.pservice!=='off'){
+    result.push(mainCard);
+  }
+  // Extra stack layers have class "pceil-card" but are NOT the main card
+  const stack=document.getElementById(`pceilStack-${roomId}`);
+  if(stack) stack.querySelectorAll(`.pceil-card:not(#pceil-${roomId})`).forEach(c=>{
+    const svc=c.dataset.pservice;
+    if(svc&&svc!=='off'&&svc!=='__remove__') result.push(c);
+  });
+  return result;
+}
+
+function renderCeilStack(roomId){
+  const stack=document.getElementById(`pceilStack-${roomId}`);
+  const addRow=document.getElementById(`pceilAdd-${roomId}`);
+  if(!stack||!addRow) return;
+  const cards=getCeilLayers(roomId);
+  const mainCard=document.getElementById(`pceil-${roomId}`);
+  if(!mainCard||mainCard.dataset.pservice==='off'){addRow.style.display='none';return;}
+  const lastCard=cards[cards.length-1];
+  const lastSvc=lastCard.dataset.pservice||'off';
+  const lastIdx=PSTACK.indexOf(lastSvc);
+  const canAdd=lastIdx>=0&&lastIdx<PSTACK.length-1;
+  addRow.style.display='flex';
+  const plus=addRow.querySelector('.pceil-plus');
+  if(plus){plus.style.opacity=canAdd?'1':'0.25';plus.style.pointerEvents=canAdd?'auto':'none';}
+}
+
+function applyCeilCardStyle(el, svc){
+  PCYCLE.forEach(s=>{if(s!=='off') el.classList.remove('ps-'+s);});
+  if(svc==='off'){
+    el.querySelector('.ptitle').textContent='ТАВАН';
+    el.querySelector('.psvc').textContent='цъкни за услуга';
+    el.classList.remove(...['ps-osnovna','ps-gipsova','ps-gipsova_mesh','ps-fina','ps-fugi']);
+  } else {
+    el.classList.add('ps-'+svc);
+    el.querySelector('.ptitle').textContent='ТАВАН';
+    el.querySelector('.psvc').textContent=PSVC[svc].label;
+  }
+}
+
+function cyclePCeil(el, roomId){
+  if(el.classList.contains('disabled')) return;
+  const isMain=el.id===`pceil-${roomId}`;
+  const cur=el.dataset.pservice||'off';
+  // For extra ceil cards, cycle within available range
+  if(!isMain){
+    const stack=document.getElementById(`pceilStack-${roomId}`);
+    const cards=getCeilLayers(roomId);
+    const myIdx=cards.indexOf(el);
+    const prevCard=cards[myIdx-1];
+    const prevSvc=prevCard?prevCard.dataset.pservice:'off';
+    const prevIdx=PSTACK.indexOf(prevSvc);
+    const available=PSTACK.slice(prevIdx+1);
+    if(!available.length) return;
+    const curInAvail=available.indexOf(cur);
+    const next=available[(curInAvail+1)%available.length];
+    el.dataset.pservice=next;
+    applyCeilCardStyle(el,next);
+    // Remove extras after this
+    cards.slice(myIdx+1).forEach(c=>c.remove());
+    renderCeilStack(roomId);updateLayersTable(roomId);clearOvr();calcAll();
+    return;
+  }
+  // Main card: full cycle
+  const idx=PCYCLE.indexOf(cur);
+  const next=PCYCLE[(idx+1)%PCYCLE.length];
+  el.dataset.pservice=next;
+  applyCeilCardStyle(el,next);
+  if(next==='off'){
+    // Remove all extra ceil cards
+    getCeilLayers(roomId).slice(1).forEach(c=>c.remove());
+  }
+  renderCeilStack(roomId);clearOvr();updateLayersTable(roomId);calcAll();
+}
+
+function addCeilLayer(roomId){
+  const stack=document.getElementById(`pceilStack-${roomId}`);
+  const addRow=document.getElementById(`pceilAdd-${roomId}`);
+  if(!stack||!addRow) return;
+  const cards=getCeilLayers(roomId);
+  const lastCard=cards[cards.length-1];
+  const lastSvc=lastCard.dataset.pservice||'off';
+  const lastIdx=PSTACK.indexOf(lastSvc);
+  if(lastIdx<0||lastIdx>=PSTACK.length-1) return;
+  const nextSvc=PSTACK[lastIdx+1];
+  // Get area from main card
+  const mainCard=document.getElementById(`pceil-${roomId}`);
+  const areaText=mainCard?mainCard.querySelector('.parea').textContent:'—';
+  const newCard=document.createElement('div');
+  newCard.className='pceil-card ps-'+nextSvc;
+  newCard.dataset.pservice=nextSvc;
+  newCard.innerHTML=`<div class="pleft"><span class="picon">🏠</span><span class="ptitle">ТАВАН</span><span class="parea">${areaText}</span></div><span class="psvc">${PSVC[nextSvc].label}</span>`;
+  newCard.onclick=()=>cyclePCeil(newCard,roomId);
+  stack.insertBefore(newCard,addRow);
+  renderCeilStack(roomId);clearOvr();updateLayersTable(roomId);calcAll();
+}
+
+// Stack order for putty services
+const PSTACK=['osnovna','gipsova','gipsova_mesh','fugi','fina'];
+
+function cyclePWall(el, roomId){
+  const cur=el.dataset.pservice||'off';
+  const idx=PCYCLE.indexOf(cur);
+  const next=PCYCLE[(idx+1)%PCYCLE.length];
+  el.dataset.pservice=next;
+  el.dataset.layers=el.dataset.layers||'1';
+  PCYCLE.forEach(s=>{if(s!=='off') el.classList.remove('ps-'+s);});
+  const st=el.querySelector('.state');
+  if(next==='off'){
+    st.textContent='';el.classList.remove('active-wall');
+    const wall=el.dataset.wall;
+    const schema=el.closest('.schema');
+    if(schema) schema.querySelectorAll(`.wall-extra[data-wall="${wall}"]`).forEach(x=>x.remove());
+  } else {
+    el.classList.add('ps-'+next,'active-wall');st.textContent=PSVC[next].label;
+  }
+  clearOvr();renderWallStacks(roomId);updateLayersTable(roomId);calcAll();
+}
+
+function resetPWall(btn, roomId){
+  const el=btn.closest('.wall-btn');
+  const wall=el.dataset.wall;
+  el.dataset.pservice='off';
+  PCYCLE.forEach(s=>{if(s!=='off') el.classList.remove('ps-'+s);});
+  el.classList.remove('active-wall');
+  el.querySelector('.state').textContent='';
+  const schema=el.closest('.schema');
+  if(schema) schema.querySelectorAll(`.wall-extra[data-wall="${wall}"]`).forEach(x=>x.remove());
+  clearOvr();renderWallStacks(roomId);updateLayersTable(roomId);calcAll();
+}
+
+function addWallLayer(roomId, wall){
+  const pWrap=document.getElementById(`pWrap-${roomId}`);
+  if(!pWrap) return;
+  const schema=pWrap.querySelector('.schema');
+  if(!schema) return;
+  const mainBtn=schema.querySelector(`.wall-btn[data-wall="${wall}"]`);
+  if(!mainBtn) return;
+  const mainSvc=mainBtn.dataset.pservice||'off';
+  if(mainSvc==='off') return;
+  // Gather existing extra layers
+  const extras=Array.from(schema.querySelectorAll(`.wall-extra[data-wall="${wall}"]`));
+  const lastEl=extras.length>0?extras[extras.length-1]:mainBtn;
+  const lastSvc=lastEl.dataset.pservice||'off';
+  const lastIdx=PSTACK.indexOf(lastSvc);
+  if(lastIdx<0||lastIdx>=PSTACK.length-1) return; // already at fina/fugi or not found
+  const nextSvc=PSTACK[lastIdx+1];
+  // Build the extra wall element
+  const isH=mainBtn.style.height===mainBtn.offsetHeight+'px'||(parseInt(mainBtn.style.height)<60);
+  const extraDiv=document.createElement('div');
+  extraDiv.className='wall-btn wall-extra ps-'+nextSvc;
+  extraDiv.dataset.wall=wall;
+  extraDiv.dataset.pservice=nextSvc;
+  extraDiv.dataset.layers='1';
+  // Copy geometry from main btn and offset
+  extraDiv.style.cssText=mainBtn.style.cssText;
+  const offset=(extras.length+1)*40;
+  if(mainBtn.style.top&&parseInt(mainBtn.style.top)<0){
+    extraDiv.style.top=(parseInt(mainBtn.style.top)-offset)+'px';
+  } else if(mainBtn.style.bottom&&parseInt(mainBtn.style.bottom)<0){
+    extraDiv.style.bottom=(parseInt(mainBtn.style.bottom)-offset)+'px';
+  } else if(mainBtn.style.left&&parseInt(mainBtn.style.left)<0){
+    extraDiv.style.left=(parseInt(mainBtn.style.left)-offset)+'px';
+  } else if(mainBtn.style.right&&parseInt(mainBtn.style.right)<0){
+    extraDiv.style.right=(parseInt(mainBtn.style.right)-offset)+'px';
+  }
+  const dimSpan=mainBtn.querySelector('.dim').cloneNode(true);
+  const m2Span=mainBtn.querySelector('.m2').cloneNode(true);
+  const stSpan=document.createElement('span');
+  stSpan.className='state';
+  stSpan.textContent=PSVC[nextSvc].label;
+  const resetBtn=document.createElement('button');
+  resetBtn.className='wall-reset';
+  resetBtn.style.cssText='top:-5px;left:-5px;right:auto;display:flex;';
+  resetBtn.textContent='✕';
+  resetBtn.onclick=(e)=>{e.stopPropagation();e.preventDefault();removeExtraWallLayer(resetBtn,roomId);};
+  extraDiv.appendChild(dimSpan);
+  extraDiv.appendChild(m2Span);
+  extraDiv.appendChild(stSpan);
+  extraDiv.appendChild(resetBtn);
+  extraDiv.onclick=()=>{cycleExtraWall(extraDiv, roomId);};
+  schema.appendChild(extraDiv);
+  clearOvr();renderWallStacks(roomId);updateLayersTable(roomId);calcAll();
+}
+
+function removeExtraWallLayer(btn, roomId){
+  const el=btn.closest('.wall-extra');
+  if(!el) return;
+  const wall=el.dataset.wall;
+  const schema=el.closest('.schema');
+  if(!schema) return;
+  const extras=Array.from(schema.querySelectorAll(`.wall-extra[data-wall="${wall}"]`));
+  const myIdx=extras.indexOf(el);
+  extras.slice(myIdx).forEach(x=>x.remove());
+  clearOvr();renderWallStacks(roomId);updateLayersTable(roomId);calcAll();
+}
+
+function cycleExtraWall(el, roomId){
+  const wall=el.dataset.wall;
+  const schema=el.closest('.schema');
+  const mainBtn=schema.querySelector(`.wall-btn:not(.wall-extra)[data-wall="${wall}"]`);
+  const extras=Array.from(schema.querySelectorAll(`.wall-extra[data-wall="${wall}"]`));
+  const myIdx=extras.indexOf(el);
+  const prevEl=myIdx===0?mainBtn:extras[myIdx-1];
+  const prevSvc=prevEl.dataset.pservice||'off';
+  const prevIdx=PSTACK.indexOf(prevSvc);
+  // Available services after prev
+  const available=PSTACK.slice(prevIdx+1);
+  if(!available.length) return;
+  const cur=el.dataset.pservice;
+  const curInAvail=available.indexOf(cur);
+  const next=available[(curInAvail+1)%available.length];
+  PCYCLE.forEach(s=>{if(s!=='off') el.classList.remove('ps-'+s);});
+  el.classList.add('ps-'+next);
+  el.dataset.pservice=next;
+  el.querySelector('.state').textContent=PSVC[next].label;
+  // Remove any extras after this one (stack broken)
+  extras.slice(myIdx+1).forEach(x=>x.remove());
+  clearOvr();renderWallStacks(roomId);updateLayersTable(roomId);calcAll();
+}
+
+function renderWallStacks(roomId){
+  // Re-render + buttons on the schema for each wall
+  const pWrap=document.getElementById(`pWrap-${roomId}`);
+  if(!pWrap) return;
+  const schema=pWrap.querySelector('.schema');
+  if(!schema) return;
+  schema.querySelectorAll('.wall-plus-btn').forEach(b=>b.remove());
+  ['N','S','W','E'].forEach(wall=>{
+    const mainBtn=schema.querySelector(`.wall-btn:not(.wall-extra)[data-wall="${wall}"]`);
+    if(!mainBtn||mainBtn.dataset.pservice==='off') return;
+    const extras=Array.from(schema.querySelectorAll(`.wall-extra[data-wall="${wall}"]`));
+    const lastEl=extras.length>0?extras[extras.length-1]:mainBtn;
+    const lastSvc=lastEl.dataset.pservice||'off';
+    const lastIdx=PSTACK.indexOf(lastSvc);
+    const canAdd=lastIdx>=0&&lastIdx<PSTACK.length-1;
+    const plusBtn=document.createElement('div');
+    plusBtn.className='wall-plus-btn';
+    plusBtn.style.cssText='position:absolute;width:18px;height:18px;border-radius:50%;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;border:none;line-height:1;z-index:10;'+(canAdd?'background:#d9a441;color:#0f172a;cursor:pointer;':'background:#334155;color:#64748b;cursor:default;opacity:0.3;');
+    plusBtn.textContent='+';
+    // Position near last element
+    const ls=lastEl.style;
+    if(ls.top&&parseInt(ls.top)<0){
+      plusBtn.style.top=(parseInt(ls.top)-4)+'px';
+      plusBtn.style.left=(parseInt(ls.left||'0')+parseInt(ls.width||'0')-8)+'px';
+    } else if(ls.bottom&&parseInt(ls.bottom)<0){
+      plusBtn.style.bottom=(parseInt(ls.bottom)-4)+'px';
+      plusBtn.style.left=(parseInt(ls.left||'0')+parseInt(ls.width||'0')-8)+'px';
+    } else if(ls.left&&parseInt(ls.left)<0){
+      plusBtn.style.left=(parseInt(ls.left)-4)+'px';
+      plusBtn.style.top=(parseInt(ls.top||'0')+parseInt(ls.height||'0')-8)+'px';
+    } else if(ls.right&&parseInt(ls.right)<0){
+      plusBtn.style.right=(parseInt(ls.right)-4)+'px';
+      plusBtn.style.top=(parseInt(ls.top||'0')+parseInt(ls.height||'0')-8)+'px';
+    }
+    if(canAdd) plusBtn.onclick=(e)=>{e.stopPropagation();addWallLayer(roomId,wall);};
+    schema.appendChild(plusBtn);
+  });
+}
+
+function updatePuttySchema(id){
+  const root=document.getElementById(`p-${id}`);
+  if(!root) return;
+  const L=parseFloat(root.querySelector('.pL').value)||0;
+  const W=parseFloat(root.querySelector('.pW').value)||0;
+  const H=parseFloat(root.querySelector('.pH').value)||0;
+  const cc=document.getElementById(`pceil-${id}`);
+  const ca=L*W;
+  if(L>0&&W>0){
+    cc.classList.remove('disabled');
+    cc.querySelector('.parea').textContent=ca.toFixed(1)+' м²';
+    // Update area on extra ceil cards too
+    getCeilLayers(id).slice(1).forEach(c=>{if(c.querySelector('.parea')) c.querySelector('.parea').textContent=ca.toFixed(1)+' м²';});
+  } else {
+    cc.classList.add('disabled');
+    cc.querySelector('.parea').textContent='—';
+    if(cc.dataset.pservice!=='off'){
+      cc.dataset.pservice='off';
+      PCYCLE.forEach(s=>{if(s!=='off') cc.classList.remove('ps-'+s);});
+      cc.querySelector('.ptitle').textContent='ТАВАН';
+      cc.querySelector('.psvc').textContent='цъкни за услуга';
+      getCeilLayers(id).slice(1).forEach(c=>c.remove());
+    }
+  }
+  const wrap=document.getElementById(`pWrap-${id}`);
+  if(!wrap) return;
+  if(L<=0||W<=0||H<=0){wrap.classList.add('empty');wrap.innerHTML='<span>Въведи размери за да се появи схемата</span>';const info=document.getElementById(`pInfo-${id}`);if(info)info.style.display='none';return;}
+  wrap.classList.remove('empty');
+  const pInfoEl=document.getElementById(`pInfo-${id}`);
+  if(pInfoEl){
+    pInfoEl.style.display='flex';
+    document.getElementById(`pInfoCeil-${id}`).textContent=(L*W).toFixed(1);
+    document.getElementById(`pInfoWall-${id}`).textContent=(2*(L+W)*H).toFixed(1);
+    document.getElementById(`pInfoTotal-${id}`).textContent=(L*W+2*(L+W)*H).toFixed(1);
+  }
+  const maxPx=240,minPx=110,ratio=L/W;
+  const sW=ratio>=1?maxPx:Math.max(minPx,maxPx*ratio);
+  const sH=ratio>=1?Math.max(minPx,maxPx/ratio):maxPx;
+  const prev={};
+  const prevExtras={};
+  wrap.querySelectorAll('.wall-btn').forEach(b=>{prev[b.dataset.wall]={svc:b.dataset.pservice||'off',layers:b.dataset.layers||'1'};});
+  wrap.querySelectorAll('.wall-extra').forEach(b=>{
+    const w=b.dataset.wall;
+    if(!prevExtras[w]) prevExtras[w]=[];
+    prevExtras[w].push(b.dataset.pservice||'off');
+  });
+  const wt=36,aL=(L*H).toFixed(1),aS=(W*H).toFixed(1);
+  wrap.innerHTML=`<div class="schema" style="width:${sW}px;height:${sH}px;">
+    <div class="wall-btn" data-wall="N" data-pservice="off" data-layers="1" style="top:-${wt+4}px;left:0;width:${sW}px;height:${wt}px;" onclick="cyclePWall(this,'${id}')"><span class="dim">${L}×${H}м</span><span class="m2">${aL}м²</span><span class="state"></span><button class="wall-reset" onclick="event.stopPropagation();event.preventDefault();resetPWall(this,'${id}')">✕</button></div>
+    <div class="wall-btn" data-wall="S" data-pservice="off" data-layers="1" style="bottom:-${wt+4}px;left:0;width:${sW}px;height:${wt}px;" onclick="cyclePWall(this,'${id}')"><span class="dim">${L}×${H}м</span><span class="m2">${aL}м²</span><span class="state"></span><button class="wall-reset" onclick="event.stopPropagation();event.preventDefault();resetPWall(this,'${id}')">✕</button></div>
+    <div class="wall-btn" data-wall="W" data-pservice="off" data-layers="1" style="left:-${wt+4}px;top:0;width:${wt}px;height:${sH}px;" onclick="cyclePWall(this,'${id}')"><span class="dim">${W}×${H}</span><span class="m2">${aS}м²</span><span class="state"></span><button class="wall-reset" onclick="event.stopPropagation();event.preventDefault();resetPWall(this,'${id}')">✕</button></div>
+    <div class="wall-btn" data-wall="E" data-pservice="off" data-layers="1" style="right:-${wt+4}px;top:0;width:${wt}px;height:${sH}px;" onclick="cyclePWall(this,'${id}')"><span class="dim">${W}×${H}</span><span class="m2">${aS}м²</span><span class="state"></span><button class="wall-reset" onclick="event.stopPropagation();event.preventDefault();resetPWall(this,'${id}')">✕</button></div>
+    <div class="room-center">${L}×${W}м<div class="dims">${ca.toFixed(1)}м²</div><div style="font-size:0.6rem;color:#d9a441;margin-top:5px;line-height:1.6;">ivanov-remonti.com<br>0877 810 418</div></div>
+  </div>`;
+  wrap.querySelectorAll('.wall-btn').forEach(b=>{
+    const p=prev[b.dataset.wall];
+    if(p&&p.svc!=='off'){
+      b.dataset.pservice=p.svc;b.dataset.layers=p.layers;
+      b.classList.add('ps-'+p.svc,'active-wall');
+      b.querySelector('.state').textContent=PSVC[p.svc].label;
+    }
+  });
+  // Restore extra stack layers
+  if(prevExtras){
+    Object.entries(prevExtras).forEach(([wall,layers])=>{
+      layers.forEach(svc=>{
+        const mainBtn=wrap.querySelector(`.wall-btn[data-wall="${wall}"]`);
+        if(!mainBtn||mainBtn.dataset.pservice==='off') return;
+        addWallLayer(id,wall);
+        // Set the correct svc on the just-added extra
+        const schema=wrap.querySelector('.schema');
+        const extras=Array.from(schema.querySelectorAll(`.wall-extra[data-wall="${wall}"]`));
+        if(extras.length>0){
+          const last=extras[extras.length-1];
+          PCYCLE.forEach(s=>{if(s!=='off') last.classList.remove('ps-'+s);});
+          last.classList.add('ps-'+svc);
+          last.dataset.pservice=svc;
+          last.querySelector('.state').textContent=PSVC[svc].label;
+        }
+      });
+    });
+  }
+  renderWallStacks(id);
+  renderCeilStack(id);
+  updateLayersTable(id);
+}
+
+function updateLayersTable(id){
+  const root=document.getElementById(`p-${id}`);
+  const wrap=document.getElementById(`lt-${id}`);
+  const body=document.getElementById(`ltBody-${id}`);
+  if(!root||!wrap||!body) return;
+  const L=parseFloat(root.querySelector('.pL').value)||0;
+  const W=parseFloat(root.querySelector('.pW').value)||0;
+  const H=parseFloat(root.querySelector('.pH').value)||0;
+  const rows=[];
+  // Ceiling (all stack layers)
+  const cc=document.getElementById(`pceil-${id}`);
+  if(cc&&cc.dataset.pservice!=='off'&&L>0&&W>0){
+    const area=(L*W).toFixed(1);
+    getCeilLayers(id).forEach((card,ci)=>{
+      const svc_key=card.dataset.pservice||'off';
+      if(svc_key==='off') return;
+      const svc=PSVC[svc_key];
+      const key=ci===0?'c':'c_extra'+ci;
+      rows.push({key,label:`🏠 Таван (${svc.label})`,area,layers:1,el:card});
+    });
+  }
+  // Walls
+  const walls=['N','S','W','E'];
+  const wallLabels={N:`${L}×${H}м`,S:`${L}×${H}м`,W:`${W}×${H}м`,E:`${W}×${H}м`};
+  const wallAreas={N:(L*H).toFixed(1),S:(L*H).toFixed(1),W:(W*H).toFixed(1),E:(W*H).toFixed(1)};
+  const wrapEl=document.getElementById(`pWrap-${id}`);
+  if(wrapEl){
+    const wallNames={N:'С',S:'Ю',W:'З',E:'И'};
+    ['N','S','W','E'].forEach(wall=>{
+      const mainBtn=wrapEl.querySelector(`.wall-btn:not(.wall-extra)[data-wall="${wall}"]`);
+      if(!mainBtn) return;
+      const svc_key=mainBtn.dataset.pservice||'off';
+      if(svc_key==='off') return;
+      const svc=PSVC[svc_key];
+      rows.push({key:wall,label:`🧱 Стена ${wallNames[wall]} ${wallLabels[wall]} (${svc.label})`,area:wallAreas[wall],layers:parseInt(mainBtn.dataset.layers||'1')});
+      // Extra stack layers for this wall
+      wrapEl.querySelectorAll(`.wall-extra[data-wall="${wall}"]`).forEach((ex,i)=>{
+        const exSvc_key=ex.dataset.pservice||'off';
+        if(exSvc_key==='off') return;
+        const exSvc=PSVC[exSvc_key];
+        rows.push({key:wall+'_extra'+i,label:`   ↳ Стена ${wallNames[wall]} (${exSvc.label})`,area:wallAreas[wall],layers:parseInt(ex.dataset.layers||'1'),isExtra:true,extraEl:ex});
+      });
+    });
+  }
+  if(rows.length===0){wrap.classList.add('empty');return;}
+  wrap.classList.remove('empty');
+  body.innerHTML=rows.map(r=>{
+    const isCeil=r.key==='c'||r.key.startsWith('c_extra');
+    const layerBtns=isCeil?'':`<div class="layers-btns">
+        <button class="lbtn${r.layers===1?' active':''}" onclick="setPLayers(this,'${id}','${r.key}',1)">1</button>
+        <button class="lbtn${r.layers===2?' active':''}" onclick="setPLayers(this,'${id}','${r.key}',2)">2</button>
+        <button class="lbtn${r.layers===3?' active':''}" onclick="setPLayers(this,'${id}','${r.key}',3)">3</button>
+      </div>`;
+    return `<div class="layers-row">
+      <span class="layers-name">${r.label}</span>
+      <span class="layers-area">${r.area} м²</span>
+      ${layerBtns}
+    </div>`;
+  }).join('');
+}
+
+function setPLayers(btn, roomId, key, layers){
+  // Update dataset on the source element
+  if(key==='c'){
+    const cc=document.getElementById(`pceil-${roomId}`);
+    if(cc) cc.dataset.layers=layers;
+  } else {
+    const wrap=document.getElementById(`pWrap-${roomId}`);
+    if(wrap){
+      const wb=wrap.querySelector(`.wall-btn[data-wall="${key}"]`);
+      if(wb) wb.dataset.layers=layers;
+    }
+  }
+  // Update button highlight in layers table
+  const row=btn.closest('.layers-row');
+  row.querySelectorAll('.lbtn').forEach((b,i)=>b.classList.toggle('active',i+1===layers));
+  clearOvr();calcAll();
+}
+
+function removeEl(id){document.getElementById(id)?.remove();clearOvr();calcAll();}
+
+// ═══ GK CALCULATION ═══
+function calcGK(){
+  let tArea=0,boardArea=0,ud=0,cd=0,hangers=0,screws=0,dowel=0,glue=0,ins=0,foam=0;
+  const pLen=parseFloat(document.getElementById('pLen').value);
+  const positions=[];
+  document.querySelectorAll('#roomsContainer .room').forEach(r=>{
+    const kind=r.dataset.kind;
+    const name=r.querySelector('.title-input').value||(kind==='room'?'Помещение':'Преградна');
+    if(kind==='room'){
+      const L=parseFloat(r.querySelector('.rLen').value)||0;
+      const W=parseFloat(r.querySelector('.rWid').value)||0;
+      const H=parseFloat(r.querySelector('.rHgt').value)||0;
+      if(L<=0||W<=0||H<=0) return;
+      if(r.querySelector('.ceil-card').dataset.on==='1'){
+        const a=L*W,p=2*(L+W);
+        boardArea+=a;ud+=p/pLen;cd+=(a/0.6)/pLen;
+        hangers+=a*2.8;screws+=a*15;dowel+=p/0.7;dowel+=(a*2.8)*2;
+        ins+=a;tArea+=a;positions.push({name:name+' – Таван',area:a.toFixed(1)});
+      }
+      r.querySelectorAll('#gkWrap-'+r.id.replace('r-','')+' .wall-btn').forEach(wb=>{
+        const s=wb.dataset.state||'off';if(s==='off') return;
+        const wl=(wb.dataset.wall==='N'||wb.dataset.wall==='S')?L:W;
+        const a=wl*H,p=2*wl;
+        if(s==='wall'){boardArea+=a;ud+=p/pLen;cd+=(a/0.6)/pLen;hangers+=a*1.5;screws+=a*15;dowel+=p/0.7;ins+=a;tArea+=a;positions.push({name:name+` – Предстена (${wl}×${H}м)`,area:a.toFixed(1)});}
+        else{boardArea+=a;glue+=a*4;foam+=a/10;tArea+=a;positions.push({name:name+` – Лепене (${wl}×${H}м)`,area:a.toFixed(1)});}
+      });
+    } else if(kind==='part'){
+      const L=parseFloat(r.querySelector('.pLen2').value)||0;
+      const H=parseFloat(r.querySelector('.pHgt').value)||0;
+      if(L<=0||H<=0) return;
+      const a=L*H,p=2*L;
+      boardArea+=a*2;ud+=p/pLen;cd+=(a/0.6)/pLen;screws+=(a*2)*15;dowel+=p/0.7;ins+=a;tArea+=a;
+      positions.push({name:r.querySelector('.title-input').value||'Преградна'+` (${L}×${H}м)`,area:(a*2).toFixed(1)});
+    }
+  });
+  const buttons=hangers*2;
+  const joint=boardArea*0.4,finish=boardArea*1.2,tape=boardArea*1.5,primer=boardArea*0.2;
+  const bSizeVal=parseFloat(document.getElementById('bSize').value);
+  const totalBoards=boardArea>0?Math.ceil((boardArea*1.1)/bSizeVal):0;
+  const hasGreen=document.getElementById('hasGreen').checked;
+  const green=hasGreen?(parseInt(document.getElementById('greenManual').value)||0):0;
+  const bSizeEl=document.getElementById('bSize');
+  GKD={tArea,boardArea,totalBoards,board_std:Math.max(0,totalBoards-green),board_grn:green,
+    prof_ud:Math.ceil(ud),prof_cd:Math.ceil(cd),hangers:Math.ceil(hangers),buttons:Math.ceil(buttons),
+    screws:Math.ceil(screws),dowels:Math.ceil(dowel),joint:Math.ceil(joint),finish:Math.ceil(finish),
+    tape:Math.ceil(tape),primer:Math.ceil(primer),ins:Math.ceil(ins),glue:Math.ceil(glue),
+    foam:Math.ceil(foam),foam_r:foam,
+    joint_r:joint,finish_r:finish,tape_r:tape,primer_r:primer,glue_r:glue,
+    positions,pLen:parseFloat(document.getElementById('pLen').value),
+    bSizeTxt:bSizeEl.options[bSizeEl.selectedIndex].text,bThick:document.getElementById('bThick').value,hasGreen,
+  };
+}
+
+// ═══ PUTTY CALCULATION ═══
+function calcPutty(){
+  let osnovna=0,gipsova=0,gipsova_mesh=0,fina=0,fugi=0;
+  const puttyPositions=[];
+  const puttyRooms=[];   // per-room breakdown
+  const usedSvcs=new Set(); // all services used across all rooms
+
+  document.querySelectorAll('#puttyContainer .room').forEach(r=>{
+    const rid=r.id.replace('p-','');
+    const L=parseFloat(r.querySelector('.pL').value)||0;
+    const W=parseFloat(r.querySelector('.pW').value)||0;
+    const H=parseFloat(r.querySelector('.pH').value)||0;
+    if(L<=0||W<=0||H<=0) return;
+    const name=r.querySelector('.title-input').value||'Помещение';
+
+    let roomCeil=0, roomWall=0;
+    const roomPositions=[];
+
+    // Ceiling (all stack layers) — reads from select + extra cards
+    const ceilLayers=getCeilLayers(rid);
+    if(ceilLayers.length>0){
+      const a=L*W;
+      roomCeil=a;
+      const ceilSvcs=[];
+      ceilLayers.forEach(card=>{
+        const svc_key=card.dataset.pservice||'off';
+        if(svc_key==='off'||svc_key==='__remove__') return;
+        const svc=PSVC[svc_key];
+        if(!svc) return;
+        accumPutty(svc_key,a,1,svc.mesh);
+        usedSvcs.add(svc_key);
+        ceilSvcs.push(svc.label);
+        puttyPositions.push({name:name+' – Таван',area:a.toFixed(1),svc:svc.label,layers:1});
+      });
+      if(ceilSvcs.length) roomPositions.push({label:'Таван',area:a,svcs:ceilSvcs});
+    }
+
+    // Walls (main + extra stack layers)
+    const wrap=document.getElementById(`pWrap-${rid}`);
+    const wallDirNames={N:'С',S:'Ю',W:'З',E:'И'};
+    const wallSeenArea={};
+    if(wrap){
+      wrap.querySelectorAll('.wall-btn:not(.wall-extra)').forEach(wb=>{
+        const svc_key=wb.dataset.pservice||'off';
+        if(svc_key==='off') return;
+        const svc=PSVC[svc_key];
+        const layers=parseInt(wb.dataset.layers||'1');
+        const wall=wb.dataset.wall;
+        const wallLen=(wall==='N'||wall==='S')?L:W;
+        const a=wallLen*H;
+        const wallName=`Стена ${wallDirNames[wall]}`;
+        if(!wallSeenArea[wall]){wallSeenArea[wall]=a;roomWall+=a;}
+        accumPutty(svc_key,a,layers,svc.mesh);
+        usedSvcs.add(svc_key);
+        const wallSvcs=[svc.label];
+        puttyPositions.push({name:name+' – '+wallName+` (${wallLen}×${H}м)`,area:a.toFixed(1),svc:svc.label,layers,isWall:true});
+        // Extra stack layers
+        wrap.querySelectorAll(`.wall-extra[data-wall="${wall}"]`).forEach(ex=>{
+          const exSvc_key=ex.dataset.pservice||'off';
+          if(exSvc_key==='off') return;
+          const exSvc=PSVC[exSvc_key];
+          const exLayers=parseInt(ex.dataset.layers||'1');
+          accumPutty(exSvc_key,a,exLayers,exSvc.mesh);
+          usedSvcs.add(exSvc_key);
+          wallSvcs.push(exSvc.label);
+          puttyPositions.push({name:name+' – '+wallName+` (${wallLen}×${H}м)`,area:a.toFixed(1),svc:exSvc.label,layers:exLayers,isWall:true,extra:true});
+        });
+        roomPositions.push({label:wallName+` (${wallLen}×${H}м)`,area:a,svcs:wallSvcs});
+      });
+    }
+
+    if(roomPositions.length>0){
+      puttyRooms.push({name,ceilM2:roomCeil,wallM2:roomWall,positions:roomPositions});
+    }
+
+    function accumPutty(key,a,layers,mesh){
+      const svc=PSVC[key];
+      const norm=svc.norm;
+      if(key==='osnovna') osnovna+=a*norm*layers;
+      else if(key==='gipsova') gipsova+=a*norm*layers;
+      else if(key==='gipsova_mesh'){gipsova+=a*norm*layers;gipsova_mesh+=a;}
+      else if(key==='fina') fina+=a*norm*layers;
+      else if(key==='fugi') fugi+=a*norm*layers;
+    }
+  });
+
+  PD={
+    osnovna:Math.ceil(osnovna),gipsova:Math.ceil(gipsova),
+    gipsova_mesh:Math.ceil(gipsova_mesh),fina:Math.ceil(fina),fugi:Math.ceil(fugi),
+    osnovna_r:osnovna,gipsova_r:gipsova,fina_r:fina,fugi_r:fugi,
+    hasAny:osnovna>0||gipsova>0||fina>0||fugi>0,
+    puttyPositions, puttyRooms, usedSvcs,
+  };
+}
+
+function calcAll(){calcGK();calcPutty();renderResults();}
+
+// ═══ RENDER ROW ═══
+function mkR(id,lbl,rawQty,rawUnit,rawCalc){
+  if(rawQty<=0&&!ovr[id]) return '';
+  const cfg=PKG[id];
+  const qty=ovr[id]!==undefined?ovr[id]:rawQty;
+  const isOvr=ovr[id]!==undefined;
+  let pkgHtml;
+  if(cfg.ps>0&&qty>0){
+    const n=Math.ceil(qty/cfg.ps);
+    pkgHtml=`<span class="n">${n}</span><span class="u"> ${n===1?cfg.pu:cfg.pp} ${cfg.sz}</span>`;
+  } else {
+    pkgHtml=`<span class="n">${qty}</span><span class="u"> ${cfg.pu}</span>`;
+  }
+  const rightVal=cfg.ps>0&&rawCalc!==undefined?(isOvr?`${qty} ${rawUnit}`:`${Math.round(rawCalc)} ${rawUnit}`):'';
+  return `<tr class="${isOvr?'overridden':''}">
+    <td class="col-name">${lbl}</td>
+    <td class="col-pkg" id="qc-${id}">${pkgHtml}</td>
+    <td class="col-raw">${rightVal}</td>
+    <td class="col-edit"><button class="edit-btn" onclick="startEdit('${id}',${qty},'${rawUnit}')">✏️</button></td>
+  </tr>`;
+}
+function mkGroup(cls,header,rows){
+  const r=rows.filter(Boolean).join('');
+  if(!r) return '';
+  return `<div class="mat-group ${cls}"><div class="mat-group-header">${header}</div><table>${r}</table></div>`;
+}
+
+// ═══ RENDER ═══
+function renderResults(){
+  const res=document.getElementById('resContent');
+  const ar=document.getElementById('actionRow');
+  const on=document.getElementById('ovrNote');
+  const hasGK=GKD.boardArea>0;
+  const hasPT=PD.hasAny;
+  if(!hasGK&&!hasPT){
+    res.innerHTML='<div class="empty-state"><span class="big-icon">📋</span>Добави позиции<br>за да видиш сметката</div>';
+    ar.style.display='none';on.classList.remove('on');return;
+  }
+  ar.style.display='flex';
+  on.classList.toggle('on',Object.keys(ovr).length>0);
+  const show={board:document.getElementById('mBoard').checked,profile:document.getElementById('mProfile').checked,hanger:document.getElementById('mHanger').checked,button:document.getElementById('mButton').checked,screws:document.getElementById('mScrews').checked,dowel:document.getElementById('mDowel').checked,joint:document.getElementById('mJoint').checked,finish:document.getElementById('mFinish').checked,tape:document.getElementById('mTape').checked,ins:document.getElementById('mIns').checked,primer:document.getElementById('mPrimer').checked,glue:document.getElementById('mGlue').checked,foam:document.getElementById('mFoam').checked};
+  const d=GKD;
+  const pLen=d.pLen?d.pLen.toFixed(2):'3.00';
+  const bL=d.bSizeTxt?`${d.bSizeTxt}×${d.bThick}мм`:'';
+  const pL=`× ${pLen}м`;
+  const pName=document.getElementById('pName').value||'Без име';
+  let html=`<div class="summary-box"><strong>${pName}</strong>`;
+  if(hasGK) html+=`ГК: ${d.tArea.toFixed(1)} м² / ${d.totalBoards} бр. плоскости<br>`;
+  if(hasPT){
+    const svcLabels=Array.from(PD.usedSvcs||[]).map(s=>PSVC[s]?.label||s).join(', ');
+    html+=`Шпакловка: ${svcLabels||'—'}<br>`;
+    html+=`Общо: ${Math.round((PD.osnovna_r||0)+(PD.gipsova_r||0)+(PD.fina_r||0)+(PD.fugi_r||0))} кг`;
+  }
+  html+='</div>';
+
+  if(hasGK){
+    html+=`<div class="section-divider">🏗️ ГИПСОКАРТОН</div>`;
+    if(show.board) html+=mkGroup('mat-group g-boards','🟦 ПЛОСКОСТИ',[mkR('board_std',`ГК Стандартен ${bL}`,d.board_std,'бр'),d.hasGreen?mkR('board_grn',`ГК Зелен ${bL}`,d.board_grn,'бр'):'']);
+    if(show.profile||show.hanger||show.button||show.dowel) html+=mkGroup('mat-group g-struct','🟧 КОНСТРУКЦИЯ',[show.profile?mkR('prof_ud',`UD ${pL}`,d.prof_ud,'бр'):'',show.profile?mkR('prof_cd',`CD ${pL}`,d.prof_cd,'бр'):'',show.hanger?mkR('hangers','Окачвачи',d.hangers,'бр'):'',show.button?mkR('buttons','Копчета',d.buttons,'бр'):'',show.dowel?mkR('dowels','Дюбели',d.dowels,'бр'):'']);
+    if(show.screws) html+=mkGroup('mat-group g-fix','🟥 КРЕПЕЖИ',[mkR('screws','Винтове (рапидки)',d.screws,'бр')]);
+    if(show.joint||show.finish||show.tape||show.primer) html+=mkGroup('mat-group g-finish','🟩 ФИНИШ',[show.joint?mkR('joint','Фугираща смес',d.joint,'кг',d.joint_r):'',show.finish?mkR('finish','Шпакловка (фина)',d.finish,'кг',d.finish_r):'',show.tape?mkR('tape','Лента',d.tape,'м',d.tape_r):'',show.primer?mkR('primer','Грунд',d.primer,'л',d.primer_r):'']);
+    if(show.ins||show.glue||show.foam) html+=mkGroup('mat-group g-extra','🟪 ДОПЪЛНИТЕЛНИ',[show.ins&&d.ins>0?mkR('ins','Изолация',d.ins,'м²'):'',show.glue&&d.glue>0?mkR('glue','Лепило за ГК',d.glue,'кг',d.glue_r):'',show.foam&&d.foam>0?mkR('foam','Монтажна пяна',d.foam,'бр',d.foam_r):'']);
+    html+=`<div class="waste-note">* заложен отпадък: 10% на плоскости</div>`;
+  }
+
+  if(hasPT){
+    html+=`<div class="section-divider">🔨 ШПАКЛОВКА</div>`;
+
+    // ── Service chips used across all rooms ──
+    const SVC_CHIP={
+      osnovna:`<span style="display:inline-block;font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:4px;background:#d97706;color:#0f172a;">Основна</span>`,
+      gipsova:`<span style="display:inline-block;font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:4px;background:#059669;color:#0f172a;">Гипсова</span>`,
+      gipsova_mesh:`<span style="display:inline-block;font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:4px;background:#34d399;color:#0f172a;">Гипс+мрежа</span>`,
+      fina:`<span style="display:inline-block;font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:4px;background:#7c3aed;color:#fff;">Фина</span>`,
+      fugi:`<span style="display:inline-block;font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:4px;background:#2563eb;color:#fff;">Фуги</span>`,
+    };
+    const PILL_CLS={osnovna:'p-osnovna-pill',gipsova:'p-gipsova-pill',gipsova_mesh:'p-gipsova_mesh-pill',fina:'p-fina-pill',fugi:'p-fugi-pill'};
+    const SVCKEY={};PCYCLE.filter(s=>s!=='off').forEach(s=>{SVCKEY[PSVC[s].label]=s;});
+
+    const usedChips=Array.from(PD.usedSvcs||[]).map(s=>SVC_CHIP[s]||'').join(' ');
+
+    // ── Global totals ──
+    let totalCeil=0,totalWall=0;
+    (PD.puttyRooms||[]).forEach(rm=>{totalCeil+=rm.ceilM2;totalWall+=rm.wallM2;});
+    const totalAll=totalCeil+totalWall;
+
+    html+=`<div style="background:#0a0f1c;border-radius:10px;border:1px solid #1e293b;padding:10px 12px;margin-bottom:10px;">
+      <div style="font-size:0.72rem;color:#64748b;margin-bottom:6px;">Избрани услуги: ${usedChips||'—'}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:70px;background:#0f172a;border-radius:7px;padding:7px 10px;border:1px solid #1e293b;">
+          <div style="font-size:0.62rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;">Тавани</div>
+          <div style="font-size:0.95rem;font-weight:700;color:#a7f3d0;margin-top:1px;">${totalCeil.toFixed(1)}<span style="font-size:0.65rem;font-weight:400;color:#64748b;"> м²</span></div>
+        </div>
+        <div style="flex:1;min-width:70px;background:#0f172a;border-radius:7px;padding:7px 10px;border:1px solid #1e293b;">
+          <div style="font-size:0.62rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;">Стени</div>
+          <div style="font-size:0.95rem;font-weight:700;color:#fde68a;margin-top:1px;">${totalWall.toFixed(1)}<span style="font-size:0.65rem;font-weight:400;color:#64748b;"> м²</span></div>
+        </div>
+        <div style="flex:1;min-width:70px;background:#0f172a;border-radius:7px;padding:7px 10px;border:1px solid #334155;">
+          <div style="font-size:0.62rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;">Общо</div>
+          <div style="font-size:0.95rem;font-weight:700;color:#e2e8f0;margin-top:1px;">${totalAll.toFixed(1)}<span style="font-size:0.65rem;font-weight:400;color:#64748b;"> м²</span></div>
+        </div>
+      </div>
+    </div>`;
+
+    // ── Per-room breakdown ──
+    if((PD.puttyRooms||[]).length>0){
+      const multiRoom=PD.puttyRooms.length>1;
+      PD.puttyRooms.forEach(rm=>{
+        if(multiRoom){
+          html+=`<div style="font-size:0.78rem;font-weight:700;color:#d9a441;margin:10px 0 4px;padding-left:2px;">📐 ${rm.name}`;
+          const rmTotal=rm.ceilM2+rm.wallM2;
+          html+=` <span style="font-weight:400;color:#64748b;font-size:0.72rem;">— таван ${rm.ceilM2.toFixed(1)}м² / стени ${rm.wallM2.toFixed(1)}м² / общо ${rmTotal.toFixed(1)}м²</span></div>`;
+        }
+        html+=`<div class="pos-table-wrap"><table><tr><th>Позиция</th><th>м²</th><th>Услуги</th></tr>`;
+        rm.positions.forEach(p=>{
+          const pills=p.svcs.map(s=>{const k=SVCKEY[s]||'';return `<span class="pos-svc-pill ${PILL_CLS[k]||''}">${s}</span>`;}).join('');
+          html+=`<tr><td>${p.label}</td><td class="col-m2">${p.area.toFixed(1)} м²</td><td>${pills}</td></tr>`;
+        });
+        // Room subtotals row
+        const rmTot=(rm.ceilM2+rm.wallM2).toFixed(1);
+        html+=`<tr style="border-top:1px solid #334155;"><td style="color:#64748b;font-size:0.72rem;">Общо стая</td><td class="col-m2" style="color:#cbd5e1;font-weight:700;">${rmTot} м²</td><td></td></tr>`;
+        html+=`</table></div>`;
+      });
+
+      // ── Grand total row if multiple rooms ──
+      if(PD.puttyRooms.length>1){
+        html+=`<div class="pos-table-wrap" style="margin-top:4px;"><table>
+          <tr><td style="font-weight:700;color:#d9a441;font-size:0.82rem;">ОБЩО ТАВАНИ</td><td class="col-m2" style="color:#a7f3d0;font-weight:700;">${totalCeil.toFixed(1)} м²</td><td></td></tr>
+          <tr><td style="font-weight:700;color:#d9a441;font-size:0.82rem;">ОБЩО СТЕНИ</td><td class="col-m2" style="color:#fde68a;font-weight:700;">${totalWall.toFixed(1)} м²</td><td></td></tr>
+          <tr style="border-top:1px solid #334155;"><td style="font-weight:700;color:#e2e8f0;font-size:0.82rem;">ОБЩО ВСИЧКО</td><td class="col-m2" style="color:#e2e8f0;font-weight:700;">${totalAll.toFixed(1)} м²</td><td></td></tr>
+        </table></div>`;
+      }
+    }
+
+    // ── Materials ──
+    if(PD.osnovna>0) html+=mkGroup('mat-group g-osnovna','🟤 ОСНОВНА МАЗИЛКА',[mkR('p_osnovna','Основна мазилка',PD.osnovna,'кг',PD.osnovna_r)]);
+    if(PD.gipsova>0) html+=mkGroup('mat-group g-gipsova','🟢 ГИПСОВА ШПАКЛОВКА',[mkR('p_gipsova','Гипсова шпакловка',PD.gipsova,'кг',PD.gipsova_r),PD.gipsova_mesh>0?mkR('p_mreja','Армираща мрежа',PD.gipsova_mesh,'м²'):'']);
+    if(PD.fina>0) html+=mkGroup('mat-group g-fina','🟣 ФИНА ШПАКЛОВКА',[mkR('p_fina','Фина шпакловка',PD.fina,'кг',PD.fina_r)]);
+    if(PD.fugi>0) html+=mkGroup('mat-group g-fugi','🔵 ФУГИ',[mkR('p_fugi','Фуги',PD.fugi,'кг',PD.fugi_r)]);
+  }
+  res.innerHTML=html;
+}
+
+// ═══ INLINE EDIT ═══
+function startEdit(id,qty,unit){
+  const cell=document.getElementById(`qc-${id}`);
+  if(!cell) return;
+  cell.innerHTML=`<input class="qty-edit" id="ei-${id}" type="number" value="${qty}" min="0" step="1" onblur="commitEdit('${id}','${unit}')" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.dataset.esc=1;this.blur();}">`;
+  const inp=document.getElementById(`ei-${id}`);
+  inp.focus();inp.select();
+}
+function commitEdit(id,unit){
+  const inp=document.getElementById(`ei-${id}`);
+  if(!inp) return;
+  if(inp.dataset.esc){renderResults();return;}
+  const v=parseFloat(inp.value);
+  if(!isNaN(v)&&v>=0) ovr[id]=Math.ceil(v);
+  renderResults();
+}
+
+// ═══ PDF ═══
+async function pdf(){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF();
+  try{
+    const r=await fetch('https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Regular.ttf');
+    const buf=await r.arrayBuffer();
+    const b64=btoa(new Uint8Array(buf).reduce((d,b)=>d+String.fromCharCode(b),''));
+    doc.addFileToVFS('Roboto.ttf',b64);doc.addFont('Roboto.ttf','Roboto','normal');doc.setFont('Roboto');
+  }catch(e){}
+  const pName=document.getElementById('pName').value||'Без име';
+  const pDate=document.getElementById('pDate').value||'';
+  const d=GKD;
+  const pLen=d.pLen?d.pLen.toFixed(2):'3.00';
+  const bL=d.bSizeTxt?`${d.bSizeTxt}×${d.bThick}мм`:'';
+  doc.setFillColor(217,164,65);doc.rect(0,0,210,12,'F');
+  doc.setFontSize(9);doc.setTextColor(15,23,42);
+  doc.text('ivanov-remonti.com',14,8);
+  doc.text('0877 810 418',210-14,8,{align:'right'});
+  doc.setFontSize(16);doc.setTextColor(217,164,65);doc.text('Калкулация ГК + Шпакловка',14,22);
+  doc.setFontSize(10);doc.setTextColor(80,80,80);
+  doc.text('Обект: '+pName,14,30);doc.text('Дата: '+pDate,14,35);
+  let y=42;
+  const getQ=(id,raw)=>ovr[id]!==undefined?ovr[id]:Math.ceil(raw||0);
+  const getPkg=(id,qty)=>{const cfg=PKG[id];if(!cfg||cfg.ps<=0||qty<=0) return '';const n=Math.ceil(qty/cfg.ps);return `${n} ${n===1?cfg.pu:cfg.pp} ${cfg.sz}`.trim();};
+  const getRaw=(id,rawCalc,unit)=>{if(rawCalc===undefined) return '';return ovr[id]!==undefined?`${ovr[id]} ${unit}`:`${Math.round(rawCalc)} ${unit}`;};
+  const makePDFTable=(title,positions,matRows,startY)=>{
+    let ly=startY;
+    if(positions&&positions.length>0){
+      doc.setFontSize(11);doc.setTextColor(217,164,65);doc.text(title+' – Позиции',14,ly);ly+=5;
+      doc.autoTable({startY:ly,head:[['Позиция','Площ']],body:positions.map(p=>[p.name,p.area+' м²'+(p.layers>1?` × ${p.layers} слоя`:'')+(p.svc?` (${p.svc})`:'')]),styles:{font:'Roboto',fontSize:9,cellPadding:2},headStyles:{fillColor:[30,41,59],textColor:[217,164,65],fontStyle:'bold'},alternateRowStyles:{fillColor:[248,250,252]},columnStyles:{1:{halign:'right',cellWidth:50}}});
+      ly=doc.lastAutoTable.finalY+6;
+    }
+    if(matRows.length>0){
+      doc.autoTable({startY:ly,head:[['Материал','Опаковки','Количество']],body:matRows,styles:{font:'Roboto',fontSize:10,cellPadding:3},headStyles:{fillColor:[217,164,65],textColor:[15,23,42],fontStyle:'bold'},alternateRowStyles:{fillColor:[248,250,252]},columnStyles:{1:{halign:'right',fontStyle:'bold'},2:{halign:'right',textColor:[130,130,130],cellWidth:35}}});
+      ly=doc.lastAutoTable.finalY+8;
+    }
+    return ly;
+  };
+  // GK
+  if(d.boardArea>0){
+    const show={board:document.getElementById('mBoard').checked,profile:document.getElementById('mProfile').checked,hanger:document.getElementById('mHanger').checked,button:document.getElementById('mButton').checked,screws:document.getElementById('mScrews').checked,dowel:document.getElementById('mDowel').checked,joint:document.getElementById('mJoint').checked,finish:document.getElementById('mFinish').checked,tape:document.getElementById('mTape').checked,ins:document.getElementById('mIns').checked,primer:document.getElementById('mPrimer').checked,glue:document.getElementById('mGlue').checked,foam:document.getElementById('mFoam').checked};
+    const rows=[];
+    const addSec=(label,items)=>{const f=items.filter(i=>i&&i[2]>0);if(!f.length) return;rows.push([{content:label,colSpan:3,styles:{fillColor:[30,41,59],textColor:[217,164,65],fontStyle:'bold'}}]);f.forEach(([nm,id,qty,unit,rawCalc])=>{const pkg=getPkg(id,qty);rows.push([nm,pkg||`${qty} ${unit}`,rawCalc!==undefined?getRaw(id,rawCalc,unit):'']);});};
+    if(show.board) addSec('ПЛОСКОСТИ',[[`ГК Стандартен ${bL}`,'board_std',getQ('board_std',d.board_std),'бр'],...(d.hasGreen?[[`ГК Зелен ${bL}`,'board_grn',getQ('board_grn',d.board_grn),'бр']]:[] )]);
+    if(show.profile||show.hanger||show.button||show.dowel) addSec('КОНСТРУКЦИЯ',[...(show.profile?[[`UD × ${pLen}м`,'prof_ud',getQ('prof_ud',d.prof_ud),'бр']]:[] ),...(show.profile?[[`CD × ${pLen}м`,'prof_cd',getQ('prof_cd',d.prof_cd),'бр']]:[] ),...(show.hanger?[['Окачвачи','hangers',getQ('hangers',d.hangers),'бр']]:[] ),...(show.button?[['Копчета','buttons',getQ('buttons',d.buttons),'бр']]:[] ),...(show.dowel?[['Дюбели','dowels',getQ('dowels',d.dowels),'бр']]:[] )]);
+    if(show.screws) addSec('КРЕПЕЖИ',[['Винтове','screws',getQ('screws',d.screws),'бр']]);
+    if(show.joint||show.finish||show.tape||show.primer) addSec('ФИНИШ',[...(show.joint?[['Фугираща смес','joint',getQ('joint',d.joint),'кг',d.joint_r]]:[] ),...(show.finish?[['Шпакловка (фина)','finish',getQ('finish',d.finish),'кг',d.finish_r]]:[] ),...(show.tape?[['Лента','tape',getQ('tape',d.tape),'м',d.tape_r]]:[] ),...(show.primer?[['Грунд','primer',getQ('primer',d.primer),'л',d.primer_r]]:[] )]);
+    if(show.ins||show.glue||show.foam) addSec('ДОПЪЛНИТЕЛНИ',[...(show.ins&&d.ins>0?[['Изолация','ins',getQ('ins',d.ins),'м²']]:[] ),...(show.glue&&d.glue>0?[['Лепило','glue',getQ('glue',d.glue),'кг',d.glue_r]]:[] ),...(show.foam&&d.foam>0?[['Монтажна пяна (750мл)','foam',getQ('foam',d.foam),'бр',d.foam_r]]:[] )]);
+    y=makePDFTable('ГИПСОКАРТОН',d.positions,rows,y);
+  }
+  // Putty
+  if(PD.hasAny){
+    const pRows=[];
+    const addPS=(label,items)=>{const f=items.filter(i=>i&&i[2]>0);if(!f.length) return;pRows.push([{content:label,colSpan:3,styles:{fillColor:[30,41,59],textColor:[217,164,65],fontStyle:'bold'}}]);f.forEach(([nm,id,qty,unit,rawCalc])=>{const pkg=getPkg(id,qty);pRows.push([nm,pkg||`${qty} ${unit}`,rawCalc!==undefined?getRaw(id,rawCalc,unit):'']);});};
+    if(PD.osnovna>0) addPS('ОСНОВНА МАЗИЛКА',[['Основна мазилка','p_osnovna',getQ('p_osnovna',PD.osnovna),'кг',PD.osnovna_r]]);
+    if(PD.gipsova>0) addPS('ГИПСОВА ШПАКЛОВКА',[['Гипсова шпакловка','p_gipsova',getQ('p_gipsova',PD.gipsova),'кг',PD.gipsova_r],...(PD.gipsova_mesh>0?[['Армираща мрежа','p_mreja',getQ('p_mreja',PD.gipsova_mesh),'м²']]:[] )]);
+    if(PD.fina>0) addPS('ФИНА ШПАКЛОВКА',[['Фина шпакловка','p_fina',getQ('p_fina',PD.fina),'кг',PD.fina_r]]);
+    if(PD.fugi>0) addPS('ФУГИ',[['Фуги','p_fugi',getQ('p_fugi',PD.fugi),'кг',PD.fugi_r]]);
+    // Build positions table for PDF — per room, each wall separate
+    const posBody=[];
+    let pdfTotalCeil=0,pdfTotalWall=0;
+    if((PD.puttyRooms||[]).length>0){
+      PD.puttyRooms.forEach(rm=>{
+        if(PD.puttyRooms.length>1) posBody.push([{content:rm.name,colSpan:3,styles:{fillColor:[30,41,59],textColor:[217,164,65],fontStyle:'bold'}}]);
+        rm.positions.forEach(p=>{posBody.push([p.label, p.area.toFixed(1)+' м²', p.svcs.join(' + ')]);});
+        pdfTotalCeil+=rm.ceilM2;pdfTotalWall+=rm.wallM2;
+      });
+      // Always show totals
+      posBody.push([{content:'Тавани общо',styles:{fontStyle:'bold'}},{content:pdfTotalCeil.toFixed(1)+' м²',styles:{halign:'right',fontStyle:'bold'}},{content:''}]);
+      posBody.push([{content:'Стени общо',styles:{fontStyle:'bold'}},{content:pdfTotalWall.toFixed(1)+' м²',styles:{halign:'right',fontStyle:'bold'}},{content:''}]);
+      posBody.push([{content:'ОБЩО',styles:{fontStyle:'bold',fillColor:[217,164,65],textColor:[15,23,42]}},{content:(pdfTotalCeil+pdfTotalWall).toFixed(1)+' м²',styles:{halign:'right',fontStyle:'bold',fillColor:[217,164,65],textColor:[15,23,42]}},{content:'',styles:{fillColor:[217,164,65]}}]);
+    }
+    let ly=y;
+    if(posBody.length>0){
+      doc.setFontSize(11);doc.setTextColor(217,164,65);doc.text('ШПАКЛОВКА – Позиции',14,ly);ly+=5;
+      doc.autoTable({startY:ly,head:[['Позиция','м²','Услуги']],body:posBody,styles:{font:'Roboto',fontSize:9,cellPadding:2},headStyles:{fillColor:[30,41,59],textColor:[217,164,65],fontStyle:'bold'},alternateRowStyles:{fillColor:[248,250,252]},columnStyles:{1:{halign:'right',cellWidth:24},2:{cellWidth:70}}});
+      ly=doc.lastAutoTable.finalY+6;
+    }
+    if(pRows.length>0){
+      doc.setFontSize(11);doc.setTextColor(217,164,65);doc.text('ШПАКЛОВКА – Материали',14,ly);ly+=5;
+      doc.autoTable({startY:ly,head:[['Материал','Опаковки','Количество']],body:pRows,styles:{font:'Roboto',fontSize:10,cellPadding:3},headStyles:{fillColor:[217,164,65],textColor:[15,23,42],fontStyle:'bold'},alternateRowStyles:{fillColor:[248,250,252]},columnStyles:{1:{halign:'right',fontStyle:'bold'},2:{halign:'right',textColor:[130,130,130],cellWidth:35}}});
+      ly=doc.lastAutoTable.finalY+8;
+    }
+    y=ly;
+  }
+  doc.setFontSize(8);doc.setTextColor(150,150,150);doc.text('* заложен отпадък на плоскости: 10%',14,y);
+  const pageCount=doc.getNumberOfPages();
+  for(let pi=1;pi<=pageCount;pi++){
+    doc.setPage(pi);
+    const ph=doc.internal.pageSize.getHeight();
+    doc.setFillColor(30,41,59);doc.rect(0,ph-10,210,10,'F');
+    doc.setFontSize(7);doc.setTextColor(148,163,184);
+    doc.text('ivanov-remonti.com',14,ph-3.5);
+    doc.text('0877 810 418',210-14,ph-3.5,{align:'right'});
+    doc.text('str. '+pi+' / '+pageCount,105,ph-3.5,{align:'center'});
+  }
+  doc.save('smetka_'+pName.replace(/\s+/g,'_')+'.pdf');
+}
+
+function sendToOffer(){
+  const d = GKD, p = PD;
+  const data = {
+    project: document.getElementById('pName').value || '',
+    date: document.getElementById('pDate').value || '',
+    gk_ceil_m2:  d.boardArea > 0 ? parseFloat(d.tArea) : 0,
+    gk_wall_m2:  0,
+    gk_part_m2:  0,
+    putty_osnovna_m2: 0,
+    putty_gipsova_m2: 0,
+    putty_fina_m2:    0,
+    putty_fugi_m2:    0,
+  };
+  // GK wall/partition breakdown
+  document.querySelectorAll('#roomsContainer .room').forEach(r => {
+    if(r.dataset.kind === 'part'){
+      const L = parseFloat(r.querySelector('.pLen2').value)||0;
+      const H = parseFloat(r.querySelector('.pHgt').value)||0;
+      data.gk_part_m2 += L*H*2;
+    } else if(r.dataset.kind === 'room'){
+      const rid = r.id.replace('r-','');
+      const wrap = document.getElementById('gkWrap-'+rid);
+      if(wrap) wrap.querySelectorAll('.wall-btn').forEach(wb => {
+        if((wb.dataset.state||'off') !== 'off'){
+          const L = parseFloat(r.querySelector('.rLen').value)||0;
+          const W = parseFloat(r.querySelector('.rWid').value)||0;
+          const H = parseFloat(r.querySelector('.rHgt').value)||0;
+          const wl = (wb.dataset.wall==='N'||wb.dataset.wall==='S') ? L : W;
+          data.gk_wall_m2 += wl*H;
+        }
+      });
+    }
+  });
+  // Putty breakdown from PD
+  (p.puttyRooms||[]).forEach(rm => {
+    rm.positions.forEach(pos => {
+      const svcs = pos.svcs || [];
+      svcs.forEach(svcLabel => {
+        if(svcLabel.includes('Основна'))    data.putty_osnovna_m2 += pos.area;
+        else if(svcLabel.includes('Гипсова')) data.putty_gipsova_m2 += pos.area;
+        else if(svcLabel.includes('Фина'))    data.putty_fina_m2    += pos.area;
+        else if(svcLabel.includes('Фуги'))    data.putty_fugi_m2    += pos.area;
+      });
+    });
+  });
+  // Round all м²
+  Object.keys(data).forEach(k => {
+    if(typeof data[k] === 'number') data[k] = Math.round(data[k] * 10) / 10;
+  });
+  localStorage.setItem('ir_calc_data', JSON.stringify(data));
+  if(confirm('Данните са запазени. Отваряш офертата?')) window.location.href = 'offer.html';
+}
+
+function resetAll(){if(confirm('Нов проект?'))location.reload();}
+window.onload=()=>{document.getElementById('pDate').valueAsDate=new Date();addRoom();};
+</script>
+</body>
+</html>
