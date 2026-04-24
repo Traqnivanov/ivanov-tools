@@ -65,23 +65,28 @@ function cdProfiles(cols,colLen,pLen){
 // Cutting breakdown: given pieces[], show how they pack into pLen profiles
 function cuttingPlan(totalM,pLen){
   const n=Math.ceil((totalM/pLen)*1.1);
-  const used=totalM/n; // avg used per profile
   const plans=[];
-  let remaining=totalM;
+  let remaining=Math.round(totalM*1000)/1000;
   for(let i=0;i<n;i++){
+    if(remaining<=0.001){plans.push({used:0,waste:pLen,fira:true});continue;}
     const u=Math.min(pLen,Math.round(remaining*100)/100);
     const w=Math.round((pLen-u)*100)/100;
-    plans.push({used:u,waste:w});
-    remaining-=u;
-    if(remaining<=0) break;
+    plans.push({used:u,waste:w,fira:false});
+    remaining=Math.round((remaining-u)*1000)/1000;
   }
-  // pad to n
-  while(plans.length<n) plans.push({used:0,waste:pLen});
   return plans;
 }
 
 function renderCutBars(plans,pLen,color){
   return plans.map((p,i)=>{
+    if(p.fira) return `<div class="cut-row">
+      <div class="cut-num">${i+1}</div>
+      <div class="cut-bar">
+        <div class="cut-waste" style="width:100%;background:#334155;opacity:0.5;border-radius:4px;display:flex;align-items:center;padding-left:6px;">
+          <span style="font-size:0.65rem;color:#64748b;">фира буфер</span>
+        </div>
+      </div>
+    </div>`;
     const usedPct=(p.used/pLen*100).toFixed(1);
     const wastePct=(p.waste/pLen*100).toFixed(1);
     return `<div class="cut-row">
@@ -91,7 +96,7 @@ function renderCutBars(plans,pLen,color){
           <span class="cut-used-label" style="color:#fff;">${p.used>0.15?p.used.toFixed(2)+'м':''}</span>
         </div>
         ${p.waste>0.05?`<div class="cut-waste" style="width:${wastePct}%;background:${color};">
-          <span class="cut-waste-label" style="color:#94a3b8;">${p.waste>0.2?p.waste.toFixed(2)+'м':''}</span>
+          <span class="cut-waste-label" style="color:#94a3b8;">${p.waste>0.2?p.waste.toFixed(2)+'м ост.':''}</span>
         </div>`:''}
       </div>
     </div>`;
@@ -186,8 +191,8 @@ function svgWall(wl,H,pLen,label){
 function renderSurface(label,svgHtml,udM,cdM,cdCols,colLen,pLen){
   const udProf=udProfiles(udM,pLen);
   const cdProf=cdProfiles(cdCols,colLen,pLen);
-  const udPlan=cuttingPlan(udM*1.1,pLen);
-  const cdPlan=cuttingPlan(cdCols*colLen*1.1,pLen);
+  const udPlan=cuttingPlan(udM,pLen);
+  const cdPlan=cuttingPlan(cdCols*colLen,pLen);
 
   return `<div class="surface-block">
     <div class="surface-title">${label}</div>
