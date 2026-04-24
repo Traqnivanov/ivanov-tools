@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ivanov Remonti — Офис</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #0f172a;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 32px;
+}
+.logo {
+  text-align: center;
+}
+.logo-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #d9a441;
+  letter-spacing: 0.5px;
+}
+.logo-sub {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+.cards {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+  max-width: 600px;
+}
+.card {
+  flex: 1;
+  min-width: 220px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 18px;
+  padding: 28px 24px;
+  text-align: center;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.card:hover {
+  border-color: #d9a441;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(217,164,65,0.15);
+}
+.card-icon {
+  font-size: 2.5rem;
+}
+.card-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+.card-desc {
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.5;
+}
+.card-btn {
+  margin-top: 4px;
+  background: linear-gradient(135deg, #d9a441, #b8862d);
+  color: #0f172a;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+}
+.footer {
+  font-size: 0.75rem;
+  color: #334155;
+}
+</style>
+</head>
+<body>
+
+<div class="logo">
+  <div class="logo-title">🏗️ Ivanov Remonti</div>
+  <div class="logo-sub">Офис инструменти</div>
+</div>
+
+<div class="cards">
+  <a class="card" href="calculator.html">
+    <div class="card-icon">📐</div>
+    <div class="card-title">Калкулатор</div>
+    <div class="card-desc">Изчисли материали за ГК и шпакловка по стаи и размери</div>
+    <div class="card-btn">Отвори →</div>
+  </a>
+
+  <a class="card" href="offer.html">
+    <div class="card-icon">📋</div>
+    <div class="card-title">Оферта</div>
+    <div class="card-desc">Създай оферта за клиент и генерирай PDF</div>
+    <div class="card-btn">Отвори →</div>
+  </a>
+</div>
+
+<div class="footer">ivanov-remonti.com · 0877 810 418</div>
+
+</body>
+</html>
