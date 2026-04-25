@@ -330,6 +330,7 @@ tr.overridden td.col-pkg .n { color:#f59e0b; }
     </div>
     <div class="action-row" id="actionRow" style="display:none;flex-wrap:wrap;gap:6px;align-items:center;">
       <button onclick="pdf()">📤 PDF</button>
+      <label style="display:flex;align-items:center;gap:5px;font-size:0.78rem;color:#64748b;cursor:pointer;font-weight:normal;background:none;box-shadow:none;padding:0;"><input type="checkbox" id="showLaborInPDF" style="width:auto;accent-color:#3b82f6;"> Труд в PDF</label>
       <button onclick="sendToOffer()" style="background:linear-gradient(135deg,#16a34a,#15803d);">📋 Прати в оферта</button>
       <button onclick="openProfiles()" style="background:linear-gradient(135deg,#1d4ed8,#1e40af);">📐 Профили</button>
       <button class="sec" onclick="clearOvr();renderResults()">↺ Корекции</button>
@@ -1055,7 +1056,7 @@ function removeEl(id){document.getElementById(id)?.remove();clearOvr();calcAll()
 
 // ═══ GK CALCULATION ═══
 function calcGK(){
-  let tArea=0,boardArea=0,ud=0,cd=0,hangers=0,screws=0,dowel=0,glue=0,ins=0,foam=0;
+  let tArea=0,ceilArea=0,wallArea=0,partArea=0,boardArea=0,ud=0,cd=0,hangers=0,screws=0,dowel=0,glue=0,ins=0,foam=0;
   const pLen=parseFloat(document.getElementById('pLen').value);
   const positions=[];
   document.querySelectorAll('#roomsContainer .room').forEach(r=>{
@@ -1078,7 +1079,7 @@ function calcGK(){
         const cdCeil=Math.ceil((colsC*longC/pLen)*1.1);
         boardArea+=a;ud+=udCeil;cd+=cdCeil;
         hangers+=a*2.8;screws+=a*15;dowel+=p/0.7;dowel+=(a*2.8)*2;
-        ins+=a;tArea+=a;positions.push({name:name+' – Таван',area:a.toFixed(1)});
+        ins+=a;tArea+=a;ceilArea+=a;positions.push({name:name+' – Таван',area:a.toFixed(1)});
       }
       r.querySelectorAll('#gkWrap-'+r.id.replace('r-','')+' .wall-btn').forEach(wb=>{
         const s=wb.dataset.state||'off';if(s==='off') return;
@@ -1092,7 +1093,7 @@ function calcGK(){
           const remW=wl-regW*0.6;
           const colsW=remW>=0.7?regW+1:regW;
           const cdWall=Math.ceil((colsW*H/pLen)*1.1);
-          boardArea+=a;ud+=udWall;cd+=cdWall;hangers+=a*1.5;screws+=a*15;dowel+=Math.ceil(((2*wl+2*H)/0.7)*1.1);ins+=a;tArea+=a;
+          boardArea+=a;ud+=udWall;cd+=cdWall;hangers+=a*1.5;screws+=a*15;dowel+=Math.ceil(((2*wl+2*H)/0.7)*1.1);ins+=a;tArea+=a;wallArea+=a;
           positions.push({name:name+` – Предстена (${wl}×${H}м)`,area:a.toFixed(1)});
         }
         else{boardArea+=a;glue+=a*4;foam+=a/10;tArea+=a;positions.push({name:name+` – Лепене (${wl}×${H}м)`,area:a.toFixed(1)});}
@@ -1109,7 +1110,7 @@ function calcGK(){
       const remP=L-regP*0.6;
       const colsP=remP>=0.7?regP+1:regP;
       const cdPart=Math.ceil((colsP*H/pLen)*1.1);
-      boardArea+=a*2;ud+=udPart;cd+=cdPart;screws+=(a*2)*15;dowel+=Math.ceil((2*L/0.7)*1.1);ins+=a;tArea+=a;
+      boardArea+=a*2;ud+=udPart;cd+=cdPart;screws+=(a*2)*15;dowel+=Math.ceil((2*L/0.7)*1.1);ins+=a;tArea+=a;partArea+=a;
       positions.push({name:r.querySelector('.title-input').value||'Преградна'+` (${L}×${H}м)`,area:(a*2).toFixed(1)});
     }
   });
@@ -1120,7 +1121,7 @@ function calcGK(){
   const hasGreen=document.getElementById('hasGreen').checked;
   const green=hasGreen?(parseInt(document.getElementById('greenManual').value)||0):0;
   const bSizeEl=document.getElementById('bSize');
-  GKD={tArea,boardArea,totalBoards,board_std:Math.max(0,totalBoards-green),board_grn:green,
+  GKD={tArea,ceilArea,wallArea,partArea,boardArea,totalBoards,board_std:Math.max(0,totalBoards-green),board_grn:green,
     prof_ud:Math.ceil(ud),prof_cd:Math.ceil(cd),hangers:Math.ceil(hangers),buttons:Math.ceil(buttons),
     screws:Math.ceil(screws),dowels:Math.ceil(dowel),joint:Math.ceil(joint),finish:Math.ceil(finish),
     tape:Math.ceil(tape),primer:Math.ceil(primer),ins:Math.ceil(ins),glue:Math.ceil(glue),
@@ -1163,7 +1164,7 @@ function calcPutty(){
         accumPutty(svc_key,a,1,svc.mesh);
         usedSvcs.add(svc_key);
         ceilSvcs.push(svc.label);
-        puttyPositions.push({name:name+' – Таван',area:a.toFixed(1),svc:svc.label,layers:1});
+        puttyPositions.push({name:name+' – Таван',area:a.toFixed(1),svc:svc.label,svcKey:svc_key,layers:1});
       });
       if(ceilSvcs.length) roomPositions.push({label:'Таван',area:a,svcs:ceilSvcs});
     }
@@ -1186,7 +1187,7 @@ function calcPutty(){
         accumPutty(svc_key,a,layers,svc.mesh);
         usedSvcs.add(svc_key);
         const wallSvcs=[svc.label];
-        puttyPositions.push({name:name+' – '+wallName+` (${wallLen}×${H}м)`,area:a.toFixed(1),svc:svc.label,layers,isWall:true});
+        puttyPositions.push({name:name+' – '+wallName+` (${wallLen}×${H}м)`,area:a.toFixed(1),svc:svc.label,svcKey:svc_key,layers,isWall:true});
         // Extra stack layers
         wrap.querySelectorAll(`.wall-extra[data-wall="${wall}"]`).forEach(ex=>{
           const exSvc_key=ex.dataset.pservice||'off';
@@ -1196,7 +1197,7 @@ function calcPutty(){
           accumPutty(exSvc_key,a,exLayers,exSvc.mesh);
           usedSvcs.add(exSvc_key);
           wallSvcs.push(exSvc.label);
-          puttyPositions.push({name:name+' – '+wallName+` (${wallLen}×${H}м)`,area:a.toFixed(1),svc:exSvc.label,layers:exLayers,isWall:true,extra:true});
+          puttyPositions.push({name:name+' – '+wallName+` (${wallLen}×${H}М)`,area:a.toFixed(1),svc:exSvc.label,svcKey:exSvc_key,layers:exLayers,isWall:true,extra:true});
         });
         roomPositions.push({label:wallName+` (${wallLen}×${H}м)`,area:a,svcs:wallSvcs});
       });
@@ -1530,6 +1531,44 @@ function renderResults(){
     </div>`;
   }
 
+  // ── Информативна секция ТРУД ──
+  const laborRows=[];
+  if(GKD.ceilArea>0)  laborRows.push({name:'Гипсокартон – Прав таван',       m2:GKD.ceilArea, eur:15.00});
+  if(GKD.wallArea>0)  laborRows.push({name:'Гипсокартон – Предстенна обшивка',m2:GKD.wallArea, eur:14.00});
+  if(GKD.partArea>0)  laborRows.push({name:'Гипсокартон – Преградна стена',   m2:GKD.partArea, eur:25.00});
+  // Лепене — изчисляваме от positions
+  const glueArea=(GKD.positions||[]).filter(p=>p.name&&p.name.includes('Лепене')).reduce((s,p)=>s+parseFloat(p.area||0),0);
+  if(glueArea>0) laborRows.push({name:'Гипсокартон – Лепене', m2:glueArea, eur:10.00});
+  // Шпакловка
+  const puttyMap={osnovna:{name:'Основна укрепваща шпакловка',eur:8.18},gipsova:{name:'Гипсова шпакловка',eur:6.14},gipsova_mesh:{name:'Гипсова шп. + мрежа',eur:6.14},fina:{name:'Фина шпакловка',eur:5.50},fugi:{name:'Шпакловка на фуги',eur:4.09}};
+  if(PD.hasAny){
+    ['osnovna','gipsova','gipsova_mesh','fina','fugi'].forEach(k=>{
+      const m2=(PD.puttyPositions||[]).filter(p=>p.svcKey===k).reduce((s,p)=>s+parseFloat(p.area||0),0);
+      if(m2>0) laborRows.push({name:puttyMap[k].name, m2, eur:puttyMap[k].eur});
+    });
+  }
+  if(laborRows.length>0){
+    const grandLabor=laborRows.reduce((s,r)=>s+r.m2*r.eur,0);
+    const laborHTML=laborRows.map(r=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #1e293b;">
+        <span style="font-size:0.78rem;color:#94a3b8;">${r.name}</span>
+        <span style="font-size:0.78rem;color:#cbd5e1;white-space:nowrap;margin-left:8px;">
+          <span style="color:#64748b;">${r.m2.toFixed(1)} м² × ${r.eur.toFixed(2)}€ =</span>
+          <span style="color:#d9a441;font-weight:700;"> ${(r.m2*r.eur).toFixed(2)}€</span>
+        </span>
+      </div>`).join('');
+    html+=`<div style="background:#0c1a2e;border:1px solid #1e3a5f;border-radius:10px;padding:12px 14px;margin-top:12px;">
+      <div style="font-size:0.72rem;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">🔨 ТРУД (информативно)</div>
+      ${laborHTML}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid #1e3a5f;">
+        <span style="font-size:0.82rem;color:#60a5fa;font-weight:700;">Общо труд</span>
+        <span style="font-size:1.0rem;font-weight:800;color:#60a5fa;">${grandLabor.toFixed(2)} €
+          <span style="font-size:0.72rem;color:#64748b;margin-left:4px;">(${(grandLabor*EUR2LV).toFixed(2)} лв)</span>
+        </span>
+      </div>
+    </div>`;
+  }
+
   res.innerHTML=html;
 }
 
@@ -1701,6 +1740,41 @@ async function pdf(){
     doc.text('0877 810 418',210-14,ph-3.5,{align:'right'});
     doc.text('str. '+pi+' / '+pageCount,105,ph-3.5,{align:'center'});
   }
+  // ── Труд в PDF (ако е отметнато) ──
+  if(document.getElementById('showLaborInPDF')?.checked){
+    doc.addPage();
+    let ly=20;
+    doc.setFillColor(15,23,42);doc.rect(0,0,210,297,'F');
+    doc.setFont('Roboto','bold');doc.setFontSize(10);doc.setTextColor(96,165,250);
+    doc.text('ТРУД - информативно',14,ly); ly+=10;
+    const laborRows=[];
+    if(GKD.ceilArea>0)  laborRows.push({name:'Гипсокартон – Прав таван',        m2:GKD.ceilArea, eur:15.00});
+    if(GKD.wallArea>0)  laborRows.push({name:'Гипсокартон – Предстенна обшивка', m2:GKD.wallArea, eur:14.00});
+    if(GKD.partArea>0)  laborRows.push({name:'Гипсокартон – Преградна стена',    m2:GKD.partArea, eur:25.00});
+    const glueArea=(GKD.positions||[]).filter(p=>p.name&&p.name.includes('Лепене')).reduce((s,p)=>s+parseFloat(p.area||0),0);
+    if(glueArea>0) laborRows.push({name:'Гипсокартон – Лепене', m2:glueArea, eur:10.00});
+    const puttyMap={osnovna:{name:'Основна укрепваща шпакловка',eur:8.18},gipsova:{name:'Гипсова шпакловка',eur:6.14},gipsova_mesh:{name:'Гипсова шп. + мрежа',eur:6.14},fina:{name:'Фина шпакловка',eur:5.50},fugi:{name:'Шпакловка на фуги',eur:4.09}};
+    if(PD.hasAny){
+      ['osnovna','gipsova','gipsova_mesh','fina','fugi'].forEach(k=>{
+        const m2=(PD.puttyPositions||[]).filter(p=>p.svcKey===k).reduce((s,p)=>s+parseFloat(p.area||0),0);
+        if(m2>0) laborRows.push({name:puttyMap[k].name, m2, eur:puttyMap[k].eur});
+      });
+    }
+    if(laborRows.length>0){
+      const grandLabor=laborRows.reduce((s,r)=>s+r.m2*r.eur,0);
+      doc.autoTable({startY:ly,
+        head:[['Услуга','м²','€/м²','Общо €']],
+        body:laborRows.map(r=>[r.name,r.m2.toFixed(1),r.eur.toFixed(2),(r.m2*r.eur).toFixed(2)]),
+        styles:{font:'Roboto',fontSize:9,cellPadding:3,textColor:[203,213,225],fillColor:[15,23,42]},
+        headStyles:{fillColor:[30,58,138],textColor:[147,197,253],fontStyle:'bold'},
+        alternateRowStyles:{fillColor:[22,33,55]},
+        columnStyles:{1:{halign:'right'},2:{halign:'right'},3:{halign:'right',fontStyle:'bold',textColor:[96,165,250]}},
+        foot:[[{content:'ОБЩО ТРУД',colSpan:3,styles:{fontStyle:'bold',textColor:[96,165,250],fillColor:[15,23,42]}},{content:grandLabor.toFixed(2)+' €',styles:{fontStyle:'bold',textColor:[96,165,250],fillColor:[15,23,42],halign:'right'}}]],
+        showFoot:'lastPage',margin:{left:14,right:14},
+      });
+    }
+  }
+
   doc.save(pFileName+'.pdf');
 }
 
@@ -1708,56 +1782,63 @@ function sendToOffer(){
   const data={
     project: document.getElementById('pName').value||'',
     date:    document.getElementById('pDate').value||'',
-    gk_ceil_m2:0, gk_wall_m2:0, gk_part_m2:0,
-    putty_osnovna_m2:0, putty_gipsova_m2:0,
-    putty_fina_m2:0, putty_fugi_m2:0,
   };
-  // GK м²
-  if(GKD){
-    data.gk_ceil_m2 = GKD.tArea||0;
-    document.querySelectorAll('.wall-btn[data-state]').forEach(wb=>{
-      if((wb.dataset.state||'off')==='off') return;
-      const r=wb.closest('.room-block');
-      if(!r) return;
-      const L=parseFloat(r.querySelector('.rLen')?.value)||0;
-      const W=parseFloat(r.querySelector('.rWid')?.value)||0;
-      const H=parseFloat(r.querySelector('.rHgt')?.value)||0;
-      const wl=(wb.dataset.wall==='N'||wb.dataset.wall==='S')?L:W;
-      data.gk_wall_m2+=wl*H;
+
+  // ── Цени на услугите (от services.js) ──
+  const SVC_PRICES={
+    ceil:  {name:'Гипсокартон – Прав таван',        eur:15.00, unit:'м²'},
+    wall:  {name:'Гипсокартон – Предстенна обшивка', eur:14.00, unit:'м²'},
+    glue:  {name:'Гипсокартон – Лепене',             eur:10.00, unit:'м²'},
+    part:  {name:'Гипсокартон – Преградна стена',    eur:25.00, unit:'м²'},
+    osnovna:      {name:'Основна укрепваща шпакловка', eur:8.18, unit:'м²'},
+    gipsova:      {name:'Гипсова шпакловка',           eur:6.14, unit:'м²'},
+    gipsova_mesh: {name:'Гипсова шпакловка + мрежа',  eur:6.14, unit:'м²'},
+    fina:         {name:'Фина шпакловка',              eur:5.50, unit:'м²'},
+    fugi:         {name:'Шпакловка на фуги',           eur:4.09, unit:'м²'},
+  };
+
+  // ── ГК услуги — събираме м² по тип ──
+  const gkTotals={ceil:0, wall:0, glue:0, part:0};
+  if(GKD && GKD.positions){
+    GKD.positions.forEach(p=>{
+      const a=parseFloat(p.area)||0;
+      if(p.name.includes('Таван'))      gkTotals.ceil+=a;
+      else if(p.name.includes('Предстена')) gkTotals.wall+=a;
+      else if(p.name.includes('Лепене'))    gkTotals.glue+=a;
+      else if(p.name.includes('Преградна')) gkTotals.part+=a;
     });
   }
-  // Putty м² по услуга
-  document.querySelectorAll('.wall-btn[data-pservice]').forEach(wb=>{
-    const svc=wb.dataset.pservice||'off';
-    if(svc==='off') return;
-    const r=wb.closest('.putty-room');
-    if(!r) return;
-    const L=parseFloat(r.querySelector('.pL')?.value)||0;
-    const W=parseFloat(r.querySelector('.pW')?.value)||0;
-    const H=parseFloat(r.querySelector('.pH')?.value)||0;
-    const wl=(wb.dataset.wall==='N'||wb.dataset.wall==='S')?L:W;
-    const m2=wl*H;
-    if(svc==='osnovna')     data.putty_osnovna_m2+=m2;
-    else if(svc==='gipsova')     data.putty_gipsova_m2+=m2;
-    else if(svc==='fina')        data.putty_fina_m2+=m2;
-    else if(svc==='fugi')        data.putty_fugi_m2+=m2;
+
+  // ── Шпакловка — събираме м² по тип ──
+  const puttyTotals={osnovna:0, gipsova:0, gipsova_mesh:0, fina:0, fugi:0};
+  if(PD && PD.puttyPositions){
+    PD.puttyPositions.forEach(p=>{
+      const a=parseFloat(p.area)||0;
+      const svc=p.svcKey||'';
+      if(svc==='osnovna')      puttyTotals.osnovna+=a;
+      else if(svc==='gipsova') puttyTotals.gipsova+=a;
+      else if(svc==='gipsova_mesh') puttyTotals.gipsova_mesh+=a;
+      else if(svc==='fina')    puttyTotals.fina+=a;
+      else if(svc==='fugi')    puttyTotals.fugi+=a;
+    });
+  }
+
+  // ── Строим labor_rows ──
+  const labor_rows=[];
+  Object.entries(gkTotals).forEach(([type,m2])=>{
+    if(m2>0){
+      const s=SVC_PRICES[type];
+      labor_rows.push({name:s.name, qty:Math.round(m2*10)/10, unit:s.unit, price:s.eur});
+    }
   });
-  // Тавани шпакловка
-  document.querySelectorAll('[id^="pceil-"]').forEach(c=>{
-    const svc=c.dataset.pservice||'off';
-    if(svc==='off') return;
-    const r=c.closest('.putty-room');
-    if(!r) return;
-    const L=parseFloat(r.querySelector('.pL')?.value)||0;
-    const W=parseFloat(r.querySelector('.pW')?.value)||0;
-    const m2=L*W;
-    if(svc==='osnovna')     data.putty_osnovna_m2+=m2;
-    else if(svc==='gipsova')     data.putty_gipsova_m2+=m2;
-    else if(svc==='fina')        data.putty_fina_m2+=m2;
-    else if(svc==='fugi')        data.putty_fugi_m2+=m2;
+  Object.entries(puttyTotals).forEach(([type,m2])=>{
+    if(m2>0){
+      const s=SVC_PRICES[type];
+      labor_rows.push({name:s.name, qty:Math.round(m2*10)/10, unit:s.unit, price:s.eur});
+    }
   });
-  // Закръгляме
-  Object.keys(data).forEach(k=>{if(typeof data[k]==='number') data[k]=Math.round(data[k]*10)/10;});
+
+  data.labor_rows = labor_rows;
 
   // ── Материали: събираме всички с количество и цена ──
   const show={
