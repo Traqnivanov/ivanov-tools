@@ -152,7 +152,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#0f172a;color:#e2e8f0;mi
   <h1>🏠 Помещение</h1>
   <label>Проект <input type="text" id="pName" placeholder="Обект..."></label>
   <label>Дата <input type="date" id="pDate"></label>
-  <label>Профил <select id="pLen"><option value="3">3м</option><option value="4">4м</option></select></label>
+  <label>Профил <select id="pLen" onchange="calcAll()"><option value="3">3м</option><option value="4">4м</option></select></label>
 </div>
 
 <div class="layout">
@@ -161,6 +161,32 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#0f172a;color:#e2e8f0;mi
     <div style="display:flex;gap:8px;">
       <div class="add-room-btn" style="flex:1;" onclick="addRoom()">+ Помещение</div>
       <div class="add-room-btn" style="flex:1;border-color:#7c3aed;color:#7c3aed;" onclick="addPartition()">+ Преградна стена</div>
+    </div>
+    <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:12px 14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div style="font-size:0.7rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;">Допълнителни материали</div>
+        <div onclick="addExtraMat()" style="font-size:0.78rem;color:#3b82f6;cursor:pointer;padding:3px 8px;border:1px solid #3b82f6;border-radius:5px;">+ Добави</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:0.75rem;table-layout:fixed;" id="extraMatTable">
+        <colgroup>
+          <col style="width:auto;">
+          <col style="width:80px;">
+          <col style="width:55px;">
+          <col style="width:55px;">
+          <col style="width:72px;">
+          <col style="width:24px;">
+        </colgroup>
+        <thead><tr>
+          <th style="text-align:left;color:#64748b;padding:3px 4px;border-bottom:1px solid #334155;">Вид материал</th>
+          <th style="text-align:right;color:#64748b;padding:3px 4px;border-bottom:1px solid #334155;">Ед. цена</th>
+          <th style="text-align:center;color:#64748b;padding:3px 4px;border-bottom:1px solid #334155;">Ед.</th>
+          <th style="text-align:center;color:#64748b;padding:3px 4px;border-bottom:1px solid #334155;">Бр</th>
+          <th style="text-align:right;color:#64748b;padding:3px 4px;border-bottom:1px solid #334155;">Общо</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="extraMatBody"></tbody>
+      </table>
+      <div id="extraMatEmpty" style="font-size:0.75rem;color:#475569;padding:4px;">Няма добавени материали</div>
     </div>
   </div>
   <div class="spec-col" id="specCol">
@@ -248,7 +274,7 @@ const SVC={
 };
 
 const PKG={
-  board_std:{ps:0,   pu:'бр',   pp:'бр',    sz:'',         price:6.64,  src:'ГК Стандартен'},
+  board_std:{ps:0,   pu:'бр',   pp:'бр',    sz:'(1.2×2.0м)', price:6.64,  src:'ГК плоскост'},
   prof_ud:  {ps:0,   pu:'бр',   pp:'бр',    sz:'',         price:3.57,  src:'UD профил'},
   prof_cd:  {ps:0,   pu:'бр',   pp:'бр',    sz:'',         price:4.09,  src:'CD профил'},
   hangers:  {ps:0,   pu:'бр',   pp:'бр',    sz:'',         price:0.30,  src:'Окачвачи'},
@@ -265,6 +291,8 @@ const PKG={
   p_mreja:  {ps:50,  pu:'ролка',pp:'ролки', sz:'(50м²)',   price:7.66,  src:'Армираща мрежа'},
   p_fina:   {ps:20,  pu:'кофа', pp:'кофи',  sz:'(20кг)',   price:17.90, src:'Фина шпакловка'},
   p_fugi:   {ps:25,  pu:'чувал',pp:'чувала',sz:'(25кг)',   price:17.24, src:'Шпакловка фуги'},
+  gk_glue:  {ps:25,  pu:'чувал',pp:'чувала',sz:'(25кг)',   price:8.50,  src:'Лепило за ГК'},
+  gk_foam:  {ps:1,   pu:'бр',   pp:'бр',    sz:'',         price:8.70,  src:'Монтажна пяна'},
 };
 
 const PUTTY_OPTS=[
@@ -280,6 +308,7 @@ const GK_WALL_OPTS=[{val:'wall',label:'Предстенна — 14€/м²'},{va
 
 let rooms=[], rc=0;
 let activeRoom=null, activeSurf=null;
+let extraMats=[];
 
 function addPartition(){
   const id=rc++;
@@ -609,6 +638,43 @@ function removePT(roomId,surfKey,idx){
 }
 
 // ── CALC ──
+// ── EXTRA MATERIALS ──
+function addExtraMat(){
+  extraMats.push({id:Date.now(),name:'',unit:'бр',unitPrice:0,qty:1});
+  renderExtraMats();
+  calcAll();
+}
+function removeExtraMat(id){
+  extraMats=extraMats.filter(m=>m.id!==id);
+  renderExtraMats();
+  calcAll();
+}
+function updateExtraMat(id,field,val){
+  const m=extraMats.find(m=>m.id===id);
+  if(!m) return;
+  if(field==='unitPrice'||field==='qty') m[field]=parseFloat(val)||0;
+  else m[field]=val;
+  // Update only the total cell for this row, don't re-render
+  const totCell=document.getElementById(`em-tot-${id}`);
+  if(totCell) totCell.textContent=(m.unitPrice*m.qty).toFixed(2)+'€';
+  calcAll();
+}
+function renderExtraMats(){
+  const tbody=document.getElementById('extraMatBody');
+  const empty=document.getElementById('extraMatEmpty');
+  if(!extraMats.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  const inp='background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:5px;padding:4px 6px;font-size:0.78rem;box-sizing:border-box;width:100%;';
+  tbody.innerHTML=extraMats.map(m=>`<tr>
+    <td style="padding:3px 3px;"><input value="${m.name}" placeholder="Вид материал..." oninput="updateExtraMat(${m.id},'name',this.value)" style="${inp}"></td>
+    <td style="padding:3px 3px;width:80px;"><input type="number" value="${m.unitPrice||''}" placeholder="0.00" min="0" step="0.01" oninput="updateExtraMat(${m.id},'unitPrice',this.value)" style="${inp}text-align:right;"></td>
+    <td style="padding:3px 3px;width:55px;"><input value="${m.unit}" placeholder="бр" oninput="updateExtraMat(${m.id},'unit',this.value)" style="${inp}text-align:center;"></td>
+    <td style="padding:3px 3px;width:55px;"><input type="number" value="${m.qty||''}" placeholder="1" min="0" step="1" oninput="updateExtraMat(${m.id},'qty',this.value)" style="${inp}text-align:center;"></td>
+    <td style="padding:3px 6px;width:72px;text-align:right;color:#d9a441;font-weight:600;white-space:nowrap;" id="em-tot-${m.id}">${(m.unitPrice*m.qty).toFixed(2)}€</td>
+    <td style="padding:3px 2px;width:24px;text-align:center;"><button onclick="removeExtraMat(${m.id})" style="background:none;border:none;color:#475569;cursor:pointer;font-size:0.9rem;padding:0;">✕</button></td>
+  </tr>`).join('');
+}
+
 function calcAll(){
   let totalLabor=0,totalMat=0;
   const allRows=[];
@@ -684,9 +750,9 @@ function calcAll(){
           boardArea+=a; ud+=udWall; cd+=cdWall;
           hangers+=a*1.5; screws+=a*15;
           dowel+=Math.ceil(((2*wl+2*H)/0.7)*1.1);
+          dowel+=(a*1.5)*2; // 2 дюбела на окачвач
         } else if(s.gk==='glue'){
           boardArea+=a; glue+=a*4; foam+=a/10;
-          screws+=a*15;
         }
       });
     }
@@ -702,10 +768,11 @@ function calcAll(){
     const pc=cfg.ps>0?Math.ceil(qty/cfg.ps):Math.ceil(qty);
     const up=cfg.price*MARKUP;
     const tot=up*pc;
-    matRows.push({name:cfg.src,qty:pc,unit:cfg.pp+(cfg.sz?' '+cfg.sz:''),unitPrice:Math.round(up*100)/100,total:Math.round(tot*100)/100});
+    const unit=pc===1?cfg.pu:cfg.pp;
+    matRows.push({name:cfg.src,qty:pc,unit:unit+(cfg.sz?' '+cfg.sz:''),unitPrice:Math.round(up*100)/100,total:Math.round(tot*100)/100});
     return tot;
   };
-  PKG.board_std.src=`ГК Стандартен ${pLen}м`;
+  
   PKG.prof_ud.src=`UD × ${pLen}м`;
   PKG.prof_cd.src=`CD × ${pLen}м`;
   PKG.prof_uw.src=`UW × ${pLen}м`;
@@ -723,13 +790,16 @@ function calcAll(){
   if(Math.ceil(joint)>0)   totalMat+=m('joint',   Math.ceil(joint));
   if(Math.ceil(finish)>0)  totalMat+=m('finish',  Math.ceil(finish));
   if(Math.ceil(tape)>0)    totalMat+=m('tape',    Math.ceil(tape));
+  if(Math.ceil(glue)>0)   totalMat+=m('gk_glue', Math.ceil(glue));
+  if(Math.ceil(foam)>0)   totalMat+=m('gk_foam', Math.ceil(foam));
   // Точна логика от calculator.html — норми и мрежа
   let pt_osnovna=0,pt_gipsova=0,pt_gipsova_mesh=0,pt_fina=0,pt_fugi=0;
   rooms.forEach(room=>{
-    const {L,W,H,surfs}=room;
-    if(L<=0||W<=0||H<=0) return;
+    const {L,W,H,surfs,type}=room;
+    const invalid=type==='part'?(L<=0||H<=0):(L<=0||W<=0||H<=0);
+    if(invalid) return;
     Object.entries(surfs).forEach(([key,s])=>{
-      const area=surfArea(room,key);
+      const area=type==='part'?surfArea(room,key)*2:surfArea(room,key);
       s.pt.forEach(v=>{
         if(v==='osnovna')      pt_osnovna+=area*9;
         else if(v==='gipsova') pt_gipsova+=area*1.0;
@@ -744,7 +814,8 @@ function calcAll(){
     const pc=Math.ceil(kgQty/cfg.ps);
     const up=cfg.price*MARKUP;
     const tot=up*pc;
-    matRows.push({name:cfg.src,qty:pc,unit:cfg.pp+' '+cfg.sz,unitPrice:Math.round(up*100)/100,total:Math.round(tot*100)/100});
+    const unit=pc===1?cfg.pu:cfg.pp;
+    matRows.push({name:cfg.src,qty:pc,unit:unit+' '+cfg.sz,unitPrice:Math.round(up*100)/100,total:Math.round(tot*100)/100});
     return tot;
   };
   if(pt_gipsova_mesh>0) totalMat+=ptM('p_mreja', pt_gipsova_mesh);
@@ -753,11 +824,12 @@ function calcAll(){
   if(pt_fina>0)         totalMat+=ptM('p_fina',    pt_fina);
   if(pt_fugi>0)         totalMat+=ptM('p_fugi',    pt_fugi);
 
-  const grand=totalLabor+totalMat;
+  const extraTotal=extraMats.reduce((s,m)=>s+(m.unitPrice*m.qty),0);
+  const grand=totalLabor+totalMat+extraTotal;
 
   // Update footer
   document.getElementById('fLabor').textContent=totalLabor.toFixed(2)+' €';
-  document.getElementById('fMat').textContent=totalMat.toFixed(2)+' €';
+  document.getElementById('fMat').textContent=(totalMat+extraTotal).toFixed(2)+' €';
   document.getElementById('fGrand').textContent=grand.toFixed(2)+' €';
   document.getElementById('fLv').textContent=(grand*EUR2LV).toFixed(2)+' лв';
   if(grand>0) document.getElementById('fLvChip').style.display='flex';
@@ -794,17 +866,22 @@ function calcAll(){
             <td style="padding:3px 4px;text-align:right;color:#64748b;white-space:nowrap;">${r.qty} ${r.unit}</td>
             <td style="padding:3px 4px;text-align:right;color:#d9a441;font-weight:600;white-space:nowrap;">${r.total.toFixed(2)}€</td>
           </tr>`).join('')}
+          ${extraMats.filter(m=>m.name||m.unitPrice>0).map(m=>`<tr>
+            <td style="padding:3px 4px;color:#94a3b8;">${m.name||'—'}</td>
+            <td style="padding:3px 4px;text-align:right;color:#64748b;white-space:nowrap;">1 ${m.unit}</td>
+            <td style="padding:3px 4px;text-align:right;color:#d9a441;font-weight:600;white-space:nowrap;">${(m.unitPrice*m.qty).toFixed(2)}€</td>
+          </tr>`).join('')}
         </tbody>
         <tfoot><tr>
           <td colspan="2" style="padding:4px;border-top:1px solid #334155;color:#94a3b8;font-weight:700;">Общо материали</td>
-          <td style="padding:4px;border-top:1px solid #334155;text-align:right;color:#60a5fa;font-weight:700;">${totalMat.toFixed(2)}€</td>
+          <td style="padding:4px;border-top:1px solid #334155;text-align:right;color:#60a5fa;font-weight:700;">${(totalMat+extraTotal).toFixed(2)}€</td>
         </tr></tfoot>
       </table>
     </div>`;
     specContent.innerHTML=html;
     document.getElementById('grandBox').style.display='block';
     document.getElementById('dGrandLabor').textContent=totalLabor.toFixed(2)+' €';
-    document.getElementById('dGrandMat').textContent=totalMat.toFixed(2)+' €';
+    document.getElementById('dGrandMat').textContent=(totalMat+extraTotal).toFixed(2)+' €';
     document.getElementById('dGrand').textContent=grand.toFixed(2)+' €';
     document.getElementById('dGrandLv').textContent=(grand*EUR2LV).toFixed(2)+' лв';
   }
@@ -813,8 +890,9 @@ function calcAll(){
   const tbody=document.getElementById('ftTbody');
   const tfoot=document.getElementById('ftFoot');
   tbody.innerHTML=allRows.map(r=>`<tr><td>${r.room} — ${r.name}</td><td>${r.m2.toFixed(1)}</td><td>${r.eur.toFixed(2)}</td><td style="text-align:right;">${r.total.toFixed(2)}€</td></tr>`).join('')+
-    (matRows.length?'<tr><td colspan="4" style="padding-top:8px;font-size:0.7rem;color:#64748b;font-weight:700;text-transform:uppercase;">Материали</td></tr>'+
-    matRows.map(r=>`<tr><td>${r.name}</td><td>${r.qty} ${r.unit}</td><td>${r.unitPrice.toFixed(2)}</td><td style="text-align:right;">${r.total.toFixed(2)}€</td></tr>`).join(''):'');
+    (matRows.length||extraMats.length?'<tr><td colspan="4" style="padding-top:8px;font-size:0.7rem;color:#64748b;font-weight:700;text-transform:uppercase;">Материали</td></tr>'+
+    matRows.map(r=>`<tr><td>${r.name}</td><td>${r.qty} ${r.unit}</td><td>${r.unitPrice.toFixed(2)}</td><td style="text-align:right;">${r.total.toFixed(2)}€</td></tr>`).join('')+
+    extraMats.filter(m=>m.name||m.unitPrice>0).map(m=>`<tr><td>${m.name||'—'}</td><td>${m.qty} ${m.unit}</td><td>${m.unitPrice.toFixed(2)}</td><td style="text-align:right;">${(m.unitPrice*m.qty).toFixed(2)}€</td></tr>`).join(''):'');
   tfoot.innerHTML=`<tr class="tot"><td colspan="3">ОБЩО ТРУД + МАТЕРИАЛИ</td><td style="text-align:right;">${grand.toFixed(2)}€</td></tr>`;
 }
 
@@ -831,10 +909,11 @@ function sendToOffer(){
   const labor_rows=[],materials=[];
   const totals={};
   rooms.forEach(room=>{
-    const {L,W,H,surfs}=room;
-    if(L<=0||W<=0||H<=0) return;
+    const {L,W,H,surfs,type}=room;
+    const invalid=type==='part'?(L<=0||H<=0):(L<=0||W<=0||H<=0);
+    if(invalid) return;
     Object.entries(surfs).forEach(([key,s])=>{
-      const area=surfArea(room,key);
+      const area=type==='part'?surfArea(room,key)*2:surfArea(room,key);
       if(s.gk&&SVC[s.gk]){const k=s.gk;totals[k]=(totals[k]||0)+area;}
       s.pt.forEach(v=>{if(SVC[v]){totals[v]=(totals[v]||0)+area;}});
     });
@@ -842,25 +921,96 @@ function sendToOffer(){
   Object.entries(totals).forEach(([k,m2])=>{
     if(SVC[k]) labor_rows.push({name:SVC[k].name,qty:Math.round(m2*10)/10,unit:'м²',price:SVC[k].eur});
   });
-  // Materials
-  let gkArea=0;
+  // Materials — точна логика, идентична с calcAll()
+  const pLen=parseFloat(document.getElementById('pLen').value)||3;
+  let boardArea=0,ud=0,cd=0,uw=0,cw=0,hangers=0,screws=0,dowel=0,glue=0,foam=0;
   rooms.forEach(room=>{
-    const {L,W,H,surfs}=room;
-    if(L<=0||W<=0||H<=0) return;
-    Object.entries(surfs).forEach(([key,s])=>{if(s.gk) gkArea+=surfArea(room,key);});
+    const {L,W,H,surfs,type}=room;
+    if(type==='part'){
+      if(L<=0||H<=0) return;
+      const a=L*H;
+      uw+=Math.ceil((2*L/pLen)*1.1);
+      const regP=Math.floor(L/0.6)-1,remP=L-regP*0.6,colsP=remP>=0.7?regP+1:regP;
+      cw+=Math.ceil((colsP*H/pLen)*1.1);
+      boardArea+=a*2; screws+=(a*2)*15; dowel+=Math.ceil((2*L/0.7)*1.1);
+    } else {
+      if(L<=0||W<=0||H<=0) return;
+      if(surfs.ceil&&surfs.ceil.gk){
+        const a=L*W,p=2*(L+W);
+        ud+=Math.ceil((p/pLen)*1.1);
+        const shortC=Math.min(L,W),longC=Math.max(L,W);
+        const regC=Math.floor(shortC/0.6)-1,remC=shortC-regC*0.6,colsC=remC>=0.7?regC+1:regC;
+        cd+=Math.ceil((colsC*longC/pLen)*1.1);
+        boardArea+=a; hangers+=a*2.8; screws+=a*15;
+        dowel+=p/0.7; dowel+=(a*2.8)*2;
+      }
+      ['N','S','W','E'].forEach(wk=>{
+        const s=surfs[wk]; if(!s||!s.gk) return;
+        const wl=(wk==='N'||wk==='S')?L:W, a=wl*H;
+        if(s.gk==='wall'){
+          ud+=Math.ceil(((2*wl+2*H)/pLen)*1.1);
+          const regW=Math.floor(wl/0.6)-1,remW=wl-regW*0.6,colsW=remW>=0.7?regW+1:regW;
+          cd+=Math.ceil((colsW*H/pLen)*1.1);
+          boardArea+=a; hangers+=a*1.5; screws+=a*15;
+          dowel+=Math.ceil(((2*wl+2*H)/0.7)*1.1);
+          dowel+=(a*1.5)*2; // 2 дюбела на окачвач
+        } else if(s.gk==='glue'){
+          boardArea+=a; glue+=a*4; foam+=a/10;
+        }
+      });
+    }
   });
-  if(gkArea>0){
-    const pLen=parseFloat(document.getElementById('pLen').value)||3;
-    const addM=(key,qty,label)=>{const cfg=PKG[key];if(!(qty>0)) return;const pc=cfg.ps>0?Math.ceil(qty/cfg.ps):Math.ceil(qty);const up=cfg.price*MARKUP;materials.push({name:label,qty:pc,unit:cfg.pp+' '+cfg.sz,unitPrice:Math.round(up*100)/100,total:Math.round(up*pc*100)/100});};
-    addM('board_std',Math.ceil((gkArea*1.1)/2.4),'ГК плоскост Knauf A13');
-    addM('prof_ud',Math.ceil(gkArea*0.25/pLen),`UD профил ${pLen}м`);
-    addM('prof_cd',Math.ceil(gkArea*1.6/pLen),`CD профил ${pLen}м`);
-    addM('hangers',Math.ceil(gkArea*1.4),'Окачвачи');
-    addM('screws',Math.ceil(gkArea*15),'Рапидки TN25');
-    addM('joint',Math.ceil(gkArea*0.4),'Фугираща смес');
-    addM('finish',Math.ceil(gkArea*1.2),'Финишна шпакловка');
-    addM('tape',Math.ceil(gkArea*1.5),'Лента');
-  }
+  const buttons=hangers*2;
+  const joint=boardArea*0.4,finish=boardArea*1.2,tape=boardArea*1.5;
+  const totalBoards=boardArea>0?Math.ceil((boardArea*1.1)/2.4):0;
+  
+  PKG.prof_ud.src=`UD × ${pLen}м`; PKG.prof_cd.src=`CD × ${pLen}м`;
+  PKG.prof_uw.src=`UW × ${pLen}м`; PKG.prof_cw.src=`CW × ${pLen}м`;
+  const addM=(key,qty)=>{
+    const cfg=PKG[key]; if(!(qty>0)) return;
+    const pc=cfg.ps>0?Math.ceil(qty/cfg.ps):Math.ceil(qty);
+    const up=cfg.price*MARKUP;
+    materials.push({name:cfg.src,qty:pc,unit:cfg.pp+(cfg.sz?' '+cfg.sz:''),unitPrice:Math.round(up*100)/100,total:Math.round(up*pc*100)/100});
+  };
+  addM('board_std',totalBoards);
+  addM('prof_ud',Math.ceil(ud)); addM('prof_cd',Math.ceil(cd));
+  addM('prof_uw',Math.ceil(uw)); addM('prof_cw',Math.ceil(cw));
+  addM('hangers',Math.ceil(hangers)); addM('buttons',Math.ceil(buttons));
+  addM('screws',Math.ceil(screws)); addM('dowels',Math.ceil(dowel));
+  addM('joint',Math.ceil(joint)); addM('finish',Math.ceil(finish)); addM('tape',Math.ceil(tape));
+  addM('gk_glue',Math.ceil(glue)); addM('gk_foam',Math.ceil(foam));
+  // Шпакловъчни материали
+  let pt_osnovna=0,pt_gipsova=0,pt_gipsova_mesh=0,pt_fina=0,pt_fugi=0;
+  rooms.forEach(room=>{
+    const {L,W,H,surfs,type}=room;
+    const invalid=type==='part'?(L<=0||H<=0):(L<=0||W<=0||H<=0);
+    if(invalid) return;
+    Object.entries(surfs).forEach(([key,s])=>{
+      const area=type==='part'?surfArea(room,key)*2:surfArea(room,key);
+      s.pt.forEach(v=>{
+        if(v==='osnovna')      pt_osnovna+=area*9;
+        else if(v==='gipsova') pt_gipsova+=area*1.0;
+        else if(v==='gipsova_mesh'){ pt_gipsova+=area*1.5; pt_gipsova_mesh+=area; }
+        else if(v==='fina')    pt_fina+=area*0.8;
+        else if(v==='fugi')    pt_fugi+=area*0.4;
+      });
+    });
+  });
+  const addPT=(key,kgQty)=>{
+    const cfg=PKG[key]; if(!(kgQty>0)) return;
+    const pc=Math.ceil(kgQty/cfg.ps);
+    const up=cfg.price*MARKUP;
+    materials.push({name:cfg.src,qty:pc,unit:cfg.pp+' '+cfg.sz,unitPrice:Math.round(up*100)/100,total:Math.round(up*pc*100)/100});
+  };
+  if(pt_gipsova_mesh>0) addPT('p_mreja',pt_gipsova_mesh);
+  if(pt_osnovna>0)      addPT('p_osnovna',pt_osnovna);
+  if(pt_gipsova>0)      addPT('p_gipsova',pt_gipsova);
+  if(pt_fina>0)         addPT('p_fina',pt_fina);
+  if(pt_fugi>0)         addPT('p_fugi',pt_fugi);
+  // Ръчно добавени материали
+  extraMats.filter(m=>m.name||m.unitPrice>0).forEach(m=>{
+    materials.push({name:m.name||'—',qty:m.qty,unit:m.unit,unitPrice:m.unitPrice,total:Math.round(m.unitPrice*m.qty*100)/100});
+  });
   const data={project:document.getElementById('pName').value||'',date:document.getElementById('pDate').value||'',labor_rows,materials};
   localStorage.setItem('ir_calc_data',JSON.stringify(data));
   if(confirm('Данните са запазени. Отваряш офертата?')) window.location.href='offer.html';
@@ -937,7 +1087,7 @@ async function exportPDF(){
   // Materials table — точна логика от calculator.html
   const matRowsData=[];
   const pdfPLen=parseFloat(document.getElementById('pLen').value)||3;
-  let pdfBoardArea=0,pdfUd=0,pdfCd=0,pdfUw=0,pdfCw=0,pdfHangers=0,pdfScrews=0,pdfDowel=0;
+  let pdfBoardArea=0,pdfUd=0,pdfCd=0,pdfUw=0,pdfCw=0,pdfHangers=0,pdfScrews=0,pdfDowel=0,pdfGlue=0,pdfFoam=0;
 
   rooms.forEach(room=>{
     const {L,W,H,surfs,type}=room;
@@ -968,8 +1118,9 @@ async function exportPDF(){
           pdfCd+=Math.ceil((colsW*H/pdfPLen)*1.1);
           pdfBoardArea+=a; pdfHangers+=a*1.5; pdfScrews+=a*15;
           pdfDowel+=Math.ceil(((2*wl+2*H)/0.7)*1.1);
+          pdfDowel+=(a*1.5)*2; // 2 дюбела на окачвач
         } else if(s.gk==='glue'){
-          pdfBoardArea+=a; pdfScrews+=a*15;
+          pdfBoardArea+=a; pdfGlue+=a*4; pdfFoam+=a/10;
         }
       });
     }
@@ -984,9 +1135,10 @@ async function exportPDF(){
     const pc=cfg.ps>0?Math.ceil(qty/cfg.ps):Math.ceil(qty);
     const up=cfg.price*MARKUP;const tot=up*pc;
     totalMat+=tot;
-    matRowsData.push([cfg.src,`${pc} ${cfg.pp}${cfg.sz?' '+cfg.sz:''}`,up.toFixed(2)+' €',tot.toFixed(2)+' €']);
+    const unit=pc===1?cfg.pu:cfg.pp;
+    matRowsData.push([cfg.src,`${pc} ${unit}${cfg.sz?' '+cfg.sz:''}`,up.toFixed(2)+' €',tot.toFixed(2)+' €']);
   };
-  PKG.board_std.src=`ГК Стандартен ${pdfPLen}м`;
+  
   PKG.prof_ud.src=`UD × ${pdfPLen}м`; PKG.prof_cd.src=`CD × ${pdfPLen}м`;
   PKG.prof_uw.src=`UW × ${pdfPLen}м`; PKG.prof_cw.src=`CW × ${pdfPLen}м`;
   addM('board_std',pdfBoards);
@@ -995,21 +1147,33 @@ async function exportPDF(){
   addM('hangers',Math.ceil(pdfHangers)); addM('buttons',Math.ceil(pdfButtons));
   addM('screws',Math.ceil(pdfScrews)); addM('dowels',Math.ceil(pdfDowel));
   addM('joint',Math.ceil(pdfJoint)); addM('finish',Math.ceil(pdfFinish)); addM('tape',Math.ceil(pdfTape));
+  addM('gk_glue',Math.ceil(pdfGlue)); addM('gk_foam',Math.ceil(pdfFoam));
 
   const ptTotals={osnovna:0,gipsova:0,gipsova_mesh:0,fina:0,fugi:0};
-  rooms.forEach(room=>{const {L,W,H,surfs}=room;if(L<=0||W<=0||H<=0) return;Object.entries(surfs).forEach(([key,s])=>{const area=surfArea(room,key);s.pt.forEach(v=>{if(ptTotals.hasOwnProperty(v)) ptTotals[v]+=area;});});});
+  rooms.forEach(room=>{const {L,W,H,surfs,type}=room;const invalid=type==='part'?(L<=0||H<=0):(L<=0||W<=0||H<=0);if(invalid) return;Object.entries(surfs).forEach(([key,s])=>{const area=type==='part'?surfArea(room,key)*2:surfArea(room,key);s.pt.forEach(v=>{if(ptTotals.hasOwnProperty(v)) ptTotals[v]+=area;});});});
   const ptMap={osnovna:{key:'p_osnovna',norm:9},gipsova:{key:'p_gipsova',norm:1},gipsova_mesh:{key:'p_gipsova',norm:1},fina:{key:'p_fina',norm:0.8},fugi:{key:'p_fugi',norm:0.4}};
-  if(ptTotals.gipsova_mesh>0){const cfg=PKG.p_mreja;const pc=Math.ceil(ptTotals.gipsova_mesh/cfg.ps);const up=cfg.price*MARKUP;const tot=up*pc;totalMat+=tot;matRowsData.push([cfg.src,`${pc} ${cfg.pp} ${cfg.sz}`,up.toFixed(2)+' €',tot.toFixed(2)+' €']);}
-  Object.entries(ptTotals).forEach(([svc,m2])=>{if(m2<=0) return;const pm=ptMap[svc];const cfg=PKG[pm.key];const kg=m2*pm.norm;const pc=Math.ceil(kg/cfg.ps);const up=cfg.price*MARKUP;const tot=up*pc;totalMat+=tot;matRowsData.push([cfg.src,`${pc} ${cfg.pp} ${cfg.sz}`,up.toFixed(2)+' €',tot.toFixed(2)+' €']);});
+  if(ptTotals.gipsova_mesh>0){const cfg=PKG.p_mreja;const pc=Math.ceil(ptTotals.gipsova_mesh/cfg.ps);const up=cfg.price*MARKUP;const tot=up*pc;const unit=pc===1?cfg.pu:cfg.pp;totalMat+=tot;matRowsData.push([cfg.src,`${pc} ${unit} ${cfg.sz}`,up.toFixed(2)+' €',tot.toFixed(2)+' €']);}
+  Object.entries(ptTotals).forEach(([svc,m2])=>{if(m2<=0) return;const pm=ptMap[svc];const cfg=PKG[pm.key];const kg=m2*pm.norm;const pc=Math.ceil(kg/cfg.ps);const up=cfg.price*MARKUP;const tot=up*pc;const unit=pc===1?cfg.pu:cfg.pp;totalMat+=tot;matRowsData.push([cfg.src,`${pc} ${unit} ${cfg.sz}`,up.toFixed(2)+' €',tot.toFixed(2)+' €']);});
+  // Ръчно добавени материали
+  extraMats.filter(m=>m.name||m.unitPrice>0).forEach(m=>{
+    const tot=m.unitPrice*m.qty;
+    totalMat+=tot;
+    matRowsData.push([m.name||'—',`${m.qty} ${m.unit}`,m.unitPrice.toFixed(2)+' €',tot.toFixed(2)+' €']);
+  });
 
   if(matRowsData.length&&y<260){
-    doc.setFont(F,'bold'); doc.setFontSize(9); doc.setTextColor(154,117,48);
+    doc.setFont(F,'bold'); doc.setFontSize(9); doc.setTextColor(22,163,74);
     doc.text('МАТЕРИАЛИ',14,y); y+=4;
     doc.autoTable({startY:y,head:[['Материал','Количество','Ед. цена','Общо']],body:matRowsData,
       styles:{fontSize:8,cellPadding:2,font:F},
       headStyles:{fillColor:[26,24,16],textColor:[201,168,76],fontStyle:'bold'},
       alternateRowStyles:{fillColor:[245,240,228]},
-      columnStyles:{1:{halign:'right'},2:{halign:'right'},3:{halign:'right',fontStyle:'bold'}},
+      columnStyles:{
+        0:{cellWidth:80},
+        1:{cellWidth:50,halign:'center'},
+        2:{cellWidth:32,halign:'right'},
+        3:{cellWidth:32,halign:'right',fontStyle:'bold'}
+      },
       margin:{left:8,right:8},tableWidth:194,
       foot:[[{content:'Общо материали',colSpan:3,styles:{fontStyle:'bold',halign:'right'}},{content:totalMat.toFixed(2)+' €',styles:{fontStyle:'bold',halign:'right'}}]],
       showFoot:'lastPage'});
