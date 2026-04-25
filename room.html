@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Помещение — Ivanov Remonti</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;padding-bottom:64px;}
+
+/* TOP BAR */
+.top-bar{background:#1e293b;border-bottom:1px solid #334155;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:50;}
+.top-bar h1{font-size:1rem;font-weight:700;color:#f5d581;white-space:nowrap;}
+.top-bar input,.top-bar select{background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:6px;padding:5px 8px;font-size:0.82rem;}
+.top-bar input[type=text]{width:160px;}
+.top-bar input[type=date]{width:140px;}
+.top-bar label{font-size:0.78rem;color:#94a3b8;display:flex;align-items:center;gap:5px;}
+
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:1fr;gap:12px;padding:14px;}
+@media(min-width:900px){.layout{grid-template-columns:1fr 300px;}}
+
+/* ROOMS */
+.rooms-col{display:flex;flex-direction:column;gap:12px;}
+.room-card{background:#1e293b;border:1px solid #334155;border-radius:12px;overflow:hidden;}
+.room-card-head{background:#162032;padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #334155;}
+.room-card-head input{flex:1;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:6px;padding:5px 10px;font-size:0.85rem;}
+.rm-btn{background:none;border:none;color:#475569;cursor:pointer;font-size:0.9rem;padding:4px 7px;border-radius:5px;}
+.rm-btn:hover{color:#ef4444;}
+.room-card-body{padding:12px 14px;display:flex;flex-direction:column;gap:10px;}
+.dims{display:flex;gap:8px;flex-wrap:wrap;}
+.dims label{font-size:0.75rem;color:#94a3b8;display:flex;flex-direction:column;gap:3px;}
+.dims input{background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:6px;padding:4px 8px;font-size:0.82rem;width:68px;}
+
+/* SURF GRID */
+.surf-hint{font-size:0.7rem;color:#475569;font-style:italic;}
+.surf-grid{display:grid;grid-template-columns:64px 1fr 64px;grid-template-rows:50px 100px 50px;gap:4px;}
+.sb{border-radius:8px;border:1.5px solid #334155;background:#0f172a;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:0.68rem;color:#475569;transition:all 0.12s;padding:4px;text-align:center;user-select:none;}
+.sb:hover{border-color:#64748b;color:#94a3b8;}
+.sb.sel{border-color:#3b82f6;border-width:2px;background:#0c1a2e;color:#60a5fa;}
+.sb.has-gk{border-color:#d9a441;background:#1a1100;color:#f5d581;}
+.sb.has-pt{border-color:#22c55e;background:#0a1a0a;color:#4ade80;}
+.sb.has-both{border-color:#a78bfa;background:#110c22;color:#c4b5fd;}
+.sb.sel.has-gk,.sb.sel.has-pt,.sb.sel.has-both{border-width:2.5px;border-color:#3b82f6;}
+.sb-lbl{font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;}
+.sb-m2{font-size:0.75rem;font-weight:700;}
+.tags{display:flex;gap:2px;justify-content:center;flex-wrap:wrap;}
+.tag{font-size:0.55rem;padding:1px 3px;border-radius:2px;font-weight:700;}
+.tg{background:#5a4418;color:#f5d581;}
+.tp{background:#14532d;color:#4ade80;}
+.tb{background:#2d1f6e;color:#c4b5fd;}
+.sc-center{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;}
+
+/* INLINE PANEL */
+.inline-panel{border:1.5px solid #3b82f6;border-radius:10px;background:#0c1a2e;padding:12px 14px;display:none;flex-direction:column;gap:10px;animation:fi 0.15s;}
+.inline-panel.open{display:flex;}
+@keyframes fi{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+.ip-head{display:flex;justify-content:space-between;align-items:center;}
+.ip-title{font-size:0.85rem;font-weight:700;color:#60a5fa;}
+.ip-close{background:none;border:none;color:#475569;cursor:pointer;font-size:0.9rem;}
+.ip-close:hover{color:#94a3b8;}
+.ip-body{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+@media(max-width:500px){.ip-body{grid-template-columns:1fr;}}
+.ip-sec{background:#0f172a;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;}
+.ip-sec-lbl{font-size:0.68rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;}
+.ip-opt{display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:7px;border:1px solid #1e293b;font-size:0.78rem;color:#64748b;cursor:pointer;transition:all 0.1s;}
+.ip-opt:hover{border-color:#334155;color:#94a3b8;}
+.ip-opt.ag{border-color:#d9a441;background:#1a1100;color:#f5d581;}
+.ip-opt.ap{border-color:#22c55e;background:#0a1a0a;color:#4ade80;}
+.ip-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:#334155;}
+.pt-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.pt-row select{flex:1;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:6px;padding:5px 7px;font-size:0.75rem;}
+.pt-rm{background:none;border:none;color:#475569;cursor:pointer;font-size:0.8rem;}
+.add-pt{font-size:0.75rem;color:#3b82f6;cursor:pointer;padding:3px 0;}
+.add-pt:hover{color:#60a5fa;}
+.ip-summary{background:#0f172a;border-radius:7px;padding:8px 10px;font-size:0.75rem;color:#94a3b8;line-height:1.8;}
+.ip-summary strong{color:#e2e8f0;}
+
+/* LEGEND */
+.legend{display:flex;gap:10px;font-size:0.68rem;color:#475569;flex-wrap:wrap;}
+.ld{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:3px;vertical-align:middle;}
+
+/* RIGHT PANEL — desktop only */
+.spec-col{display:none;}
+@media(min-width:900px){.spec-col{display:flex;flex-direction:column;gap:10px;}}
+.spec-box{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;}
+.spec-title{font-size:0.7rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;}
+.spec-room-name{font-size:0.82rem;font-weight:700;color:#e2e8f0;}
+.spec-line{display:flex;justify-content:space-between;font-size:0.75rem;color:#94a3b8;padding:2px 0;}
+.spec-line span{color:#d9a441;font-weight:600;}
+.spec-total{display:flex;justify-content:space-between;font-size:0.8rem;font-weight:700;color:#60a5fa;border-top:1px solid #334155;padding-top:6px;margin-top:2px;}
+.mat-line{font-size:0.72rem;color:#64748b;display:flex;justify-content:space-between;padding:1px 0;}
+.grand-box{background:linear-gradient(135deg,#1e3a5f,#0c2340);border:1px solid #3b82f6;border-radius:10px;padding:12px 14px;}
+.grand-lbl{font-size:0.7rem;color:#93c5fd;font-weight:700;text-transform:uppercase;}
+.grand-val{font-size:1.2rem;font-weight:800;color:#60a5fa;}
+.grand-sub{font-size:0.75rem;color:#64748b;}
+
+/* ADD ROOM */
+.add-room-btn{background:#0f172a;border:1px dashed #334155;color:#475569;border-radius:10px;padding:12px;font-size:0.82rem;cursor:pointer;text-align:center;transition:all 0.15s;}
+.add-room-btn:hover{border-color:#64748b;color:#94a3b8;}
+
+/* STICKY FOOTER */
+.sticky-footer{position:fixed;bottom:0;left:0;right:0;background:#1e293b;border-top:1px solid #334155;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;z-index:50;cursor:pointer;}
+.ft-chips{display:flex;gap:14px;flex-wrap:wrap;}
+.ft-chip .lbl{font-size:0.62rem;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;}
+.ft-chip .val{font-size:0.9rem;font-weight:700;color:#e2e8f0;}
+.ft-chip .val.g{color:#fbbf24;font-size:1rem;}
+.ft-expand{display:none;background:#1e293b;border-top:1px solid #334155;padding:10px 16px;position:fixed;bottom:52px;left:0;right:0;max-height:40vh;overflow-y:auto;z-index:49;}
+.ft-expand.open{display:block;}
+.spec-tbl{width:100%;border-collapse:collapse;font-size:0.75rem;}
+.spec-tbl th{text-align:left;color:#64748b;padding:4px 6px;border-bottom:1px solid #1e293b;}
+.spec-tbl td{padding:5px 6px;border-bottom:1px solid #0f172a;color:#e2e8f0;}
+.spec-tbl .tot td{font-weight:700;color:#fbbf24;border-top:1px solid #334155;}
+.ft-actions{display:flex;gap:8px;align-items:center;}
+.btn-offer{background:#16a34a;border:none;color:#fff;border-radius:7px;padding:7px 14px;font-size:0.82rem;cursor:pointer;font-weight:600;}
+.btn-pdf{background:#1e3a5f;border:1px solid #3b82f6;color:#60a5fa;border-radius:7px;padding:7px 12px;font-size:0.82rem;cursor:pointer;}
+.toast{position:fixed;bottom:72px;right:16px;background:#16a34a;color:#fff;padding:9px 16px;border-radius:8px;font-size:0.82rem;z-index:200;display:none;}
+.schema-wrap{display:flex;justify-content:center;padding:55px 28px 28px;background:#0a0f1c;border-radius:12px;border:1px dashed #334155;margin-bottom:6px;min-height:120px;align-items:center;overflow:visible;}
+.schema-wrap.empty{color:#475569;font-size:0.85rem;font-style:italic;}
+.schema{position:relative;background:repeating-linear-gradient(45deg,#1e293b,#1e293b 4px,#162033 4px,#162033 8px);border:1px solid #475569;border-radius:4px;}
+.wall-btn{position:absolute;background:#1e293b;border:2px solid #475569;border-radius:6px;cursor:pointer;transition:all 0.2s;display:flex;flex-direction:column;align-items:center;justify-content:center;user-select:none;color:#94a3b8;}
+.wall-btn:hover{border-color:#64748b;color:#cbd5e1;transform:scale(1.02);}
+.wall-btn .dim{font-size:0.62rem;font-weight:600;opacity:0.85;}
+.wall-btn .m2{font-size:0.68rem;font-weight:700;margin-top:1px;}
+.wall-btn .state{font-size:0.58rem;font-weight:800;letter-spacing:0.3px;margin-top:2px;padding:1px 4px;border-radius:3px;text-transform:uppercase;line-height:1.3;text-align:center;}
+.wall-btn.sel{border-color:#3b82f6 !important;box-shadow:0 0 0 2px #3b82f6 !important;}
+.wall-btn.has-gk{background:linear-gradient(135deg,#3d2f0f,#5a4418);border-color:#d9a441;color:#f5d581;}
+.wall-btn.has-gk .state{background:#d9a441;color:#0f172a;}
+.wall-btn.has-pt{background:linear-gradient(135deg,#0f2a1a,#14532d);border-color:#16a34a;color:#a7f3d0;}
+.wall-btn.has-pt .state{background:#16a34a;color:#0f172a;}
+.wall-btn.has-both{background:linear-gradient(135deg,#2e1065,#4c1d95);border-color:#a78bfa;color:#ddd6fe;}
+.wall-btn.has-both .state{background:#7c3aed;color:#fff;}
+.room-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#475569;font-size:0.75rem;font-weight:600;text-align:center;pointer-events:none;}
+.ceil-btn{cursor:pointer;transition:all 0.2s;border-radius:8px;padding:6px 10px;border:2px solid #334155;background:#0f172a;color:#64748b;font-size:0.72rem;text-align:center;margin-top:6px;}
+.ceil-btn:hover{border-color:#64748b;}
+.ceil-btn.has-gk{border-color:#d9a441;background:#1a1100;color:#f5d581;}
+.ceil-btn.has-pt{border-color:#16a34a;background:#0a1a0a;color:#4ade80;}
+.ceil-btn.has-both{border-color:#a78bfa;background:#110c22;color:#c4b5fd;}
+.ceil-btn.sel{border-color:#3b82f6 !important;box-shadow:0 0 0 2px #3b82f6;}
+.info-boxes{display:flex;flex-direction:column;gap:5px;min-width:64px;flex-shrink:0;}
+.info-box{background:#0a0f1c;border:1px solid #1e293b;border-radius:7px;padding:5px 8px;text-align:center;}
+.info-box .ib-lbl{font-size:0.6rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:2px;}
+.info-box .ib-val{font-size:0.82rem;font-weight:700;}
+.schema-row{display:flex;gap:10px;align-items:flex-start;}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+
+<div class="top-bar">
+  <h1>🏠 Помещение</h1>
+  <label>Проект <input type="text" id="pName" placeholder="Обект..."></label>
+  <label>Дата <input type="date" id="pDate"></label>
+  <label>Профил <select id="pLen"><option value="3">3м</option><option value="4">4м</option></select></label>
+</div>
+
+<div class="layout">
+  <div class="rooms-col">
+    <div id="roomsContainer"></div>
+    <div style="display:flex;gap:8px;">
+      <div class="add-room-btn" style="flex:1;" onclick="addRoom()">+ Помещение</div>
+      <div class="add-room-btn" style="flex:1;border-color:#7c3aed;color:#7c3aed;" onclick="addPartition()">+ Преградна стена</div>
+    </div>
+  </div>
+  <div class="spec-col" id="specCol">
+    <div class="spec-box">
+      <div class="spec-title">Спецификация</div>
+      <div id="specContent"><div style="font-size:0.78rem;color:#475569;">Добави помещение...</div></div>
+    </div>
+    <div class="grand-box" id="grandBox" style="display:none;">
+      <div class="grand-lbl">Общо труд</div>
+      <div class="grand-val" id="dGrandLabor">0.00 €</div>
+      <div style="margin-top:6px;border-top:1px solid #1e3a5f;padding-top:6px;">
+        <div class="grand-lbl">+ Материали</div>
+        <div class="grand-val" id="dGrandMat" style="font-size:1rem;">0.00 €</div>
+      </div>
+      <div style="margin-top:6px;border-top:1px solid #1e3a5f;padding-top:6px;">
+        <div class="grand-lbl">ОБЩО</div>
+        <div class="grand-val" id="dGrand" style="font-size:1.3rem;color:#fbbf24;">0.00 €</div>
+        <div class="grand-sub" id="dGrandLv">0.00 лв</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn-offer" onclick="sendToOffer()" style="flex:1;">📋 Прати в оферта</button>
+        <button class="btn-pdf" onclick="exportPDF()">📄 PDF</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="sticky-footer" onclick="toggleExpand()">
+  <div class="ft-chips">
+    <div class="ft-chip"><div class="lbl">Труд</div><div class="val" id="fLabor">0.00 €</div></div>
+    <div class="ft-chip"><div class="lbl">Материали</div><div class="val" id="fMat">0.00 €</div></div>
+    <div class="ft-chip"><div class="lbl">ОБЩО</div><div class="val g" id="fGrand">0.00 €</div></div>
+    <div class="ft-chip" style="display:none;" id="fLvChip"><div class="lbl">в лева</div><div class="val" id="fLv" style="font-size:0.78rem;color:#94a3b8;">0.00 лв</div></div>
+  </div>
+  <div class="ft-actions" onclick="event.stopPropagation()">
+    <span style="font-size:0.7rem;color:#475569;" id="expandHint">▲ детайли</span>
+    <button class="btn-offer" onclick="sendToOffer()">📋 Оферта</button>
+  </div>
+</div>
+
+<div class="ft-expand" id="ftExpand">
+  <table class="spec-tbl">
+    <thead><tr><th>Услуга</th><th>м²</th><th>€/м²</th><th style="text-align:right;">Общо</th></tr></thead>
+    <tbody id="ftTbody"></tbody>
+    <tfoot id="ftFoot"></tfoot>
+  </table>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const EUR2LV=1.95583, MARKUP=1.10;
+
+// ── Зареждаме DejaVu шрифт за кирилица в PDF ──
+const FONT_URLS = {
+  normal: 'https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf',
+  bold:   'https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans-Bold.ttf'
+};
+let _fontCache = {};
+async function loadFont(name, url) {
+  if (_fontCache[name]) return _fontCache[name];
+  const resp = await fetch(url);
+  const buf = await resp.arrayBuffer();
+  const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+  _fontCache[name] = b64;
+  return b64;
+}
+
+const SVC={
+  ceil: {name:'Гипсокартон – Прав таван',eur:15.00},
+  wall: {name:'Гипсокартон – Предстенна обшивка',eur:14.00},
+  glue: {name:'Гипсокартон – Лепене',eur:10.00},
+  part: {name:'Гипсокартон – Преградна стена',eur:25.00},
+  osnovna:{name:'Основна укрепваща шпакловка',eur:8.18},
+  gipsova:{name:'Гипсова шпакловка',eur:6.14},
+  gipsova_mesh:{name:'Гипсова + мрежа',eur:6.14},
+  fina:{name:'Фина шпакловка',eur:5.50},
+  fugi:{name:'Шпакловка на фуги',eur:4.09},
+};
+
+const PKG={
+  board_std:{ps:0,   pu:'бр',   pp:'бр',    sz:'',         price:6.64,  src:'ГК Стандартен'},
+  prof_ud:  {ps:0,   pu:'бр',   pp:'бр',    sz:'',         price:3.57,  src:'UD профил'},
+  prof_cd:  {ps:0,   pu:'бр',   pp:'бр',    sz:'',         price:4.09,  src:'CD профил'},
+  hangers:  {ps:0,   pu:'бр',   pp:'бр',    sz:'',         price:0.30,  src:'Окачвачи'},
+  buttons:  {ps:1000,pu:'кутия',pp:'кутии', sz:'(1000бр)', price:11.24, src:'Копчета'},
+  screws:   {ps:1000,pu:'кутия',pp:'кутии', sz:'(1000бр)', price:15.10, src:'Винтове (рапидки)'},
+  dowels:   {ps:100, pu:'кутия',pp:'кутии', sz:'(100бр)',  price:3.06,  src:'Дюбели'},
+  joint:    {ps:25,  pu:'чувал',pp:'чувала',sz:'(25кг)',   price:21.47, src:'Фугираща смес'},
+  finish:   {ps:20,  pu:'бака', pp:'баки',  sz:'(20кг)',   price:19.58, src:'Шпакловка (фина)'},
+  tape:     {ps:90,  pu:'ролка',pp:'ролки', sz:'(90м)',    price:4.60,  src:'Лента'},
+  prof_uw:  {ps:0,   pu:'бр',   pp:'бр',    sz:'',         price:5.69,  src:'UW профил'},
+  prof_cw:  {ps:0,   pu:'бр',   pp:'бр',    sz:'',         price:5.44,  src:'CW профил'},
+  p_osnovna:{ps:30,  pu:'чувал',pp:'чувала',sz:'(30кг)',   price:9.20,  src:'Основна мазилка'},
+  p_gipsova:{ps:20,  pu:'чувал',pp:'чувала',sz:'(20кг)',   price:7.34,  src:'Гипсова шпакловка'},
+  p_mreja:  {ps:50,  pu:'ролка',pp:'ролки', sz:'(50м²)',   price:7.66,  src:'Армираща мрежа'},
+  p_fina:   {ps:20,  pu:'кофа', pp:'кофи',  sz:'(20кг)',   price:17.90, src:'Фина шпакловка'},
+  p_fugi:   {ps:25,  pu:'чувал',pp:'чувала',sz:'(25кг)',   price:17.24, src:'Шпакловка фуги'},
+};
+
+const PUTTY_OPTS=[
+  {val:'osnovna',label:'Основна укрепваща — 8.18€/м²'},
+  {val:'gipsova',label:'Гипсова шпакловка — 6.14€/м²'},
+  {val:'gipsova_mesh',label:'Гипсова + мрежа — 6.14€/м²'},
+  {val:'fina',label:'Фина шпакловка — 5.50€/м²'},
+  {val:'fugi',label:'Шпакловка на фуги — 4.09€/м²'},
+];
+
+const GK_CEIL_OPTS=[{val:'ceil',label:'Прав таван — 15€/м²'}];
+const GK_WALL_OPTS=[{val:'wall',label:'Предстенна — 14€/м²'},{val:'glue',label:'Лепене — 10€/м²'}];
+
+let rooms=[], rc=0;
+let activeRoom=null, activeSurf=null;
+
+function addPartition(){
+  const id=rc++;
+  rooms.push({id, name:'', L:0, H:2.7, type:'part',
+    surfs:{ part:{gk:'part', pt:[]} }
+  });
+  renderAll();
+  calcAll();
+}
+
+function addRoom(){
+  const id=rc++;
+  rooms.push({id,name:'',L:0,W:0,H:2.7,
+    surfs:{ceil:{gk:null,pt:[]},N:{gk:null,pt:[]},S:{gk:null,pt:[]},W:{gk:null,pt:[]},E:{gk:null,pt:[]}}
+  });
+  renderAll();
+  calcAll();
+}
+
+function removeRoom(id){
+  rooms=rooms.filter(r=>r.id!==id);
+  if(activeRoom===id){activeRoom=null;activeSurf=null;}
+  renderAll();calcAll();
+}
+
+function surfArea(room,key){
+  if(room.type==='part') return (room.L||0)*(room.H||0); // single side area
+  const {L,W,H}=room;
+  if(key==='ceil') return L*W;
+  if(key==='N'||key==='S') return L*H;
+  return W*H;
+}
+
+const SURF_LABELS={ceil:'Таван',N:'Стена 1',S:'Стена 2',W:'Стена 3',E:'Стена 4'};
+
+function renderAll(){
+  const c=document.getElementById('roomsContainer');
+  // Remove deleted
+  c.querySelectorAll('.room-card[data-id]').forEach(el=>{
+    if(!rooms.find(r=>r.id==el.dataset.id)) el.remove();
+  });
+  rooms.forEach(r=>{
+    let el=c.querySelector(`.room-card[data-id="${r.id}"]`);
+    if(!el){el=document.createElement('div');el.className='room-card';el.dataset.id=r.id;c.appendChild(el);}
+    renderRoom(r,el);
+  });
+}
+
+function renderPartition(room,el){
+  const {id,L,H,name,surfs}=room;
+  const area=L*H;
+  const s=surfs.part;
+  const hasPt=s.pt.length>0;
+  const isActive=activeRoom===id&&activeSurf==='part';
+
+  // Inline panel HTML
+  let inlineHTML='';
+  if(isActive){
+    const ptRows=s.pt.map((v,i)=>`
+      <div class="pt-row">
+        <select onchange="setPT(${id},'part',${i},this.value)">
+          ${PUTTY_OPTS.map(o=>`<option value="${o.val}" ${v===o.val?'selected':''}>${o.label}</option>`).join('')}
+        </select>
+        <button class="pt-rm" onclick="removePT(${id},'part',${i})">✕</button>
+      </div>`).join('');
+    const sumTotal=(area*2*(SVC.part?.eur||25))+(s.pt.reduce((acc,v)=>acc+(SVC[v]?area*2*SVC[v].eur:0),0));
+    inlineHTML=`<div class="inline-panel open">
+      <div class="ip-head">
+        <div class="ip-title">Преградна стена — ${area.toFixed(1)} м² × 2 = ${(area*2).toFixed(1)} м²</div>
+        <button class="ip-close" onclick="closeSurf()">✕</button>
+      </div>
+      <div class="ip-body">
+        <div class="ip-sec">
+          <div class="ip-sec-lbl">Гипсокартон</div>
+          <div class="ip-opt ag"><div class="ip-dot" style="background:#a78bfa;"></div>Преградна — 25€/м²</div>
+        </div>
+        <div class="ip-sec">
+          <div class="ip-sec-lbl">Шпакловка (двустранна)</div>
+          <div id="ptList-${id}-part">${ptRows}</div>
+          <div class="add-pt" onclick="addPT(${id},'part')">+ Добави шпакловка</div>
+        </div>
+      </div>
+      ${sumTotal>0?`<div class="ip-summary">Общо: <strong>${sumTotal.toFixed(2)}€</strong></div>`:''}
+    </div>`;
+  }
+
+  el.innerHTML=`
+    <div class="room-card-head" style="background:#1a0c2e;">
+      <span style="font-size:1.1rem;">🚪</span>
+      <input type="text" placeholder="Преградна стена..." value="${name}" oninput="rooms.find(r=>r.id==${id}).name=this.value;calcAll()">
+      <button class="rm-btn" onclick="removeRoom(${id})">✕</button>
+    </div>
+    <div class="room-card-body">
+      <div class="dims">
+        <label>Дължина (м)<input type="number" value="${L||''}" min="0" step="0.1" placeholder="0" oninput="updPartDim(${id},'L',this.value)"></label>
+        <label>Височина (м)<input type="number" value="${H||2.7}" min="0" step="0.1" placeholder="2.7" oninput="updPartDim(${id},'H',this.value)"></label>
+        ${L>0&&H>0?`<div style="font-size:0.78rem;color:#94a3b8;align-self:flex-end;padding-bottom:4px;">= ${area.toFixed(1)} м² × 2 = ${(area*2).toFixed(1)} м² (двустранна)</div>`:''}
+      </div>
+      ${L>0&&H>0?`
+      <div class="ceil-btn ${isActive?'sel':'has-both'}" onclick="openSurf(${id},'part')" style="display:inline-flex;align-items:center;gap:8px;">
+        <span style="font-size:0.85rem;">🚪</span>
+        <span>Преградна ГК — ${(area*2).toFixed(1)} м²</span>
+        ${hasPt?`<span style="font-size:0.65rem;font-weight:700;padding:2px 5px;border-radius:3px;background:rgba(167,139,250,0.2);">+ШП(${s.pt.length})</span>`:''}
+      </div>
+      ${inlineHTML}`:'<div style="font-size:0.78rem;color:#475569;">Въведи размерите</div>'}
+    </div>`;
+}
+
+function updPartDim(id,field,val){
+  const r=rooms.find(r=>r.id===id);
+  if(r){r[field]=parseFloat(val)||0;renderAll();calcAll();}
+}
+
+function renderRoom(room,el){
+  if(room.type==='part'){ renderPartition(room,el); return; }
+  const {id,L,W,H,surfs,name}=room;
+  const hasSize=L>0&&W>0&&H>0;
+  const surfKeys=['ceil','N','S','W','E'];
+
+  function sbClass(key){
+    const s=surfs[key];
+    const hg=!!s.gk, hp=s.pt.length>0;
+    let cls='sb';
+    if(hg&&hp) cls+=' has-both';
+    else if(hg) cls+=' has-gk';
+    else if(hp) cls+=' has-pt';
+    if(activeRoom===id&&activeSurf===key) cls+=' sel';
+    return cls;
+  }
+
+  function sbTags(key){
+    const s=surfs[key];
+    const hg=!!s.gk, hp=s.pt.length>0;
+    if(hg&&hp) return '<span class="tag tb">ГК+ШП</span>';
+    if(hg) return '<span class="tag tg">ГК</span>';
+    if(hp) return '<span class="tag tp">ШП</span>';
+    return '<span style="font-size:0.6rem;color:#334155;">цъкни</span>';
+  }
+
+  function sb(key,label){
+    const area=hasSize?surfArea(room,key).toFixed(1):'—';
+    return `<div class="${sbClass(key)}" onclick="openSurf(${id},'${key}')">
+      <div class="sb-lbl">${label}</div>
+      <div class="sb-m2">${area}м²</div>
+      <div class="tags">${sbTags(key)}</div>
+    </div>`;
+  }
+
+  // Inline panel
+  let inlineHTML='';
+  if(activeRoom===id&&activeSurf){
+    const key=activeSurf;
+    const area=surfArea(room,key);
+    const s=surfs[key];
+    const isCeil=key==='ceil';
+    const gkOpts=isCeil?GK_CEIL_OPTS:GK_WALL_OPTS;
+
+    const gkBtns=gkOpts.map(o=>`
+      <div class="ip-opt ${s.gk===o.val?'ag':''}" onclick="setGK(${id},'${key}','${o.val}')">
+        <div class="ip-dot" style="${s.gk===o.val?'background:#d9a441;':''}"></div>${o.label}
+      </div>`).join('')+
+      `<div class="ip-opt ${!s.gk?'ag':''}" onclick="setGK(${id},'${key}',null)">
+        <div class="ip-dot"></div>— без ГК
+      </div>`;
+
+    const ptRows=s.pt.map((v,i)=>`
+      <div class="pt-row">
+        <select onchange="setPT(${id},'${key}',${i},this.value)">
+          ${PUTTY_OPTS.map(o=>`<option value="${o.val}" ${v===o.val?'selected':''}>${o.label}</option>`).join('')}
+        </select>
+        <button class="pt-rm" onclick="removePT(${id},'${key}',${i})">✕</button>
+      </div>`).join('');
+
+    // Summary
+    let sumParts=[];
+    if(s.gk&&SVC[s.gk]) sumParts.push(`${SVC[s.gk].name}: <strong>${(area*SVC[s.gk].eur).toFixed(2)}€</strong>`);
+    s.pt.forEach(v=>{ if(SVC[v]) sumParts.push(`${SVC[v].name}: <strong>${(area*SVC[v].eur).toFixed(2)}€</strong>`); });
+    const sumTotal=[(s.gk&&SVC[s.gk]?area*SVC[s.gk].eur:0),...s.pt.map(v=>SVC[v]?area*SVC[v].eur:0)].reduce((a,b)=>a+b,0);
+    if(sumTotal>0) sumParts.push(`<strong style="color:#60a5fa;">= ${sumTotal.toFixed(2)}€</strong>`);
+
+    inlineHTML=`<div class="inline-panel open">
+      <div class="ip-head">
+        <div class="ip-title">${SURF_LABELS[key]} — ${area.toFixed(1)} м²</div>
+        <button class="ip-close" onclick="closeSurf()">✕</button>
+      </div>
+      <div class="ip-body">
+        <div class="ip-sec"><div class="ip-sec-lbl">Гипсокартон</div>${gkBtns}</div>
+        <div class="ip-sec">
+          <div class="ip-sec-lbl">Шпакловка</div>
+          <div id="ptList-${id}-${key}">${ptRows}</div>
+          <div class="add-pt" onclick="addPT(${id},'${key}')">+ Добави шпакловка</div>
+        </div>
+      </div>
+      ${sumParts.length?`<div class="ip-summary">${sumParts.join(' · ')}</div>`:''}
+    </div>`;
+  }
+
+  el.innerHTML=`
+    <div class="room-card-head">
+      <span style="font-size:1.1rem;">🏠</span>
+      <input type="text" placeholder="Хол, Спалня..." value="${name}" oninput="rooms.find(r=>r.id==${id}).name=this.value;calcAll()">
+      <button class="rm-btn" onclick="removeRoom(${id})">✕</button>
+    </div>
+    <div class="room-card-body">
+      <div class="dims">
+        <label>Дължина (м)<input type="number" value="${L||''}" min="0" step="0.1" placeholder="0" oninput="updDim(${id},'L',this.value)"></label>
+        <label>Ширина (м)<input type="number" value="${W||''}" min="0" step="0.1" placeholder="0" oninput="updDim(${id},'W',this.value)"></label>
+        <label>Височина (м)<input type="number" value="${H||2.7}" min="0" step="0.1" placeholder="2.7" oninput="updDim(${id},'H',this.value)"></label>
+      </div>
+      ${hasSize?`
+      <div class="surf-hint">Цъкни повърхност → избери ГК и/или шпакловка</div>
+      <div class="schema-row">
+        <div class="info-boxes">
+          <div class="info-box">
+            <div class="ib-lbl">Таван</div>
+            <div class="ib-val" style="color:#f5d581;">${(L*W).toFixed(1)}</div>
+            <div style="font-size:0.6rem;color:#475569;">м²</div>
+          </div>
+          <div class="info-box">
+            <div class="ib-lbl">Стени</div>
+            <div class="ib-val" style="color:#fde68a;">${(2*(L+W)*H).toFixed(1)}</div>
+            <div style="font-size:0.6rem;color:#475569;">м²</div>
+          </div>
+          <div class="info-box" style="border-color:#334155;">
+            <div class="ib-lbl">Общо</div>
+            <div class="ib-val" style="color:#e2e8f0;">${(L*W+2*(L+W)*H).toFixed(1)}</div>
+            <div style="font-size:0.6rem;color:#475569;">м²</div>
+          </div>
+        </div>
+        <div style="flex:1;min-width:0;">${buildSchema(room)}</div>
+      </div>
+      ${inlineHTML}
+      `:'<div style="font-size:0.78rem;color:#475569;">Въведи размерите за да се появят повърхностите</div>'}
+    </div>`;
+}
+
+function buildSchema(room){
+  const {id,L,W,H,surfs}=room;
+  const maxPx=220,minPx=100,ratio=L/W;
+  const sW=ratio>=1?maxPx:Math.max(minPx,maxPx*ratio);
+  const sH=ratio>=1?Math.max(minPx,maxPx/ratio):maxPx;
+  const wt=34;
+  const aL=(L*H).toFixed(1), aS=(W*H).toFixed(1), cA=(L*W).toFixed(1);
+
+  function wCls(key){
+    const s=surfs[key];
+    const hg=!!s.gk, hp=s.pt.length>0;
+    let cls='wall-btn';
+    if(hg&&hp) cls+=' has-both';
+    else if(hg) cls+=' has-gk';
+    else if(hp) cls+=' has-pt';
+    if(activeRoom===id&&activeSurf===key) cls+=' sel';
+    return cls;
+  }
+
+  function wState(key){
+    const s=surfs[key];
+    const hg=!!s.gk, hp=s.pt.length>0;
+    if(hg&&hp) return 'ГК+ШП';
+    if(hg) return 'ГК';
+    if(hp) return `ШП(${s.pt.length})`;
+    return '';
+  }
+
+  const cCls='ceil-btn'+(surfs.ceil.gk&&surfs.ceil.pt.length>0?' has-both':surfs.ceil.gk?' has-gk':surfs.ceil.pt.length>0?' has-pt':'')+(activeRoom===id&&activeSurf==='ceil'?' sel':'');
+
+  return `<div class="schema-wrap">
+    <div class="schema" style="width:${sW}px;height:${sH}px;">
+      <div class="${wCls('N')}" style="top:-${wt+4}px;left:0;width:${sW}px;height:${wt}px;" onclick="openSurf(${id},'N')">
+        <span class="dim">${L}×${H}м</span><span class="m2">${aL}м²</span><span class="state">${wState('N')}</span>
+      </div>
+      <div class="${wCls('S')}" style="bottom:-${wt+4}px;left:0;width:${sW}px;height:${wt}px;" onclick="openSurf(${id},'S')">
+        <span class="dim">${L}×${H}м</span><span class="m2">${aL}м²</span><span class="state">${wState('S')}</span>
+      </div>
+      <div class="${wCls('W')}" style="left:-${wt+4}px;top:0;width:${wt}px;height:${sH}px;" onclick="openSurf(${id},'W')">
+        <span class="dim">${W}×${H}</span><span class="m2">${aS}м²</span><span class="state">${wState('W')}</span>
+      </div>
+      <div class="${wCls('E')}" style="right:-${wt+4}px;top:0;width:${wt}px;height:${sH}px;" onclick="openSurf(${id},'E')">
+        <span class="dim">${W}×${H}</span><span class="m2">${aS}м²</span><span class="state">${wState('E')}</span>
+      </div>
+      <div class="room-center">${L}×${W}м<div style="font-size:0.68rem;color:#64748b;margin-top:2px;">${cA}м²</div></div>
+    </div>
+  </div>
+  <div class="${cCls}" onclick="openSurf(${id},'ceil')" style="display:inline-flex;align-items:center;gap:8px;">
+    <span style="font-size:0.85rem;">🏠</span>
+    <span>Таван — ${cA}м²</span>
+    ${wState('ceil')?`<span style="font-size:0.65rem;font-weight:700;padding:2px 5px;border-radius:3px;background:rgba(255,255,255,0.1);">${wState('ceil')}</span>`:'<span style="font-size:0.68rem;color:#475569;">цъкни</span>'}
+  </div>
+  <div class="legend" style="margin-top:6px;">
+    <span><span class="ld" style="background:#d9a441;"></span>ГК</span>
+    <span><span class="ld" style="background:#22c55e;"></span>Шпакловка</span>
+    <span><span class="ld" style="background:#a78bfa;"></span>И двете</span>
+  </div>`;
+}
+
+function updDim(id,field,val){
+  const r=rooms.find(r=>r.id===id);
+  if(r){r[field]=parseFloat(val)||0;renderAll();calcAll();}
+}
+
+function openSurf(roomId,surfKey){
+  if(activeRoom===roomId&&activeSurf===surfKey){closeSurf();return;}
+  activeRoom=roomId;activeSurf=surfKey;
+  renderAll();
+}
+
+function closeSurf(){activeRoom=null;activeSurf=null;renderAll();}
+
+function setGK(roomId,surfKey,val){
+  const r=rooms.find(r=>r.id===roomId);
+  if(r){r.surfs[surfKey].gk=val;renderAll();calcAll();}
+}
+
+function addPT(roomId,surfKey){
+  const r=rooms.find(r=>r.id===roomId);
+  if(r){r.surfs[surfKey].pt.push('gipsova');renderAll();calcAll();}
+}
+
+function setPT(roomId,surfKey,idx,val){
+  const r=rooms.find(r=>r.id===roomId);
+  if(r){r.surfs[surfKey].pt[idx]=val;calcAll();}
+}
+
+function removePT(roomId,surfKey,idx){
+  const r=rooms.find(r=>r.id===roomId);
+  if(r){r.surfs[surfKey].pt.splice(idx,1);renderAll();calcAll();}
+}
+
+// ── CALC ──
+function calcAll(){
+  let totalLabor=0,totalMat=0;
+  const allRows=[];
+
+  rooms.forEach(room=>{
+    const {L,W,H,surfs,name,id}=room;
+    if(L<=0||W<=0||H<=0) return;
+    let roomLabor=0;
+
+    Object.entries(surfs).forEach(([key,s])=>{
+      const baseArea=surfArea(room,key);
+      const area=room.type==='part'?baseArea*2:baseArea; // partition is double-sided
+      if(s.gk&&SVC[s.gk]){
+        const amt=area*SVC[s.gk].eur;
+        roomLabor+=amt;
+        allRows.push({room:name||'Помещение',name:SVC[s.gk].name,m2:area,eur:SVC[s.gk].eur,total:amt});
+      }
+      s.pt.forEach(v=>{
+        if(SVC[v]){
+          const amt=area*SVC[v].eur;
+          roomLabor+=amt;
+          allRows.push({room:name||'Помещение',name:SVC[v].name,m2:area,eur:SVC[v].eur,total:amt});
+        }
+      });
+    });
+    totalLabor+=roomLabor;
+  });
+
+  // Materials
+  let gkArea=0;
+  rooms.forEach(room=>{
+    const {L,W,H,surfs}=room;
+    if(L<=0||W<=0||H<=0) return;
+    Object.entries(surfs).forEach(([key,s])=>{if(s.gk) gkArea+=surfArea(room,key);});
+  });
+  const matRows=[];
+  if(gkArea>0){
+    const pLen=parseFloat(document.getElementById('pLen').value)||3;
+    const boards=Math.ceil((gkArea*1.1)/2.4);
+    const m=(key,qty)=>{
+      const cfg=PKG[key];if(!(qty>0)) return 0;
+      const pc=cfg.ps>0?Math.ceil(qty/cfg.ps):Math.ceil(qty);
+      const up=cfg.price*MARKUP;
+      const tot=up*pc;
+      matRows.push({name:cfg.src,qty:pc,unit:cfg.pp+(cfg.sz?' '+cfg.sz:''),unitPrice:Math.round(up*100)/100,total:Math.round(tot*100)/100});
+      return tot;
+    };
+    PKG.prof_ud.src=`UD × ${pLen}м`;
+    PKG.prof_cd.src=`CD × ${pLen}м`;
+    PKG.board_std.src=`ГК Стандартен ${pLen}м`;
+    totalMat+=m('board_std',boards);
+    totalMat+=m('prof_ud',Math.ceil(gkArea*0.25/pLen));
+    totalMat+=m('prof_cd',Math.ceil(gkArea*1.6/pLen));
+    totalMat+=m('hangers',Math.ceil(gkArea*1.4));
+    totalMat+=m('buttons',Math.ceil(gkArea*1.4)*2);
+    totalMat+=m('screws',Math.ceil(gkArea*15));
+    totalMat+=m('dowels',Math.ceil(gkArea*0.9));
+    totalMat+=m('joint',Math.ceil(gkArea*0.4));
+    totalMat+=m('finish',Math.ceil(gkArea*1.2));
+    totalMat+=m('tape',Math.ceil(gkArea*1.5));
+  }
+  // Шпакловъчни материали
+  const puttyTotals={osnovna:0,gipsova:0,gipsova_mesh:0,fina:0,fugi:0};
+  rooms.forEach(room=>{
+    const {L,W,H,surfs}=room;
+    if(L<=0||W<=0||H<=0) return;
+    Object.entries(surfs).forEach(([key,s])=>{
+      const area=surfArea(room,key);
+      s.pt.forEach(v=>{if(puttyTotals.hasOwnProperty(v)) puttyTotals[v]+=area;});
+    });
+  });
+  const ptMatMap={
+    osnovna:      {key:'p_osnovna',norm:9.0},
+    gipsova:      {key:'p_gipsova',norm:1.0},
+    gipsova_mesh: {key:'p_gipsova',norm:1.0},
+    fina:         {key:'p_fina',   norm:0.8},
+    fugi:         {key:'p_fugi',   norm:0.4},
+  };
+  const ptM=(key,kgQty)=>{
+    const cfg=PKG[key];if(!(kgQty>0)) return 0;
+    const pc=Math.ceil(kgQty/cfg.ps);
+    const up=cfg.price*MARKUP;
+    const tot=up*pc;
+    matRows.push({name:cfg.src,qty:pc,unit:cfg.pp+' '+cfg.sz,unitPrice:Math.round(up*100)/100,total:Math.round(tot*100)/100});
+    return tot;
+  };
+  // Collect gipsova_mesh separately for мрежа
+  if(puttyTotals.gipsova_mesh>0) totalMat+=ptM('p_mreja',puttyTotals.gipsova_mesh);
+  Object.entries(puttyTotals).forEach(([svc,m2])=>{
+    if(m2<=0) return;
+    const cfg=ptMatMap[svc];
+    totalMat+=ptM(cfg.key, m2*cfg.norm);
+  });
+
+  const grand=totalLabor+totalMat;
+
+  // Update footer
+  document.getElementById('fLabor').textContent=totalLabor.toFixed(2)+' €';
+  document.getElementById('fMat').textContent=totalMat.toFixed(2)+' €';
+  document.getElementById('fGrand').textContent=grand.toFixed(2)+' €';
+  document.getElementById('fLv').textContent=(grand*EUR2LV).toFixed(2)+' лв';
+  if(grand>0) document.getElementById('fLvChip').style.display='flex';
+
+  // Desktop spec
+  const specContent=document.getElementById('specContent');
+  if(allRows.length===0){
+    specContent.innerHTML='<div style="font-size:0.78rem;color:#475569;">Добави помещение и избери услуги...</div>';
+    document.getElementById('grandBox').style.display='none';
+  } else {
+    // Group by room
+    const byRoom={};
+    allRows.forEach(r=>{(byRoom[r.room]=byRoom[r.room]||[]).push(r);});
+    let html='';
+    Object.entries(byRoom).forEach(([rname,rows])=>{
+      const rt=rows.reduce((s,r)=>s+r.total,0);
+      html+=`<div style="margin-bottom:10px;">
+        <div class="spec-room-name">${rname}</div>
+        ${rows.map(r=>`<div class="spec-line">${r.name} ${r.m2.toFixed(1)}м² <span>${r.total.toFixed(2)}€</span></div>`).join('')}
+        <div class="spec-total">Общо стая <span>${rt.toFixed(2)}€</span></div>
+      </div>`;
+    });
+    if(matRows.length>0) html+=`<div style="margin-top:8px;padding-top:8px;border-top:1px solid #334155;">
+      <div class="spec-title" style="margin-bottom:6px;">Материали</div>
+      <table style="width:100%;border-collapse:collapse;font-size:0.72rem;">
+        <thead><tr>
+          <th style="text-align:left;color:#64748b;padding:3px 4px;border-bottom:1px solid #334155;">Материал</th>
+          <th style="text-align:right;color:#64748b;padding:3px 4px;border-bottom:1px solid #334155;">Кол.</th>
+          <th style="text-align:right;color:#64748b;padding:3px 4px;border-bottom:1px solid #334155;">Сума</th>
+        </tr></thead>
+        <tbody>
+          ${matRows.map(r=>`<tr>
+            <td style="padding:3px 4px;color:#94a3b8;">${r.name}</td>
+            <td style="padding:3px 4px;text-align:right;color:#64748b;white-space:nowrap;">${r.qty} ${r.unit}</td>
+            <td style="padding:3px 4px;text-align:right;color:#d9a441;font-weight:600;white-space:nowrap;">${r.total.toFixed(2)}€</td>
+          </tr>`).join('')}
+        </tbody>
+        <tfoot><tr>
+          <td colspan="2" style="padding:4px;border-top:1px solid #334155;color:#94a3b8;font-weight:700;">Общо материали</td>
+          <td style="padding:4px;border-top:1px solid #334155;text-align:right;color:#60a5fa;font-weight:700;">${totalMat.toFixed(2)}€</td>
+        </tr></tfoot>
+      </table>
+    </div>`;
+    specContent.innerHTML=html;
+    document.getElementById('grandBox').style.display='block';
+    document.getElementById('dGrandLabor').textContent=totalLabor.toFixed(2)+' €';
+    document.getElementById('dGrandMat').textContent=totalMat.toFixed(2)+' €';
+    document.getElementById('dGrand').textContent=grand.toFixed(2)+' €';
+    document.getElementById('dGrandLv').textContent=(grand*EUR2LV).toFixed(2)+' лв';
+  }
+
+  // Mobile expand table
+  const tbody=document.getElementById('ftTbody');
+  const tfoot=document.getElementById('ftFoot');
+  tbody.innerHTML=allRows.map(r=>`<tr><td>${r.room} — ${r.name}</td><td>${r.m2.toFixed(1)}</td><td>${r.eur.toFixed(2)}</td><td style="text-align:right;">${r.total.toFixed(2)}€</td></tr>`).join('')+
+    (matRows.length?'<tr><td colspan="4" style="padding-top:8px;font-size:0.7rem;color:#64748b;font-weight:700;text-transform:uppercase;">Материали</td></tr>'+
+    matRows.map(r=>`<tr><td>${r.name}</td><td>${r.qty} ${r.unit}</td><td>${r.unitPrice.toFixed(2)}</td><td style="text-align:right;">${r.total.toFixed(2)}€</td></tr>`).join(''):'');
+  tfoot.innerHTML=`<tr class="tot"><td colspan="3">ОБЩО ТРУД + МАТЕРИАЛИ</td><td style="text-align:right;">${grand.toFixed(2)}€</td></tr>`;
+}
+
+// ── FOOTER EXPAND ──
+function toggleExpand(){
+  const e=document.getElementById('ftExpand');
+  const h=document.getElementById('expandHint');
+  const open=e.classList.toggle('open');
+  h.textContent=open?'▼ затвори':'▲ детайли';
+}
+
+// ── SEND TO OFFER ──
+function sendToOffer(){
+  const labor_rows=[],materials=[];
+  const totals={};
+  rooms.forEach(room=>{
+    const {L,W,H,surfs}=room;
+    if(L<=0||W<=0||H<=0) return;
+    Object.entries(surfs).forEach(([key,s])=>{
+      const area=surfArea(room,key);
+      if(s.gk&&SVC[s.gk]){const k=s.gk;totals[k]=(totals[k]||0)+area;}
+      s.pt.forEach(v=>{if(SVC[v]){totals[v]=(totals[v]||0)+area;}});
+    });
+  });
+  Object.entries(totals).forEach(([k,m2])=>{
+    if(SVC[k]) labor_rows.push({name:SVC[k].name,qty:Math.round(m2*10)/10,unit:'м²',price:SVC[k].eur});
+  });
+  // Materials
+  let gkArea=0;
+  rooms.forEach(room=>{
+    const {L,W,H,surfs}=room;
+    if(L<=0||W<=0||H<=0) return;
+    Object.entries(surfs).forEach(([key,s])=>{if(s.gk) gkArea+=surfArea(room,key);});
+  });
+  if(gkArea>0){
+    const pLen=parseFloat(document.getElementById('pLen').value)||3;
+    const addM=(key,qty,label)=>{const cfg=PKG[key];if(!(qty>0)) return;const pc=cfg.ps>0?Math.ceil(qty/cfg.ps):Math.ceil(qty);const up=cfg.price*MARKUP;materials.push({name:label,qty:pc,unit:cfg.pp+' '+cfg.sz,unitPrice:Math.round(up*100)/100,total:Math.round(up*pc*100)/100});};
+    addM('board_std',Math.ceil((gkArea*1.1)/2.4),'ГК плоскост Knauf A13');
+    addM('prof_ud',Math.ceil(gkArea*0.25/pLen),`UD профил ${pLen}м`);
+    addM('prof_cd',Math.ceil(gkArea*1.6/pLen),`CD профил ${pLen}м`);
+    addM('hangers',Math.ceil(gkArea*1.4),'Окачвачи');
+    addM('screws',Math.ceil(gkArea*15),'Рапидки TN25');
+    addM('joint',Math.ceil(gkArea*0.4),'Фугираща смес');
+    addM('finish',Math.ceil(gkArea*1.2),'Финишна шпакловка');
+    addM('tape',Math.ceil(gkArea*1.5),'Лента');
+  }
+  const data={project:document.getElementById('pName').value||'',date:document.getElementById('pDate').value||'',labor_rows,materials};
+  localStorage.setItem('ir_calc_data',JSON.stringify(data));
+  if(confirm('Данните са запазени. Отваряш офертата?')) window.location.href='offer.html';
+}
+
+async function exportPDF(){
+  if(!window.jspdf){showToast('Библиотеката се зарежда...'); return;}
+  showToast('Генерирам PDF...');
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF('p','mm','a4');
+
+  // ── Зареждаме DejaVu за кирилица ──
+  let F = 'helvetica';
+  try {
+    const [normB64, boldB64] = await Promise.all([
+      loadFont('normal', FONT_URLS.normal),
+      loadFont('bold',   FONT_URLS.bold)
+    ]);
+    doc.addFileToVFS('DejaVuSans.ttf', normB64);
+    doc.addFont('DejaVuSans.ttf', 'DejaVuSans', 'normal');
+    doc.addFileToVFS('DejaVuSans-Bold.ttf', boldB64);
+    doc.addFont('DejaVuSans-Bold.ttf', 'DejaVuSans', 'bold');
+    F = 'DejaVuSans';
+  } catch(e) {
+    console.warn('DejaVu не успя да се зареди, ползваме helvetica:', e);
+  }
+
+  const EUR2LV=1.95583;
+  let y=14;
+
+  // Header
+  doc.setFillColor(15,14,12); doc.rect(0,0,210,30,'F');
+  doc.setFont(F,'bold'); doc.setFontSize(13); doc.setTextColor(240,180,60);
+  doc.text('IVANOV REMONTI',105,12,{align:'center'});
+  doc.setFont(F,'normal'); doc.setFontSize(8); doc.setTextColor(180,180,170);
+  doc.text('Строителни услуги · 0877 810 418 · ivanov-remonti.com',105,20,{align:'center'});
+  doc.setFillColor(201,168,76); doc.rect(0,30,210,1,'F');
+  y=40;
+
+  // Project info
+  const pName=document.getElementById('pName').value||'—';
+  const pDate=document.getElementById('pDate').value||'—';
+  doc.setFont(F,'bold'); doc.setFontSize(10); doc.setTextColor(30,30,20);
+  doc.text(`Проект: ${pName}`,14,y); doc.text(`Дата: ${pDate}`,150,y); y+=10;
+
+  // Collect all rows
+  const allRows=[], matRowsArr=[];
+  let totalLabor=0, totalMat=0;
+  rooms.forEach(room=>{
+    const {L,W,H,surfs,name}=room;
+    if(L<=0||W<=0||H<=0) return;
+    Object.entries(surfs).forEach(([key,s])=>{
+      const area=surfArea(room,key);
+      if(s.gk&&SVC[s.gk]){const t=area*SVC[s.gk].eur;totalLabor+=t;allRows.push([name||'Помещение',SURF_LABELS[key]+' — '+SVC[s.gk].name,area.toFixed(1),'м²',SVC[s.gk].eur.toFixed(2)+' €',(t).toFixed(2)+' €']);}
+      s.pt.forEach(v=>{if(SVC[v]){const t=area*SVC[v].eur;totalLabor+=t;allRows.push([name||'Помещение',SURF_LABELS[key]+' — '+SVC[v].name,area.toFixed(1),'м²',SVC[v].eur.toFixed(2)+' €',(t).toFixed(2)+' €']);}});
+    });
+  });
+
+  // Labor table
+  if(allRows.length){
+    doc.setFont(F,'bold'); doc.setFontSize(9); doc.setTextColor(154,117,48);
+    doc.text('ТРУД',14,y); y+=4;
+    doc.autoTable({startY:y,head:[['Помещение','Услуга','Кол.','Мярка','Ед. цена','Общо']],body:allRows,
+      styles:{fontSize:8,cellPadding:2,font:F},
+      headStyles:{fillColor:[26,24,16],textColor:[201,168,76],fontStyle:'bold'},
+      alternateRowStyles:{fillColor:[245,240,228]},
+      columnStyles:{2:{halign:'center'},3:{halign:'center'},4:{halign:'right'},5:{halign:'right',fontStyle:'bold'}},
+      margin:{left:8,right:8},tableWidth:194,
+      foot:[[{content:'Общо труд',colSpan:5,styles:{fontStyle:'bold',halign:'right'}},{content:totalLabor.toFixed(2)+' €',styles:{fontStyle:'bold',halign:'right'}}]],
+      showFoot:'lastPage'});
+    y=doc.lastAutoTable.finalY+8;
+  }
+
+  // Materials table
+  const matRowsData=[];
+  let gkArea=0;
+  rooms.forEach(room=>{const {L,W,H,surfs}=room;if(L<=0||W<=0||H<=0) return;Object.entries(surfs).forEach(([key,s])=>{if(s.gk) gkArea+=surfArea(room,key);});});
+  if(gkArea>0){
+    const pLen=parseFloat(document.getElementById('pLen').value)||3;
+    const boards=Math.ceil((gkArea*1.1)/2.4);
+    const addM=(key,qty)=>{const cfg=PKG[key];if(!(qty>0)) return;const pc=cfg.ps>0?Math.ceil(qty/cfg.ps):Math.ceil(qty);const up=cfg.price*MARKUP;const tot=up*pc;totalMat+=tot;matRowsData.push([cfg.src,`${pc} ${cfg.pp} ${cfg.sz}`,up.toFixed(2)+' €',tot.toFixed(2)+' €']);};
+    PKG.board_std.src=`ГК Стандартен ${pLen}м`; PKG.prof_ud.src=`UD × ${pLen}м`; PKG.prof_cd.src=`CD × ${pLen}м`;
+    addM('board_std',boards); addM('prof_ud',Math.ceil(gkArea*0.25/pLen)); addM('prof_cd',Math.ceil(gkArea*1.6/pLen));
+    addM('hangers',Math.ceil(gkArea*1.4)); addM('buttons',Math.ceil(gkArea*1.4)*2);
+    addM('screws',Math.ceil(gkArea*15)); addM('dowels',Math.ceil(gkArea*0.9));
+    addM('joint',Math.ceil(gkArea*0.4)); addM('finish',Math.ceil(gkArea*1.2)); addM('tape',Math.ceil(gkArea*1.5));
+  }
+  // UW/CW за преградни стени
+  let partArea=0;
+  rooms.forEach(room=>{
+    if(room.type==='part'&&(room.L||0)>0&&(room.H||0)>0) partArea+=room.L*room.H;
+  });
+  if(partArea>0){
+    const pLen2=parseFloat(document.getElementById('pLen').value)||3;
+    PKG.prof_uw.src=`UW × ${pLen2}м`;
+    PKG.prof_cw.src=`CW × ${pLen2}м`;
+    const addPartM=(key,qty)=>{const cfg=PKG[key];if(!(qty>0)) return;const pc=cfg.ps>0?Math.ceil(qty/cfg.ps):Math.ceil(qty);const up=cfg.price*MARKUP;const tot=up*pc;totalMat+=tot;matRows.push({name:cfg.src,qty:pc,unit:cfg.pp+(cfg.sz?' '+cfg.sz:''),unitPrice:Math.round(up*100)/100,total:Math.round(tot*100)/100});};
+    // UW: горе + долу × дължина с 10% фира
+    const uwQty=Math.ceil((partArea/((pLen2*0.6)))*1.1)*2;
+    // CW: вертикални стойки на 0.6м × височина
+    rooms.forEach(room=>{
+      if(room.type!=='part'||(room.L||0)<=0||(room.H||0)<=0) return;
+      const cols=Math.ceil(room.L/0.6)+1;
+      addPartM('prof_cw',Math.ceil(cols*room.H/pLen2*1.1));
+    });
+    addPartM('prof_uw',Math.ceil(partArea*2/pLen2*1.1));
+    // Boards for partition
+    const partBoards=Math.ceil((partArea*2*1.1)/2.4);
+    addPartM('board_std',partBoards);
+    addPartM('screws',Math.ceil(partArea*2*15));
+    addPartM('dowels',Math.ceil(partArea*2*0.5));
+  }
+
+  const ptTotals={osnovna:0,gipsova:0,gipsova_mesh:0,fina:0,fugi:0};
+  rooms.forEach(room=>{const {L,W,H,surfs}=room;if(L<=0||W<=0||H<=0) return;Object.entries(surfs).forEach(([key,s])=>{const area=surfArea(room,key);s.pt.forEach(v=>{if(ptTotals.hasOwnProperty(v)) ptTotals[v]+=area;});});});
+  const ptMap={osnovna:{key:'p_osnovna',norm:9},gipsova:{key:'p_gipsova',norm:1},gipsova_mesh:{key:'p_gipsova',norm:1},fina:{key:'p_fina',norm:0.8},fugi:{key:'p_fugi',norm:0.4}};
+  if(ptTotals.gipsova_mesh>0){const cfg=PKG.p_mreja;const pc=Math.ceil(ptTotals.gipsova_mesh/cfg.ps);const up=cfg.price*MARKUP;const tot=up*pc;totalMat+=tot;matRowsData.push([cfg.src,`${pc} ${cfg.pp} ${cfg.sz}`,up.toFixed(2)+' €',tot.toFixed(2)+' €']);}
+  Object.entries(ptTotals).forEach(([svc,m2])=>{if(m2<=0) return;const pm=ptMap[svc];const cfg=PKG[pm.key];const kg=m2*pm.norm;const pc=Math.ceil(kg/cfg.ps);const up=cfg.price*MARKUP;const tot=up*pc;totalMat+=tot;matRowsData.push([cfg.src,`${pc} ${cfg.pp} ${cfg.sz}`,up.toFixed(2)+' €',tot.toFixed(2)+' €']);});
+
+  if(matRowsData.length&&y<260){
+    doc.setFont(F,'bold'); doc.setFontSize(9); doc.setTextColor(154,117,48);
+    doc.text('МАТЕРИАЛИ',14,y); y+=4;
+    doc.autoTable({startY:y,head:[['Материал','Количество','Ед. цена','Общо']],body:matRowsData,
+      styles:{fontSize:8,cellPadding:2,font:F},
+      headStyles:{fillColor:[26,24,16],textColor:[201,168,76],fontStyle:'bold'},
+      alternateRowStyles:{fillColor:[245,240,228]},
+      columnStyles:{1:{halign:'right'},2:{halign:'right'},3:{halign:'right',fontStyle:'bold'}},
+      margin:{left:8,right:8},tableWidth:194,
+      foot:[[{content:'Общо материали',colSpan:3,styles:{fontStyle:'bold',halign:'right'}},{content:totalMat.toFixed(2)+' €',styles:{fontStyle:'bold',halign:'right'}}]],
+      showFoot:'lastPage'});
+    y=doc.lastAutoTable.finalY+8;
+  }
+
+  // Grand total
+  const grand=totalLabor+totalMat;
+  doc.setFillColor(26,24,16); doc.rect(8,y,194,12,'F');
+  doc.setFont(F,'bold'); doc.setFontSize(10); doc.setTextColor(201,168,76);
+  doc.text('ОБЩО ТРУД + МАТЕРИАЛИ:',12,y+8);
+  doc.setFontSize(12); doc.setTextColor(228,201,126);
+  doc.text(grand.toFixed(2)+' €',200,y+8,{align:'right'});
+
+  const fname=(document.getElementById('pName').value||'oferta').replace(/\s+/g,'_');
+  doc.save(fname+'-pomeshteniq.pdf');
+}
+
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',2000);}
+
+// Init
+document.getElementById('pDate').valueAsDate=new Date();
+addRoom();
+</script>
+</body>
+</html>
