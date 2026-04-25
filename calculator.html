@@ -1818,8 +1818,9 @@ function sendToOffer(){
   // Допълнителни материали от customMats масива
   (typeof customMats!=='undefined'?customMats:[]).forEach(m=>{
     if(m.name&&m.qty>0&&m.unitPrice>0){
-      const total=Math.round(m.qty*(m.unitPrice*MARKUP)*100)/100;
-      materials.push({name:m.name,qty:m.qty,unit:'бр.',unitPrice:Math.round(m.unitPrice*MARKUP*100)/100,total});
+      // Ръчно въведената цена е вече крайна — без допълнителен MARKUP
+      const total=Math.round(m.qty*m.unitPrice*100)/100;
+      materials.push({name:m.name,qty:m.qty,unit:'бр.',unitPrice:Math.round(m.unitPrice*100)/100,total});
     }
   });
 
