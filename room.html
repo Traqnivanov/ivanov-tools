@@ -224,7 +224,13 @@ async function loadFont(name, url) {
   if (_fontCache[name]) return _fontCache[name];
   const resp = await fetch(url);
   const buf = await resp.arrayBuffer();
-  const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+  const bytes = new Uint8Array(buf);
+  let b64 = '';
+  const chunk = 8192;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    b64 += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  b64 = btoa(b64);
   _fontCache[name] = b64;
   return b64;
 }
