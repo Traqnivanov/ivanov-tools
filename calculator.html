@@ -1755,6 +1755,70 @@ function sendToOffer(){
   });
   // Закръгляме
   Object.keys(data).forEach(k=>{if(typeof data[k]==='number') data[k]=Math.round(data[k]*10)/10;});
+
+  // ── Материали: събираме всички с количество и цена ──
+  const show={
+    board:  document.getElementById('mBoard')?.checked,
+    profile:document.getElementById('mProfile')?.checked,
+    hanger: document.getElementById('mHanger')?.checked,
+    button: document.getElementById('mButton')?.checked,
+    screws: document.getElementById('mScrews')?.checked,
+    dowel:  document.getElementById('mDowel')?.checked,
+    joint:  document.getElementById('mJoint')?.checked,
+    finish: document.getElementById('mFinish')?.checked,
+    tape:   document.getElementById('mTape')?.checked,
+    ins:    document.getElementById('mIns')?.checked,
+    primer: document.getElementById('mPrimer')?.checked,
+    glue:   document.getElementById('mGlue')?.checked,
+    foam:   document.getElementById('mFoam')?.checked,
+  };
+  const d=GKD;
+  const mkMat=(key,rawQty,label)=>{
+    if(!(rawQty>0)) return null;
+    const cfg=PKG[key]; if(!cfg||!cfg.price) return null;
+    const pkgCount=cfg.ps>0?Math.ceil(rawQty/cfg.ps):Math.ceil(rawQty);
+    const unitPrice=cfg.price*MARKUP;
+    const total=unitPrice*pkgCount;
+    const unitLabel=cfg.ps>0?`${cfg.pp} ${cfg.sz}`:cfg.pu;
+    return {name:label||cfg.src, qty:pkgCount, unit:unitLabel, unitPrice:Math.round(unitPrice*100)/100, total:Math.round(total*100)/100};
+  };
+  const materials=[];
+  const push=m=>{if(m) materials.push(m);};
+  if(show.board){
+    push(mkMat('board_std', d.board_std, 'Стандартен ГК плоскост (Knauf A13)'));
+    if(d.hasGreen) push(mkMat('board_grn', d.board_grn, 'Влагоустойчив ГК плоскост (Knauf H13)'));
+  }
+  if(show.profile){
+    push(mkMat('prof_ud', d.prof_ud, `UD профил ${d.pLen}м`));
+    push(mkMat('prof_cd', d.prof_cd, `CD профил ${d.pLen}м`));
+  }
+  if(show.hanger) push(mkMat('hangers', d.hangers, 'Директни окачвачи'));
+  if(show.button) push(mkMat('buttons', d.buttons, 'Копчета LN'));
+  if(show.screws) push(mkMat('screws',  d.screws,  'Рапидки TN25'));
+  if(show.dowel)  push(mkMat('dowels',  d.dowels,  'Метални дюбели 6×35мм'));
+  if(show.joint)  push(mkMat('joint',   d.joint,   'Шпакловка за фуги (Knauf Fugenfüller)'));
+  if(show.finish) push(mkMat('finish',  d.finish,  'Финишна шпакловка (Knauf Super Finish)'));
+  if(show.tape)   push(mkMat('tape',    d.tape,    'Стъклофазерна лента'));
+  if(show.primer) push(mkMat('primer',  d.primer,  'Грунд дълбокопроникващ'));
+  if(show.ins && d.ins>0)  push(mkMat('ins',  d.ins,  'Изолация'));
+  if(show.glue && d.glue>0) push(mkMat('glue', d.glue, 'Knauf Perlfix лепило'));
+  if(show.foam && d.foam>0) push(mkMat('foam', d.foam, 'Монтажна пяна 750мл'));
+  // Шпакловъчни материали
+  if(PD.osnovna>0)      push(mkMat('p_osnovna', PD.osnovna, 'Основна мазилка 30кг'));
+  if(PD.gipsova>0)      push(mkMat('p_gipsova', PD.gipsova, 'Knauf Gips Finish 20кг'));
+  if(PD.gipsova_mesh>0) push(mkMat('p_mreja',   PD.gipsova_mesh, 'Армираща мрежа 50м²'));
+  if(PD.fina>0)         push(mkMat('p_fina',    PD.fina,   'Knauf Finitura 20кг'));
+  if(PD.fugi>0)         push(mkMat('p_fugi',    PD.fugi,   'Шпакловка фуги (Knauf) 25кг'));
+  // Допълнителни материали
+  document.querySelectorAll('.custom-mat-row').forEach(row=>{
+    const n=row.querySelector('.cmat-name')?.value||'';
+    const q=parseFloat(row.querySelector('.cmat-qty')?.value)||0;
+    const u=row.querySelector('.cmat-unit')?.value||'бр.';
+    const p=parseFloat(row.querySelector('.cmat-price')?.value)||0;
+    if(n&&q>0&&p>0) materials.push({name:n,qty:q,unit:u,unitPrice:p,total:Math.round(q*p*100)/100});
+  });
+
+  data.materials = materials;
   localStorage.setItem('ir_calc_data', JSON.stringify(data));
   if(confirm('Данните са запазени. Отваряш офертата?')) window.location.href='offer.html';
 }
