@@ -1255,7 +1255,7 @@ function mkR(id,lbl,rawQty,rawUnit,rawCalc){
     <td class="col-pkg" id="qc-${id}">${pkgHtml}</td>
     <td class="col-raw">${rightVal}</td>
     <td style="vertical-align:middle;padding:4px 6px;white-space:nowrap;">${priceHtml}</td>
-    <td class="col-edit"><button class="edit-btn" onclick="startEdit('${id}',${qty},'${rawUnit}')">✏️</button></td>
+    <td class="col-edit"><button class="edit-btn" onclick="startEdit('${id}',${pkgCount},'${cfg.ps>0?(pkgCount===1?cfg.pu:cfg.pp):rawUnit}')">✏️</button></td>
   </tr>`;
 }
 
@@ -1547,7 +1547,11 @@ function commitEdit(id,unit){
   if(!inp) return;
   if(inp.dataset.esc){renderResults();return;}
   const v=parseFloat(inp.value);
-  if(!isNaN(v)&&v>=0) ovr[id]=Math.ceil(v);
+  if(!isNaN(v)&&v>=0){
+    const cfg=PKG[id];
+    // Записваме в единици за да е съвместимо с изчисленията
+    ovr[id]=cfg&&cfg.ps>0?Math.ceil(v)*cfg.ps:Math.ceil(v);
+  }
   renderResults();
 }
 
@@ -1774,9 +1778,11 @@ function sendToOffer(){
   };
   const d=GKD;
   const mkMat=(key,rawQty,label)=>{
-    if(!(rawQty>0)) return null;
+    // Вземаме ръчната корекция ако има такава
+    const effectiveQty = ovr[key]!==undefined ? ovr[key] : rawQty;
+    if(!(effectiveQty>0)) return null;
     const cfg=PKG[key]; if(!cfg||!cfg.price) return null;
-    const pkgCount=cfg.ps>0?Math.ceil(rawQty/cfg.ps):Math.ceil(rawQty);
+    const pkgCount=cfg.ps>0?Math.ceil(effectiveQty/cfg.ps):Math.ceil(effectiveQty);
     const unitPrice=cfg.price*MARKUP;
     const total=unitPrice*pkgCount;
     const unitLabel=cfg.ps>0?`${cfg.pp} ${cfg.sz}`:cfg.pu;
@@ -1809,13 +1815,12 @@ function sendToOffer(){
   if(PD.gipsova_mesh>0) push(mkMat('p_mreja',   PD.gipsova_mesh, 'Армираща мрежа 50м²'));
   if(PD.fina>0)         push(mkMat('p_fina',    PD.fina,   'Knauf Finitura 20кг'));
   if(PD.fugi>0)         push(mkMat('p_fugi',    PD.fugi,   'Шпакловка фуги (Knauf) 25кг'));
-  // Допълнителни материали
-  document.querySelectorAll('.custom-mat-row').forEach(row=>{
-    const n=row.querySelector('.cmat-name')?.value||'';
-    const q=parseFloat(row.querySelector('.cmat-qty')?.value)||0;
-    const u=row.querySelector('.cmat-unit')?.value||'бр.';
-    const p=parseFloat(row.querySelector('.cmat-price')?.value)||0;
-    if(n&&q>0&&p>0) materials.push({name:n,qty:q,unit:u,unitPrice:p,total:Math.round(q*p*100)/100});
+  // Допълнителни материали от customMats масива
+  (typeof customMats!=='undefined'?customMats:[]).forEach(m=>{
+    if(m.name&&m.qty>0&&m.unitPrice>0){
+      const total=Math.round(m.qty*(m.unitPrice*MARKUP)*100)/100;
+      materials.push({name:m.name,qty:m.qty,unit:'бр.',unitPrice:Math.round(m.unitPrice*MARKUP*100)/100,total});
+    }
   });
 
   data.materials = materials;
