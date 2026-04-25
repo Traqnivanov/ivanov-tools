@@ -17,27 +17,16 @@ body {
   padding: 24px;
   gap: 32px;
 }
-.logo {
-  text-align: center;
-}
-.logo-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #d9a441;
-  letter-spacing: 0.5px;
-}
-.logo-sub {
-  font-size: 0.85rem;
-  color: #64748b;
-  margin-top: 4px;
-}
+.logo { text-align: center; }
+.logo-title { font-size: 1.5rem; font-weight: 700; color: #d9a441; letter-spacing: 0.5px; }
+.logo-sub { font-size: 0.85rem; color: #64748b; margin-top: 4px; }
 .cards {
   display: flex;
   gap: 16px;
   flex-wrap: wrap;
   justify-content: center;
   width: 100%;
-  max-width: 600px;
+  max-width: 900px;
 }
 .card {
   flex: 1;
@@ -60,19 +49,9 @@ body {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(217,164,65,0.15);
 }
-.card-icon {
-  font-size: 2.5rem;
-}
-.card-title {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #e2e8f0;
-}
-.card-desc {
-  font-size: 0.8rem;
-  color: #64748b;
-  line-height: 1.5;
-}
+.card-icon { font-size: 2.5rem; }
+.card-title { font-size: 1.05rem; font-weight: 700; color: #e2e8f0; }
+.card-desc { font-size: 0.8rem; color: #64748b; line-height: 1.5; }
 .card-btn {
   margin-top: 4px;
   background: linear-gradient(135deg, #d9a441, #b8862d);
@@ -85,10 +64,7 @@ body {
   cursor: pointer;
   width: 100%;
 }
-.footer {
-  font-size: 0.75rem;
-  color: #334155;
-}
+.footer { font-size: 0.75rem; color: #334155; }
 </style>
 </head>
 <body>
@@ -105,7 +81,12 @@ body {
     <div class="card-desc">Изчисли материали за ГК и шпакловка по стаи и размери</div>
     <div class="card-btn">Отвори →</div>
   </a>
-
+  <a class="card" href="room.html">
+    <div class="card-icon">🏠</div>
+    <div class="card-title">Помещение</div>
+    <div class="card-desc">Изчисли ГК и шпакловка по помещения с визуална схема</div>
+    <div class="card-btn">Отвори →</div>
+  </a>
   <a class="card" href="offer.html">
     <div class="card-icon">📋</div>
     <div class="card-title">Оферта</div>
@@ -115,6 +96,5 @@ body {
 </div>
 
 <div class="footer">ivanov-remonti.com · 0877 810 418</div>
-
 </body>
 </html>
