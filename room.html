@@ -631,56 +631,108 @@ function calcAll(){
     totalLabor+=roomLabor;
   });
 
-  // Materials
-  let gkArea=0;
+  // ── Materials — точна логика от calculator.html ──
+  const pLen=parseFloat(document.getElementById('pLen').value)||3;
+  let boardArea=0,ud=0,cd=0,uw=0,cw=0,hangers=0,screws=0,dowel=0,glue=0,foam=0;
+
   rooms.forEach(room=>{
-    const {L,W,H,surfs}=room;
-    if(L<=0||W<=0||H<=0) return;
-    Object.entries(surfs).forEach(([key,s])=>{if(s.gk) gkArea+=surfArea(room,key);});
+    const {L,W,H,surfs,type}=room;
+    if(type==='part'){
+      // Преградна стена
+      if(L<=0||H<=0) return;
+      const a=L*H;
+      const uwPart=Math.ceil((2*L/pLen)*1.1);
+      const regP=Math.floor(L/0.6)-1;
+      const remP=L-regP*0.6;
+      const colsP=remP>=0.7?regP+1:regP;
+      const cwPart=Math.ceil((colsP*H/pLen)*1.1);
+      boardArea+=a*2; uw+=uwPart; cw+=cwPart;
+      screws+=(a*2)*15; dowel+=Math.ceil((2*L/0.7)*1.1);
+    } else {
+      if(L<=0||W<=0||H<=0) return;
+      // Таван
+      if(surfs.ceil&&surfs.ceil.gk){
+        const a=L*W, p=2*(L+W);
+        const udCeil=Math.ceil((p/pLen)*1.1);
+        const shortC=Math.min(L,W), longC=Math.max(L,W);
+        const regC=Math.floor(shortC/0.6)-1;
+        const remC=shortC-regC*0.6;
+        const colsC=remC>=0.7?regC+1:regC;
+        const cdCeil=Math.ceil((colsC*longC/pLen)*1.1);
+        boardArea+=a; ud+=udCeil; cd+=cdCeil;
+        hangers+=a*2.8; screws+=a*15;
+        dowel+=p/0.7; dowel+=(a*2.8)*2;
+      }
+      // Стени
+      ['N','S','W','E'].forEach(wallKey=>{
+        const s=surfs[wallKey];
+        if(!s||!s.gk) return;
+        const wl=(wallKey==='N'||wallKey==='S')?L:W;
+        const a=wl*H;
+        if(s.gk==='wall'){
+          const udWall=Math.ceil(((2*wl+2*H)/pLen)*1.1);
+          const regW=Math.floor(wl/0.6)-1;
+          const remW=wl-regW*0.6;
+          const colsW=remW>=0.7?regW+1:regW;
+          const cdWall=Math.ceil((colsW*H/pLen)*1.1);
+          boardArea+=a; ud+=udWall; cd+=cdWall;
+          hangers+=a*1.5; screws+=a*15;
+          dowel+=Math.ceil(((2*wl+2*H)/0.7)*1.1);
+        } else if(s.gk==='glue'){
+          boardArea+=a; glue+=a*4; foam+=a/10;
+          screws+=a*15;
+        }
+      });
+    }
   });
+
+  const buttons=hangers*2;
+  const joint=boardArea*0.4, finish=boardArea*1.2, tape=boardArea*1.5;
+  const totalBoards=boardArea>0?Math.ceil((boardArea*1.1)/2.4):0;
+
   const matRows=[];
-  if(gkArea>0){
-    const pLen=parseFloat(document.getElementById('pLen').value)||3;
-    const boards=Math.ceil((gkArea*1.1)/2.4);
-    const m=(key,qty)=>{
-      const cfg=PKG[key];if(!(qty>0)) return 0;
-      const pc=cfg.ps>0?Math.ceil(qty/cfg.ps):Math.ceil(qty);
-      const up=cfg.price*MARKUP;
-      const tot=up*pc;
-      matRows.push({name:cfg.src,qty:pc,unit:cfg.pp+(cfg.sz?' '+cfg.sz:''),unitPrice:Math.round(up*100)/100,total:Math.round(tot*100)/100});
-      return tot;
-    };
-    PKG.prof_ud.src=`UD × ${pLen}м`;
-    PKG.prof_cd.src=`CD × ${pLen}м`;
-    PKG.board_std.src=`ГК Стандартен ${pLen}м`;
-    totalMat+=m('board_std',boards);
-    totalMat+=m('prof_ud',Math.ceil(gkArea*0.25/pLen));
-    totalMat+=m('prof_cd',Math.ceil(gkArea*1.6/pLen));
-    totalMat+=m('hangers',Math.ceil(gkArea*1.4));
-    totalMat+=m('buttons',Math.ceil(gkArea*1.4)*2);
-    totalMat+=m('screws',Math.ceil(gkArea*15));
-    totalMat+=m('dowels',Math.ceil(gkArea*0.9));
-    totalMat+=m('joint',Math.ceil(gkArea*0.4));
-    totalMat+=m('finish',Math.ceil(gkArea*1.2));
-    totalMat+=m('tape',Math.ceil(gkArea*1.5));
-  }
-  // Шпакловъчни материали
-  const puttyTotals={osnovna:0,gipsova:0,gipsova_mesh:0,fina:0,fugi:0};
+  const m=(key,qty)=>{
+    const cfg=PKG[key]; if(!(qty>0)) return 0;
+    const pc=cfg.ps>0?Math.ceil(qty/cfg.ps):Math.ceil(qty);
+    const up=cfg.price*MARKUP;
+    const tot=up*pc;
+    matRows.push({name:cfg.src,qty:pc,unit:cfg.pp+(cfg.sz?' '+cfg.sz:''),unitPrice:Math.round(up*100)/100,total:Math.round(tot*100)/100});
+    return tot;
+  };
+  PKG.board_std.src=`ГК Стандартен ${pLen}м`;
+  PKG.prof_ud.src=`UD × ${pLen}м`;
+  PKG.prof_cd.src=`CD × ${pLen}м`;
+  PKG.prof_uw.src=`UW × ${pLen}м`;
+  PKG.prof_cw.src=`CW × ${pLen}м`;
+
+  if(totalBoards>0)      totalMat+=m('board_std', totalBoards);
+  if(Math.ceil(ud)>0)    totalMat+=m('prof_ud',   Math.ceil(ud));
+  if(Math.ceil(cd)>0)    totalMat+=m('prof_cd',   Math.ceil(cd));
+  if(Math.ceil(uw)>0)    totalMat+=m('prof_uw',   Math.ceil(uw));
+  if(Math.ceil(cw)>0)    totalMat+=m('prof_cw',   Math.ceil(cw));
+  if(Math.ceil(hangers)>0) totalMat+=m('hangers', Math.ceil(hangers));
+  if(Math.ceil(buttons)>0) totalMat+=m('buttons', Math.ceil(buttons));
+  if(Math.ceil(screws)>0)  totalMat+=m('screws',  Math.ceil(screws));
+  if(Math.ceil(dowel)>0)   totalMat+=m('dowels',  Math.ceil(dowel));
+  if(Math.ceil(joint)>0)   totalMat+=m('joint',   Math.ceil(joint));
+  if(Math.ceil(finish)>0)  totalMat+=m('finish',  Math.ceil(finish));
+  if(Math.ceil(tape)>0)    totalMat+=m('tape',    Math.ceil(tape));
+  // Точна логика от calculator.html — норми и мрежа
+  let pt_osnovna=0,pt_gipsova=0,pt_gipsova_mesh=0,pt_fina=0,pt_fugi=0;
   rooms.forEach(room=>{
     const {L,W,H,surfs}=room;
     if(L<=0||W<=0||H<=0) return;
     Object.entries(surfs).forEach(([key,s])=>{
       const area=surfArea(room,key);
-      s.pt.forEach(v=>{if(puttyTotals.hasOwnProperty(v)) puttyTotals[v]+=area;});
+      s.pt.forEach(v=>{
+        if(v==='osnovna')      pt_osnovna+=area*9;
+        else if(v==='gipsova') pt_gipsova+=area*1.0;
+        else if(v==='gipsova_mesh'){ pt_gipsova+=area*1.5; pt_gipsova_mesh+=area; }
+        else if(v==='fina')    pt_fina+=area*0.8;
+        else if(v==='fugi')    pt_fugi+=area*0.4;
+      });
     });
   });
-  const ptMatMap={
-    osnovna:      {key:'p_osnovna',norm:9.0},
-    gipsova:      {key:'p_gipsova',norm:1.0},
-    gipsova_mesh: {key:'p_gipsova',norm:1.0},
-    fina:         {key:'p_fina',   norm:0.8},
-    fugi:         {key:'p_fugi',   norm:0.4},
-  };
   const ptM=(key,kgQty)=>{
     const cfg=PKG[key];if(!(kgQty>0)) return 0;
     const pc=Math.ceil(kgQty/cfg.ps);
@@ -689,13 +741,11 @@ function calcAll(){
     matRows.push({name:cfg.src,qty:pc,unit:cfg.pp+' '+cfg.sz,unitPrice:Math.round(up*100)/100,total:Math.round(tot*100)/100});
     return tot;
   };
-  // Collect gipsova_mesh separately for мрежа
-  if(puttyTotals.gipsova_mesh>0) totalMat+=ptM('p_mreja',puttyTotals.gipsova_mesh);
-  Object.entries(puttyTotals).forEach(([svc,m2])=>{
-    if(m2<=0) return;
-    const cfg=ptMatMap[svc];
-    totalMat+=ptM(cfg.key, m2*cfg.norm);
-  });
+  if(pt_gipsova_mesh>0) totalMat+=ptM('p_mreja', pt_gipsova_mesh);
+  if(pt_osnovna>0)      totalMat+=ptM('p_osnovna', pt_osnovna);
+  if(pt_gipsova>0)      totalMat+=ptM('p_gipsova', pt_gipsova);
+  if(pt_fina>0)         totalMat+=ptM('p_fina',    pt_fina);
+  if(pt_fugi>0)         totalMat+=ptM('p_fugi',    pt_fugi);
 
   const grand=totalLabor+totalMat;
 
@@ -878,45 +928,67 @@ async function exportPDF(){
     y=doc.lastAutoTable.finalY+8;
   }
 
-  // Materials table
+  // Materials table — точна логика от calculator.html
   const matRowsData=[];
-  let gkArea=0;
-  rooms.forEach(room=>{const {L,W,H,surfs}=room;if(L<=0||W<=0||H<=0) return;Object.entries(surfs).forEach(([key,s])=>{if(s.gk) gkArea+=surfArea(room,key);});});
-  if(gkArea>0){
-    const pLen=parseFloat(document.getElementById('pLen').value)||3;
-    const boards=Math.ceil((gkArea*1.1)/2.4);
-    const addM=(key,qty)=>{const cfg=PKG[key];if(!(qty>0)) return;const pc=cfg.ps>0?Math.ceil(qty/cfg.ps):Math.ceil(qty);const up=cfg.price*MARKUP;const tot=up*pc;totalMat+=tot;matRowsData.push([cfg.src,`${pc} ${cfg.pp} ${cfg.sz}`,up.toFixed(2)+' €',tot.toFixed(2)+' €']);};
-    PKG.board_std.src=`ГК Стандартен ${pLen}м`; PKG.prof_ud.src=`UD × ${pLen}м`; PKG.prof_cd.src=`CD × ${pLen}м`;
-    addM('board_std',boards); addM('prof_ud',Math.ceil(gkArea*0.25/pLen)); addM('prof_cd',Math.ceil(gkArea*1.6/pLen));
-    addM('hangers',Math.ceil(gkArea*1.4)); addM('buttons',Math.ceil(gkArea*1.4)*2);
-    addM('screws',Math.ceil(gkArea*15)); addM('dowels',Math.ceil(gkArea*0.9));
-    addM('joint',Math.ceil(gkArea*0.4)); addM('finish',Math.ceil(gkArea*1.2)); addM('tape',Math.ceil(gkArea*1.5));
-  }
-  // UW/CW за преградни стени
-  let partArea=0;
+  const pdfPLen=parseFloat(document.getElementById('pLen').value)||3;
+  let pdfBoardArea=0,pdfUd=0,pdfCd=0,pdfUw=0,pdfCw=0,pdfHangers=0,pdfScrews=0,pdfDowel=0;
+
   rooms.forEach(room=>{
-    if(room.type==='part'&&(room.L||0)>0&&(room.H||0)>0) partArea+=room.L*room.H;
+    const {L,W,H,surfs,type}=room;
+    if(type==='part'){
+      if(L<=0||H<=0) return;
+      const a=L*H;
+      pdfUw+=Math.ceil((2*L/pdfPLen)*1.1);
+      const regP=Math.floor(L/0.6)-1,remP=L-regP*0.6,colsP=remP>=0.7?regP+1:regP;
+      pdfCw+=Math.ceil((colsP*H/pdfPLen)*1.1);
+      pdfBoardArea+=a*2; pdfScrews+=(a*2)*15; pdfDowel+=Math.ceil((2*L/0.7)*1.1);
+    } else {
+      if(L<=0||W<=0||H<=0) return;
+      if(surfs.ceil&&surfs.ceil.gk){
+        const a=L*W,p=2*(L+W);
+        pdfUd+=Math.ceil((p/pdfPLen)*1.1);
+        const shortC=Math.min(L,W),longC=Math.max(L,W);
+        const regC=Math.floor(shortC/0.6)-1,remC=shortC-regC*0.6,colsC=remC>=0.7?regC+1:regC;
+        pdfCd+=Math.ceil((colsC*longC/pdfPLen)*1.1);
+        pdfBoardArea+=a; pdfHangers+=a*2.8; pdfScrews+=a*15;
+        pdfDowel+=p/0.7; pdfDowel+=(a*2.8)*2;
+      }
+      ['N','S','W','E'].forEach(wk=>{
+        const s=surfs[wk]; if(!s||!s.gk) return;
+        const wl=(wk==='N'||wk==='S')?L:W, a=wl*H;
+        if(s.gk==='wall'){
+          pdfUd+=Math.ceil(((2*wl+2*H)/pdfPLen)*1.1);
+          const regW=Math.floor(wl/0.6)-1,remW=wl-regW*0.6,colsW=remW>=0.7?regW+1:regW;
+          pdfCd+=Math.ceil((colsW*H/pdfPLen)*1.1);
+          pdfBoardArea+=a; pdfHangers+=a*1.5; pdfScrews+=a*15;
+          pdfDowel+=Math.ceil(((2*wl+2*H)/0.7)*1.1);
+        } else if(s.gk==='glue'){
+          pdfBoardArea+=a; pdfScrews+=a*15;
+        }
+      });
+    }
   });
-  if(partArea>0){
-    const pLen2=parseFloat(document.getElementById('pLen').value)||3;
-    PKG.prof_uw.src=`UW × ${pLen2}м`;
-    PKG.prof_cw.src=`CW × ${pLen2}м`;
-    const addPartM=(key,qty)=>{const cfg=PKG[key];if(!(qty>0)) return;const pc=cfg.ps>0?Math.ceil(qty/cfg.ps):Math.ceil(qty);const up=cfg.price*MARKUP;const tot=up*pc;totalMat+=tot;matRows.push({name:cfg.src,qty:pc,unit:cfg.pp+(cfg.sz?' '+cfg.sz:''),unitPrice:Math.round(up*100)/100,total:Math.round(tot*100)/100});};
-    // UW: горе + долу × дължина с 10% фира
-    const uwQty=Math.ceil((partArea/((pLen2*0.6)))*1.1)*2;
-    // CW: вертикални стойки на 0.6м × височина
-    rooms.forEach(room=>{
-      if(room.type!=='part'||(room.L||0)<=0||(room.H||0)<=0) return;
-      const cols=Math.ceil(room.L/0.6)+1;
-      addPartM('prof_cw',Math.ceil(cols*room.H/pLen2*1.1));
-    });
-    addPartM('prof_uw',Math.ceil(partArea*2/pLen2*1.1));
-    // Boards for partition
-    const partBoards=Math.ceil((partArea*2*1.1)/2.4);
-    addPartM('board_std',partBoards);
-    addPartM('screws',Math.ceil(partArea*2*15));
-    addPartM('dowels',Math.ceil(partArea*2*0.5));
-  }
+
+  const pdfButtons=pdfHangers*2;
+  const pdfJoint=pdfBoardArea*0.4,pdfFinish=pdfBoardArea*1.2,pdfTape=pdfBoardArea*1.5;
+  const pdfBoards=pdfBoardArea>0?Math.ceil((pdfBoardArea*1.1)/2.4):0;
+
+  const addM=(key,qty)=>{
+    const cfg=PKG[key];if(!(qty>0)) return;
+    const pc=cfg.ps>0?Math.ceil(qty/cfg.ps):Math.ceil(qty);
+    const up=cfg.price*MARKUP;const tot=up*pc;
+    totalMat+=tot;
+    matRowsData.push([cfg.src,`${pc} ${cfg.pp}${cfg.sz?' '+cfg.sz:''}`,up.toFixed(2)+' €',tot.toFixed(2)+' €']);
+  };
+  PKG.board_std.src=`ГК Стандартен ${pdfPLen}м`;
+  PKG.prof_ud.src=`UD × ${pdfPLen}м`; PKG.prof_cd.src=`CD × ${pdfPLen}м`;
+  PKG.prof_uw.src=`UW × ${pdfPLen}м`; PKG.prof_cw.src=`CW × ${pdfPLen}м`;
+  addM('board_std',pdfBoards);
+  addM('prof_ud',Math.ceil(pdfUd)); addM('prof_cd',Math.ceil(pdfCd));
+  addM('prof_uw',Math.ceil(pdfUw)); addM('prof_cw',Math.ceil(pdfCw));
+  addM('hangers',Math.ceil(pdfHangers)); addM('buttons',Math.ceil(pdfButtons));
+  addM('screws',Math.ceil(pdfScrews)); addM('dowels',Math.ceil(pdfDowel));
+  addM('joint',Math.ceil(pdfJoint)); addM('finish',Math.ceil(pdfFinish)); addM('tape',Math.ceil(pdfTape));
 
   const ptTotals={osnovna:0,gipsova:0,gipsova_mesh:0,fina:0,fugi:0};
   rooms.forEach(room=>{const {L,W,H,surfs}=room;if(L<=0||W<=0||H<=0) return;Object.entries(surfs).forEach(([key,s])=>{const area=surfArea(room,key);s.pt.forEach(v=>{if(ptTotals.hasOwnProperty(v)) ptTotals[v]+=area;});});});
