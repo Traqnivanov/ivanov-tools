@@ -5,6 +5,37 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Помещение — Ivanov Remonti</title>
 <style>
+#lockScreen{position:fixed;inset:0;background:#0f172a;z-index:9999;display:flex;align-items:center;justify-content:center;}
+#lockBox{background:#1e293b;border:1px solid #334155;border-radius:14px;padding:32px 36px;display:flex;flex-direction:column;align-items:center;gap:14px;min-width:260px;}
+#lockBox h2{font-family:'Segoe UI',Arial,sans-serif;color:#f5d581;font-size:1.1rem;font-weight:700;letter-spacing:1px;}
+#lockInput{background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:7px;padding:9px 14px;font-size:1rem;width:100%;text-align:center;letter-spacing:3px;outline:none;}
+#lockInput:focus{border-color:#3b82f6;}
+#lockBtn{background:#16a34a;border:none;color:#fff;border-radius:7px;padding:9px 28px;font-size:0.9rem;cursor:pointer;font-weight:600;width:100%;}
+#lockErr{color:#ef4444;font-size:0.8rem;display:none;font-family:'Segoe UI',Arial,sans-serif;}
+</style>
+<script>
+(function(){
+  const PWD='1234';
+  function tryUnlock(){
+    const v=document.getElementById('lockInput').value;
+    if(v===PWD){
+      document.getElementById('lockScreen').style.display='none';
+    } else {
+      const err=document.getElementById('lockErr');
+      err.style.display='block';
+      document.getElementById('lockInput').value='';
+      document.getElementById('lockInput').focus();
+      setTimeout(()=>err.style.display='none',2000);
+    }
+  }
+  window.addEventListener('DOMContentLoaded',()=>{
+    document.getElementById('lockBtn').onclick=tryUnlock;
+    document.getElementById('lockInput').addEventListener('keydown',e=>{if(e.key==='Enter') tryUnlock();});
+    document.getElementById('lockInput').focus();
+  });
+})();
+</script>
+<style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Segoe UI',Arial,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;padding-bottom:64px;}
 
@@ -115,6 +146,9 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#0f172a;color:#e2e8f0;mi
 .btn-offer{background:#16a34a;border:none;color:#fff;border-radius:7px;padding:7px 14px;font-size:0.82rem;cursor:pointer;font-weight:600;}
 .btn-pdf{background:#1e3a5f;border:1px solid #3b82f6;color:#60a5fa;border-radius:7px;padding:7px 12px;font-size:0.82rem;cursor:pointer;}
 .toast{position:fixed;bottom:72px;right:16px;background:#16a34a;color:#fff;padding:9px 16px;border-radius:8px;font-size:0.82rem;z-index:200;display:none;}
+.mkp-btn{background:#0f172a;border:1px solid #334155;color:#64748b;border-radius:6px;padding:6px 12px;font-size:0.82rem;cursor:pointer;transition:all 0.1s;}
+.mkp-btn:hover{border-color:#64748b;color:#94a3b8;}
+.mkp-btn.active{border-color:#f5d581;color:#f5d581;background:#1a1500;font-weight:700;}
 .schema-wrap{display:flex;justify-content:center;padding:55px 28px 28px;background:#0a0f1c;border-radius:12px;border:1px dashed #334155;margin-bottom:6px;min-height:120px;align-items:center;overflow:visible;}
 .schema-wrap.empty{color:#475569;font-size:0.85rem;font-style:italic;}
 .schema{position:relative;background:repeating-linear-gradient(45deg,#1e293b,#1e293b 4px,#162033 4px,#162033 8px);border:1px solid #475569;border-radius:4px;}
@@ -148,11 +182,48 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#0f172a;color:#e2e8f0;mi
 </head>
 <body>
 
+<div id="lockScreen">
+  <div id="lockBox">
+    <h2>🔒 IVANOV REMONTI</h2>
+    <input id="lockInput" type="password" placeholder="••••••">
+    <div id="lockErr">Грешна парола</div>
+    <button id="lockBtn">Влез</button>
+  </div>
+</div>
+
 <div class="top-bar">
   <h1>🏠 Помещение</h1>
-  <label>Проект <input type="text" id="pName" placeholder="Обект..."></label>
-  <label>Дата <input type="date" id="pDate"></label>
+  <label>Проект <input type="text" id="pName" placeholder="Обект..." oninput="saveState()"></label>
+  <label>Дата <input type="date" id="pDate" onchange="saveState()"></label>
   <label>Профил <select id="pLen" onchange="calcAll()"><option value="3">3м</option><option value="4">4м</option></select></label>
+  <button onclick="newProject()" style="margin-left:auto;background:none;border:1px solid #334155;color:#475569;border-radius:6px;padding:5px 10px;font-size:0.78rem;cursor:pointer;">🗑 Нов обект</button>
+  <button onclick="saveToFile()" style="background:none;border:1px solid #334155;color:#475569;border-radius:6px;padding:5px 10px;font-size:0.78rem;cursor:pointer;">💾 Запази</button>
+  <label style="background:none;border:1px solid #334155;color:#475569;border-radius:6px;padding:5px 10px;font-size:0.78rem;cursor:pointer;">📂 Зареди<input type="file" accept=".json" onchange="loadFromFile(event)" style="display:none;"></label>
+  <div style="position:relative;">
+    <button onclick="toggleSettings()" id="gearBtn" style="background:none;border:none;color:#475569;cursor:pointer;font-size:1.1rem;padding:4px 8px;border-radius:6px;transition:all 0.15s;" title="">⚙️</button>
+    <div id="settingsPanel" style="display:none;position:absolute;top:36px;right:0;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:14px 16px;z-index:100;min-width:220px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+      <div style="font-size:0.7rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">Мат %</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">
+        <button id="mkp-5"  onclick="toggleMarkup(5)"  class="mkp-btn">5%</button>
+        <button id="mkp-10" onclick="toggleMarkup(10)" class="mkp-btn">10%</button>
+        <button id="mkp-15" onclick="toggleMarkup(15)" class="mkp-btn">15%</button>
+        <button id="mkp-20" onclick="toggleMarkup(20)" class="mkp-btn">20%</button>
+        <button id="mkp-25" onclick="toggleMarkup(25)" class="mkp-btn">25%</button>
+        <button id="mkp-30" onclick="toggleMarkup(30)" class="mkp-btn">30%</button>
+        <button id="mkp-35" onclick="toggleMarkup(35)" class="mkp-btn">35%</button>
+      </div>
+      <div style="font-size:0.7rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">Труд %</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        <button id="lmkp-5"  onclick="toggleLaborMarkup(5)"  class="mkp-btn">5%</button>
+        <button id="lmkp-10" onclick="toggleLaborMarkup(10)" class="mkp-btn">10%</button>
+        <button id="lmkp-15" onclick="toggleLaborMarkup(15)" class="mkp-btn">15%</button>
+        <button id="lmkp-20" onclick="toggleLaborMarkup(20)" class="mkp-btn">20%</button>
+        <button id="lmkp-25" onclick="toggleLaborMarkup(25)" class="mkp-btn">25%</button>
+        <button id="lmkp-30" onclick="toggleLaborMarkup(30)" class="mkp-btn">30%</button>
+        <button id="lmkp-35" onclick="toggleLaborMarkup(35)" class="mkp-btn">35%</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="layout">
@@ -309,6 +380,8 @@ const GK_WALL_OPTS=[{val:'wall',label:'Предстенна — 14€/м²'},{va
 let rooms=[], rc=0;
 let activeRoom=null, activeSurf=null;
 let extraMats=[];
+let extraMarkup=0;
+let extraLaborMarkup=0;
 
 function addPartition(){
   const id=rc++;
@@ -638,6 +711,88 @@ function removePT(roomId,surfKey,idx){
 }
 
 // ── CALC ──
+function saveToFile(){
+  const state={
+    rooms,rc,extraMats,extraMarkup,extraLaborMarkup,
+    pName:document.getElementById('pName').value,
+    pDate:document.getElementById('pDate').value,
+    pLen:document.getElementById('pLen').value,
+  };
+  const fname=(state.pName||'obekt').replace(/\s+/g,'_').replace(/[^a-zA-Zа-яА-Я0-9_-]/g,'')||'obekt';
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=fname+'.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('Запазено: '+fname+'.json');
+}
+
+function loadFromFile(e){
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const s=JSON.parse(ev.target.result);
+      rooms=s.rooms||[]; rc=s.rc||0;
+      extraMats=s.extraMats||[]; extraMarkup=s.extraMarkup||0; extraLaborMarkup=s.extraLaborMarkup||0;
+      if(s.pName) document.getElementById('pName').value=s.pName;
+      if(s.pDate) document.getElementById('pDate').value=s.pDate;
+      if(s.pLen)  document.getElementById('pLen').value=s.pLen;
+      renderAll();
+      renderExtraMats();
+      calcAll();
+      showToast('Заредено: '+file.name);
+    } catch(err){ showToast('Грешка при зареждане!'); }
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
+
+function newProject(){
+  if(!confirm('Изчистваш всичко и започваш нов обект?')) return;
+  localStorage.removeItem('ir_room_state');
+  rooms=[]; rc=0; extraMats=[]; extraMarkup=0; extraLaborMarkup=0;
+  document.getElementById('pName').value='';
+  document.getElementById('pDate').valueAsDate=new Date();
+  document.getElementById('pLen').value='3';
+  renderAll();
+  renderExtraMats();
+  addRoom();
+}
+
+function toggleLaborMarkup(pct){
+  extraLaborMarkup = extraLaborMarkup===pct ? 0 : pct;
+  [5,10,15,20,25,30,35].forEach(p=>{
+    const b=document.getElementById('lmkp-'+p);
+    if(b) b.classList.toggle('active',extraLaborMarkup===p);
+  });
+  calcAll();
+}
+
+// ── SETTINGS PANEL ──
+function toggleSettings(){
+  const p=document.getElementById('settingsPanel');
+  p.style.display=p.style.display==='none'?'block':'none';
+}
+document.addEventListener('click',e=>{
+  const panel=document.getElementById('settingsPanel');
+  const gear=document.getElementById('gearBtn');
+  if(panel&&gear&&!panel.contains(e.target)&&!gear.contains(e.target)){
+    panel.style.display='none';
+  }
+});
+
+// ── MARKUP TOGGLE ──
+function toggleMarkup(pct){
+  extraMarkup = extraMarkup===pct ? 0 : pct;
+  [5,10,15,20,25,30,35].forEach(p=>{
+    const b=document.getElementById('mkp-'+p);
+    if(b) b.classList.toggle('active', extraMarkup===p);
+  });
+  calcAll();
+}
+
 // ── EXTRA MATERIALS ──
 function addExtraMat(){
   extraMats.push({id:Date.now(),name:'',unit:'бр',unitPrice:0,qty:1});
@@ -675,8 +830,8 @@ function renderExtraMats(){
   </tr>`).join('');
 }
 
-function calcAll(){
-  let totalLabor=0,totalMat=0;
+function _calcAll(){
+  let totalLabor=0, totalMat=0;
   const allRows=[];
 
   rooms.forEach(room=>{
@@ -825,11 +980,13 @@ function calcAll(){
   if(pt_fugi>0)         totalMat+=ptM('p_fugi',    pt_fugi);
 
   const extraTotal=extraMats.reduce((s,m)=>s+(m.unitPrice*m.qty),0);
-  const grand=totalLabor+totalMat+extraTotal;
+  const markupAmt=(totalMat+extraTotal)*extraMarkup/100;
+  const laborMarkupAmt=totalLabor*extraLaborMarkup/100;
+  const grand=totalLabor+laborMarkupAmt+totalMat+extraTotal+markupAmt;
 
   // Update footer
-  document.getElementById('fLabor').textContent=totalLabor.toFixed(2)+' €';
-  document.getElementById('fMat').textContent=(totalMat+extraTotal).toFixed(2)+' €';
+  document.getElementById('fLabor').textContent=(totalLabor+laborMarkupAmt).toFixed(2)+' €';
+  document.getElementById('fMat').textContent=(totalMat+extraTotal+markupAmt).toFixed(2)+' €';
   document.getElementById('fGrand').textContent=grand.toFixed(2)+' €';
   document.getElementById('fLv').textContent=(grand*EUR2LV).toFixed(2)+' лв';
   if(grand>0) document.getElementById('fLvChip').style.display='flex';
@@ -874,14 +1031,14 @@ function calcAll(){
         </tbody>
         <tfoot><tr>
           <td colspan="2" style="padding:4px;border-top:1px solid #334155;color:#94a3b8;font-weight:700;">Общо материали</td>
-          <td style="padding:4px;border-top:1px solid #334155;text-align:right;color:#60a5fa;font-weight:700;">${(totalMat+extraTotal).toFixed(2)}€</td>
+          <td style="padding:4px;border-top:1px solid #334155;text-align:right;color:#60a5fa;font-weight:700;">${(totalMat+extraTotal+markupAmt).toFixed(2)}€</td>
         </tr></tfoot>
       </table>
     </div>`;
     specContent.innerHTML=html;
     document.getElementById('grandBox').style.display='block';
-    document.getElementById('dGrandLabor').textContent=totalLabor.toFixed(2)+' €';
-    document.getElementById('dGrandMat').textContent=(totalMat+extraTotal).toFixed(2)+' €';
+    document.getElementById('dGrandLabor').textContent=(totalLabor+laborMarkupAmt).toFixed(2)+' €';
+    document.getElementById('dGrandMat').textContent=(totalMat+extraTotal+markupAmt).toFixed(2)+' €';
     document.getElementById('dGrand').textContent=grand.toFixed(2)+' €';
     document.getElementById('dGrandLv').textContent=(grand*EUR2LV).toFixed(2)+' лв';
   }
@@ -1064,8 +1221,8 @@ async function exportPDF(){
     if(L<=0||W<=0||H<=0) return;
     Object.entries(surfs).forEach(([key,s])=>{
       const area=surfArea(room,key);
-      if(s.gk&&SVC[s.gk]){const t=area*SVC[s.gk].eur;totalLabor+=t;allRows.push([name||'Помещение',SURF_LABELS[key]+' — '+SVC[s.gk].name,area.toFixed(1),'м²',SVC[s.gk].eur.toFixed(2)+' €',(t).toFixed(2)+' €']);}
-      s.pt.forEach(v=>{if(SVC[v]){const t=area*SVC[v].eur;totalLabor+=t;allRows.push([name||'Помещение',SURF_LABELS[key]+' — '+SVC[v].name,area.toFixed(1),'м²',SVC[v].eur.toFixed(2)+' €',(t).toFixed(2)+' €']);}});
+      if(s.gk&&SVC[s.gk]){const t=area*SVC[s.gk].eur;totalLabor+=t;allRows.push([name||'Помещение',SURF_LABELS[key]+' — '+SVC[s.gk].name,area.toFixed(1),'м²',SVC[s.gk].eur.toFixed(2)+' €',t.toFixed(2)+' € / '+(t*EUR2LV).toFixed(2)+' лв']);}
+      s.pt.forEach(v=>{if(SVC[v]){const t=area*SVC[v].eur;totalLabor+=t;allRows.push([name||'Помещение',SURF_LABELS[key]+' — '+SVC[v].name,area.toFixed(1),'м²',SVC[v].eur.toFixed(2)+' €',t.toFixed(2)+' € / '+(t*EUR2LV).toFixed(2)+' лв']);}});
     });
   });
 
@@ -1079,7 +1236,7 @@ async function exportPDF(){
       alternateRowStyles:{fillColor:[245,240,228]},
       columnStyles:{2:{halign:'center'},3:{halign:'center'},4:{halign:'right'},5:{halign:'right',fontStyle:'bold'}},
       margin:{left:8,right:8},tableWidth:194,
-      foot:[[{content:'Общо труд',colSpan:5,styles:{fontStyle:'bold',halign:'right'}},{content:totalLabor.toFixed(2)+' €',styles:{fontStyle:'bold',halign:'right'}}]],
+      foot:[[{content:'Общо труд',colSpan:5,styles:{fontStyle:'bold',halign:'right'}},{content:totalLabor.toFixed(2)+' € / '+(totalLabor*EUR2LV).toFixed(2)+' лв',styles:{fontStyle:'bold',halign:'right'}}]],
       showFoot:'lastPage'});
     y=doc.lastAutoTable.finalY+8;
   }
@@ -1136,7 +1293,7 @@ async function exportPDF(){
     const up=cfg.price*MARKUP;const tot=up*pc;
     totalMat+=tot;
     const unit=pc===1?cfg.pu:cfg.pp;
-    matRowsData.push([cfg.src,`${pc} ${unit}${cfg.sz?' '+cfg.sz:''}`,up.toFixed(2)+' €',tot.toFixed(2)+' €']);
+    matRowsData.push([cfg.src,`${pc} ${unit}${cfg.sz?' '+cfg.sz:''}`,up.toFixed(2)+' €',tot.toFixed(2)+' € / '+(tot*EUR2LV).toFixed(2)+' лв']);
   };
   
   PKG.prof_ud.src=`UD × ${pdfPLen}м`; PKG.prof_cd.src=`CD × ${pdfPLen}м`;
@@ -1152,13 +1309,13 @@ async function exportPDF(){
   const ptTotals={osnovna:0,gipsova:0,gipsova_mesh:0,fina:0,fugi:0};
   rooms.forEach(room=>{const {L,W,H,surfs,type}=room;const invalid=type==='part'?(L<=0||H<=0):(L<=0||W<=0||H<=0);if(invalid) return;Object.entries(surfs).forEach(([key,s])=>{const area=type==='part'?surfArea(room,key)*2:surfArea(room,key);s.pt.forEach(v=>{if(ptTotals.hasOwnProperty(v)) ptTotals[v]+=area;});});});
   const ptMap={osnovna:{key:'p_osnovna',norm:9},gipsova:{key:'p_gipsova',norm:1},gipsova_mesh:{key:'p_gipsova',norm:1},fina:{key:'p_fina',norm:0.8},fugi:{key:'p_fugi',norm:0.4}};
-  if(ptTotals.gipsova_mesh>0){const cfg=PKG.p_mreja;const pc=Math.ceil(ptTotals.gipsova_mesh/cfg.ps);const up=cfg.price*MARKUP;const tot=up*pc;const unit=pc===1?cfg.pu:cfg.pp;totalMat+=tot;matRowsData.push([cfg.src,`${pc} ${unit} ${cfg.sz}`,up.toFixed(2)+' €',tot.toFixed(2)+' €']);}
-  Object.entries(ptTotals).forEach(([svc,m2])=>{if(m2<=0) return;const pm=ptMap[svc];const cfg=PKG[pm.key];const kg=m2*pm.norm;const pc=Math.ceil(kg/cfg.ps);const up=cfg.price*MARKUP;const tot=up*pc;const unit=pc===1?cfg.pu:cfg.pp;totalMat+=tot;matRowsData.push([cfg.src,`${pc} ${unit} ${cfg.sz}`,up.toFixed(2)+' €',tot.toFixed(2)+' €']);});
+  if(ptTotals.gipsova_mesh>0){const cfg=PKG.p_mreja;const pc=Math.ceil(ptTotals.gipsova_mesh/cfg.ps);const up=cfg.price*MARKUP;const tot=up*pc;const unit=pc===1?cfg.pu:cfg.pp;totalMat+=tot;matRowsData.push([cfg.src,`${pc} ${unit} ${cfg.sz}`,up.toFixed(2)+' €',tot.toFixed(2)+' € / '+(tot*EUR2LV).toFixed(2)+' лв']);}
+  Object.entries(ptTotals).forEach(([svc,m2])=>{if(m2<=0) return;const pm=ptMap[svc];const cfg=PKG[pm.key];const kg=m2*pm.norm;const pc=Math.ceil(kg/cfg.ps);const up=cfg.price*MARKUP;const tot=up*pc;const unit=pc===1?cfg.pu:cfg.pp;totalMat+=tot;matRowsData.push([cfg.src,`${pc} ${unit} ${cfg.sz}`,up.toFixed(2)+' €',tot.toFixed(2)+' € / '+(tot*EUR2LV).toFixed(2)+' лв']);});
   // Ръчно добавени материали
   extraMats.filter(m=>m.name||m.unitPrice>0).forEach(m=>{
     const tot=m.unitPrice*m.qty;
     totalMat+=tot;
-    matRowsData.push([m.name||'—',`${m.qty} ${m.unit}`,m.unitPrice.toFixed(2)+' €',tot.toFixed(2)+' €']);
+    matRowsData.push([m.name||'—',`${m.qty} ${m.unit}`,m.unitPrice.toFixed(2)+' €',tot.toFixed(2)+' € / '+(tot*EUR2LV).toFixed(2)+' лв']);
   });
 
   if(matRowsData.length&&y<260){
@@ -1175,18 +1332,20 @@ async function exportPDF(){
         3:{cellWidth:32,halign:'right',fontStyle:'bold'}
       },
       margin:{left:8,right:8},tableWidth:194,
-      foot:[[{content:'Общо материали',colSpan:3,styles:{fontStyle:'bold',halign:'right'}},{content:totalMat.toFixed(2)+' €',styles:{fontStyle:'bold',halign:'right'}}]],
+      foot:[[{content:'Общо материали',colSpan:3,styles:{fontStyle:'bold',halign:'right'}},{content:totalMat.toFixed(2)+' € / '+(totalMat*EUR2LV).toFixed(2)+' лв',styles:{fontStyle:'bold',halign:'right'}}]],
       showFoot:'lastPage'});
     y=doc.lastAutoTable.finalY+8;
   }
 
   // Grand total
   const grand=totalLabor+totalMat;
-  doc.setFillColor(26,24,16); doc.rect(8,y,194,12,'F');
+  doc.setFillColor(26,24,16); doc.rect(8,y,194,16,'F');
   doc.setFont(F,'bold'); doc.setFontSize(10); doc.setTextColor(201,168,76);
-  doc.text('ОБЩО ТРУД + МАТЕРИАЛИ:',12,y+8);
+  doc.text('ОБЩО ТРУД + МАТЕРИАЛИ:',12,y+6);
   doc.setFontSize(12); doc.setTextColor(228,201,126);
-  doc.text(grand.toFixed(2)+' €',200,y+8,{align:'right'});
+  doc.text(grand.toFixed(2)+' €',200,y+6,{align:'right'});
+  doc.setFont(F,'normal'); doc.setFontSize(9); doc.setTextColor(180,160,100);
+  doc.text((grand*EUR2LV).toFixed(2)+' лв',200,y+13,{align:'right'});
 
   const fname=(document.getElementById('pName').value||'oferta').replace(/\s+/g,'_');
   doc.save(fname+'-pomeshteniq.pdf');
@@ -1194,9 +1353,53 @@ async function exportPDF(){
 
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',2000);}
 
+// ── LOCAL STORAGE ──
+function saveState(){
+  const state={
+    rooms,rc,extraMats,extraMarkup,extraLaborMarkup,
+    pName:document.getElementById('pName').value,
+    pDate:document.getElementById('pDate').value,
+    pLen:document.getElementById('pLen').value,
+  };
+  localStorage.setItem('ir_room_state',JSON.stringify(state));
+}
+
+function loadState(){
+  try{
+    const raw=localStorage.getItem('ir_room_state');
+    if(!raw) return false;
+    const s=JSON.parse(raw);
+    rooms=s.rooms||[]; rc=s.rc||0;
+    extraMats=s.extraMats||[]; extraMarkup=s.extraMarkup||0; extraLaborMarkup=s.extraLaborMarkup||0;
+    if(s.pName) document.getElementById('pName').value=s.pName;
+    if(s.pDate) document.getElementById('pDate').value=s.pDate;
+    if(s.pLen)  document.getElementById('pLen').value=s.pLen;
+    return true;
+  } catch(e){ return false; }
+}
+
+// Wrap calcAll to auto-save
+function calcAll(){
+  _calcAll();
+  saveState();
+  // sync active markup button
+  [5,10,15,20,25,30,35].forEach(p=>{
+    const b=document.getElementById('mkp-'+p);
+    if(b) b.classList.toggle('active',extraMarkup===p);
+    const lb=document.getElementById('lmkp-'+p);
+    if(lb) lb.classList.toggle('active',extraLaborMarkup===p);
+  });
+}
+
 // Init
-document.getElementById('pDate').valueAsDate=new Date();
-addRoom();
+if(!loadState()){
+  document.getElementById('pDate').valueAsDate=new Date();
+  addRoom();
+} else {
+  renderAll();
+  renderExtraMats();
+  calcAll();
+}
 </script>
 </body>
 </html>
