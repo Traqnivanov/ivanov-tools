@@ -1252,10 +1252,9 @@ function mkR(id,lbl,rawQty,rawUnit,rawCalc){
   }
   return `<tr class="${isOvr?'overridden':''}">
     <td class="col-name">${lbl}</td>
-    <td class="col-pkg" id="qc-${id}">${pkgHtml}</td>
+    <td class="col-pkg" id="qc-${id}" style="white-space:nowrap;">${pkgHtml} <button class="edit-btn" onclick="startEdit('${id}',${pkgCount},'${cfg.ps>0?(pkgCount===1?cfg.pu:cfg.pp):rawUnit}')">✏️</button></td>
     <td class="col-raw">${rightVal}</td>
     <td style="vertical-align:middle;padding:4px 6px;white-space:nowrap;">${priceHtml}</td>
-    <td class="col-edit"><button class="edit-btn" onclick="startEdit('${id}',${pkgCount},'${cfg.ps>0?(pkgCount===1?cfg.pu:cfg.pp):rawUnit}')">✏️</button></td>
   </tr>`;
 }
 
