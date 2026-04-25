@@ -413,6 +413,8 @@ const PKG={
   board_grn:{ps:0,  pu:'бр',   pp:'бр',   sz:'',           price:11.24, src:'Knauf H13 влагоуст. 1200×2000×12.5мм'},
   prof_ud:  {ps:0,  pu:'бр',   pp:'бр',   sz:'',           price:3.57,  src:'Knauf UD 3м'},
   prof_cd:  {ps:0,  pu:'бр',   pp:'бр',   sz:'',           price:4.09,  src:'Vestal CD 3м'},
+  prof_uw:  {ps:0,  pu:'бр',   pp:'бр',   sz:'',           price:5.69,  src:'Knauf UW 3м'},
+  prof_cw:  {ps:0,  pu:'бр',   pp:'бр',   sz:'',           price:5.44,  src:'Knauf CW 3м'},
   hangers:  {ps:0,  pu:'бр',   pp:'бр',   sz:'',           price:0.30,  src:'Knauf директен окачвач 125мм'},
   buttons:  {ps:1000,pu:'кутия',pp:'кутии',sz:'(1000бр)',  price:11.24, src:'Копчета LN 1000бр'},
   screws:   {ps:1000,pu:'кутия',pp:'кутии',sz:'(1000бр)',  price:15.10, src:'Knauf рапидки TN25 1000бр'},
@@ -470,12 +472,32 @@ function addRoom(){
       </div>
       <div class="schema-label">🧱 Стени:</div>
       <div class="schema-hint">1× предстена (златно) → 2× лепене (зелено) → 3× изключена</div>
-      <div class="schema-wrap empty" id="gkWrap-${id}"><span>Въведи размери за да се появи схемата</span></div>
+      <div style="display:flex;gap:10px;align-items:center;overflow:visible;">
+        <div id="gkInfoLeft-${id}" style="display:none;flex-direction:column;gap:5px;min-width:68px;flex-shrink:0;">
+          <div style="background:#0a0f1c;border:1px solid #1e293b;border-radius:7px;padding:5px 8px;text-align:center;">
+            <div style="font-size:0.6rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:2px;">Таван</div>
+            <div id="gkInfoCeil-${id}" style="font-size:0.82rem;font-weight:700;color:#f5d581;">—</div>
+            <div style="font-size:0.6rem;color:#475569;">м²</div>
+          </div>
+          <div style="background:#0a0f1c;border:1px solid #1e293b;border-radius:7px;padding:5px 8px;text-align:center;">
+            <div style="font-size:0.6rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:2px;">Стени</div>
+            <div id="gkInfoWall-${id}" style="font-size:0.82rem;font-weight:700;color:#fde68a;">—</div>
+            <div style="font-size:0.6rem;color:#475569;">м²</div>
+          </div>
+          <div style="background:#0a0f1c;border:1px solid #334155;border-radius:7px;padding:5px 8px;text-align:center;">
+            <div style="font-size:0.6rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:2px;">Общо</div>
+            <div id="gkInfoTotal-${id}" style="font-size:0.82rem;font-weight:700;color:#e2e8f0;">—</div>
+            <div style="font-size:0.6rem;color:#475569;">м²</div>
+          </div>
+        </div>
+        <div class="schema-wrap empty" id="gkWrap-${id}" style="flex:1;min-width:0;"><span>Въведи размери за да се появи схемата</span></div>
+      </div>
       <div class="wall-legend">
         <span><span class="legend-dot off"></span> Изкл.</span>
         <span><span class="legend-dot wall"></span> Предстена</span>
         <span><span class="legend-dot glue"></span> Лепене</span>
       </div>
+      <div id="gkInfo-${id}" style="display:none;margin-top:8px;padding:8px 10px;background:#0a0f1c;border-radius:8px;border:1px solid #1e293b;font-size:0.75rem;color:#94a3b8;line-height:1.8;"></div>
     </div>`);
   calcAll();
 }
@@ -491,9 +513,26 @@ function addPartition(){
       </div>
       <div class="simple-input-row">
         <div class="row" style="margin:0;">
-          <label>Дължина (м): <input type="number" class="pLen2" placeholder="0" min="0" step="0.1" oninput="clearOvr();calcAll()"></label>
-          <label>Височина (м): <input type="number" class="pHgt" placeholder="0" min="0" step="0.1" oninput="clearOvr();calcAll()"></label>
+          <label>Дължина (м): <input type="number" class="pLen2" placeholder="0" min="0" step="0.1" oninput="clearOvr();calcAll();updateGKInfo('${id}')"></label>
+          <label>Височина (м): <input type="number" class="pHgt" placeholder="0" min="0" step="0.1" oninput="clearOvr();calcAll();updateGKInfo('${id}')"></label>
           <span style="color:#94a3b8;font-size:0.8rem;">(двустранна: ×2 ГК)</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start;margin-top:10px;">
+        <div id="gkInfoLeft-${id}" style="display:none;flex-direction:column;gap:5px;min-width:68px;flex-shrink:0;">
+          <div style="background:#0a0f1c;border:1px solid #1e293b;border-radius:7px;padding:5px 8px;text-align:center;">
+            <div style="font-size:0.6rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:2px;">Преградна</div>
+            <div id="gkInfoCeil-${id}" style="font-size:0.82rem;font-weight:700;color:#a78bfa;">—</div>
+            <div style="font-size:0.6rem;color:#475569;">м²</div>
+          </div>
+          <div style="background:#0a0f1c;border:1px solid #334155;border-radius:7px;padding:5px 8px;text-align:center;">
+            <div style="font-size:0.6rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:2px;">Общо ×2</div>
+            <div id="gkInfoTotal-${id}" style="font-size:0.82rem;font-weight:700;color:#e2e8f0;">—</div>
+            <div style="font-size:0.6rem;color:#475569;">м²</div>
+          </div>
+        </div>
+        <div style="flex:1;">
+          <div id="gkInfo-${id}" style="display:none;padding:8px 10px;background:#0a0f1c;border-radius:8px;border:1px solid #1e293b;font-size:0.75rem;color:#94a3b8;line-height:1.8;"></div>
         </div>
       </div>
     </div>`);
@@ -505,6 +544,8 @@ function toggleGKCeil(el){
   const on=el.dataset.on==='1';
   el.dataset.on=on?'0':'1';
   el.classList.toggle('active',!on);
+  const room=el.closest('.room');
+  if(room) updateGKInfo(room.id.replace('r-',''));
 }
 
 function cycleGKWall(el){
@@ -558,6 +599,7 @@ function updateGKSchema(id){
     const s=prev[b.dataset.wall]||'off';
     if(s!=='off'){b.dataset.state=s;b.classList.add(s==='wall'?'s-wall':'s-glue','active-wall');b.querySelector('.state').textContent=s==='wall'?'предст.':'лепене';}
   });
+  updateGKInfo(id);
 }
 
 // ═══ PUTTY ROOMS ═══
@@ -613,6 +655,7 @@ function addPuttyRoom(){
         <span><span class="legend-dot fina"></span> Фина</span>
         <span><span class="legend-dot fugi"></span> Фуги</span>
       </div>
+      <div id="puttyInfo-${id}" style="display:none;margin-top:8px;padding:8px 10px;background:#0a0f1c;border-radius:8px;border:1px solid #1e3a5f;font-size:0.75rem;color:#94a3b8;line-height:1.8;"></div>
       <div class="layers-table-wrap empty" id="lt-${id}">
         <div class="layers-header">Слоеве по повърхност</div>
         <div id="ltBody-${id}"></div>
@@ -1056,7 +1099,7 @@ function removeEl(id){document.getElementById(id)?.remove();clearOvr();calcAll()
 
 // ═══ GK CALCULATION ═══
 function calcGK(){
-  let tArea=0,ceilArea=0,wallArea=0,partArea=0,boardArea=0,ud=0,cd=0,hangers=0,screws=0,dowel=0,glue=0,ins=0,foam=0;
+  let tArea=0,ceilArea=0,wallArea=0,partArea=0,boardArea=0,ud=0,cd=0,uw=0,cw=0,hangers=0,screws=0,dowel=0,glue=0,ins=0,foam=0;
   const pLen=parseFloat(document.getElementById('pLen').value);
   const positions=[];
   document.querySelectorAll('#roomsContainer .room').forEach(r=>{
@@ -1103,14 +1146,14 @@ function calcGK(){
       const H=parseFloat(r.querySelector('.pHgt').value)||0;
       if(L<=0||H<=0) return;
       const a=L*H;
-      // UD: само горе + долу с 10% фира
-      const udPart=Math.ceil(((2*L)/pLen)*1.1);
-      // CD: колони по дължината на 0.6м, дължина = H
+      // UW: горе + долу с 10% фира (замества UD при преградни)
+      const uwPart=Math.ceil(((2*L)/pLen)*1.1);
+      // CW: колони по дължината на 0.6м, дължина = H (замества CD при преградни)
       const regP=Math.floor(L/0.6)-1;
       const remP=L-regP*0.6;
       const colsP=remP>=0.7?regP+1:regP;
-      const cdPart=Math.ceil((colsP*H/pLen)*1.1);
-      boardArea+=a*2;ud+=udPart;cd+=cdPart;screws+=(a*2)*15;dowel+=Math.ceil((2*L/0.7)*1.1);ins+=a;tArea+=a;partArea+=a;
+      const cwPart=Math.ceil((colsP*H/pLen)*1.1);
+      boardArea+=a*2;uw+=uwPart;cw+=cwPart;screws+=(a*2)*15;dowel+=Math.ceil((2*L/0.7)*1.1);ins+=a;tArea+=a;partArea+=a;
       positions.push({name:r.querySelector('.title-input').value||'Преградна'+` (${L}×${H}м)`,area:(a*2).toFixed(1)});
     }
   });
@@ -1121,7 +1164,7 @@ function calcGK(){
   const hasGreen=document.getElementById('hasGreen').checked;
   const green=hasGreen?(parseInt(document.getElementById('greenManual').value)||0):0;
   const bSizeEl=document.getElementById('bSize');
-  GKD={tArea,ceilArea,wallArea,partArea,boardArea,totalBoards,board_std:Math.max(0,totalBoards-green),board_grn:green,
+  GKD={tArea,ceilArea,wallArea,partArea,boardArea,totalBoards,prof_uw:Math.ceil(uw),prof_cw:Math.ceil(cw),board_std:Math.max(0,totalBoards-green),board_grn:green,
     prof_ud:Math.ceil(ud),prof_cd:Math.ceil(cd),hangers:Math.ceil(hangers),buttons:Math.ceil(buttons),
     screws:Math.ceil(screws),dowels:Math.ceil(dowel),joint:Math.ceil(joint),finish:Math.ceil(finish),
     tape:Math.ceil(tape),primer:Math.ceil(primer),ins:Math.ceil(ins),glue:Math.ceil(glue),
@@ -1227,7 +1270,142 @@ function calcPutty(){
   };
 }
 
-function calcAll(){calcGK();calcPutty();renderResults();}
+function calcAll(){calcGK();calcPutty();renderResults();updateAllGKInfo();updateAllPuttyInfo();}
+
+function updateAllPuttyInfo(){
+  document.querySelectorAll('#puttyContainer .room[data-kind="putty"]').forEach(r=>{
+    const id=r.id.replace('p-','');
+    updatePuttyInfo(id);
+  });
+}
+
+function updatePuttyInfo(id){
+  const box=document.getElementById(`puttyInfo-${id}`);
+  if(!box) return;
+  const root=document.getElementById(`p-${id}`);
+  if(!root) return;
+  const L=parseFloat(root.querySelector('.pL')?.value)||0;
+  const W=parseFloat(root.querySelector('.pW')?.value)||0;
+  const H=parseFloat(root.querySelector('.pH')?.value)||0;
+  if(L<=0||W<=0||H<=0){box.style.display='none';return;}
+
+  const lines=[];
+  const svcColors={osnovna:'#d97706',gipsova:'#22c55e',gipsova_mesh:'#10b981',fina:'#a78bfa',fugi:'#60a5fa'};
+  const svcNames={osnovna:'Основна',gipsova:'Гипсова',gipsova_mesh:'Гипс+мрежа',fina:'Фина',fugi:'Фуги'};
+
+  // Таван
+  const mainCeil=document.getElementById(`pceil-${id}`);
+  const ceilSvc=mainCeil?.dataset.pservice||'off';
+  const ceilA=(L*W);
+  if(ceilSvc!=='off'&&ceilSvc!=='__remove__'){
+    const col=svcColors[ceilSvc]||'#d9a441';
+    const nm=svcNames[ceilSvc]||ceilSvc;
+    lines.push(`<span style="color:${col};">🏠 Таван (${nm}):</span> <strong>${ceilA.toFixed(1)} м²</strong>`);
+  } else {
+    lines.push(`<span style="color:#475569;">🏠 Таван:</span> <strong>${ceilA.toFixed(1)} м²</strong>`);
+  }
+
+  // Стени
+  const wallAreas={N:L*H,S:L*H,W:W*H,E:W*H};
+  const wallNames={N:'С',S:'Ю',W:'З',E:'И'};
+  let totalWall=0;
+  const wrap=document.getElementById(`pWrap-${id}`);
+  if(wrap){
+    const seen={};
+    wrap.querySelectorAll('.wall-btn[data-pservice]').forEach(wb=>{
+      const svc=wb.dataset.pservice||'off';
+      const wall=wb.dataset.wall;
+      if(seen[wall]) return; seen[wall]=true;
+      const a=wallAreas[wall]||0;
+      totalWall+=a;
+      if(svc!=='off'){
+        const col=svcColors[svc]||'#d9a441';
+        const nm=svcNames[svc]||svc;
+        lines.push(`<span style="color:${col};">🧱 Стена ${wallNames[wall]} (${nm}):</span> <strong>${a.toFixed(1)} м²</strong>`);
+      } else {
+        lines.push(`<span style="color:#475569;">🧱 Стена ${wallNames[wall]}:</span> <strong>${a.toFixed(1)} м²</strong>`);
+      }
+    });
+  }
+
+  const total=ceilA+totalWall;
+  lines.push(`<span style="color:#e2e8f0;font-weight:700;">Общо: ${total.toFixed(1)} м²</span>`);
+
+  box.style.display='block';
+  box.innerHTML=lines.join(' &nbsp;|&nbsp; ');
+}
+
+function updateAllGKInfo(){
+  document.querySelectorAll('#roomsContainer .room').forEach(r=>{
+    const id=r.id.replace('r-','');
+    updateGKInfo(id);
+  });
+}
+
+function updateGKInfo(id){
+  const root=document.getElementById(`r-${id}`);
+  if(!root) return;
+  const L=parseFloat(root.querySelector('.rLen')?.value)||0;
+  const W=parseFloat(root.querySelector('.rWid')?.value)||0;
+  const H=parseFloat(root.querySelector('.rHgt')?.value)||0;
+
+  // ── Лява колона с кутийки ──
+  const leftBox=document.getElementById(`gkInfoLeft-${id}`);
+  const ceilEl=document.getElementById(`gkInfoCeil-${id}`);
+  const wallEl=document.getElementById(`gkInfoWall-${id}`);
+  const totalEl=document.getElementById(`gkInfoTotal-${id}`);
+  if(leftBox && L>0 && W>0 && H>0){
+    const ceilA=L*W;
+    const allWallA=2*(L+W)*H;
+    leftBox.style.display='flex';
+    if(ceilEl) ceilEl.textContent=(ceilA).toFixed(1);
+    if(wallEl) wallEl.textContent=(allWallA).toFixed(1);
+    if(totalEl) totalEl.textContent=(ceilA+allWallA).toFixed(1);
+  } else if(leftBox){
+    leftBox.style.display='none';
+  }
+
+  // ── Долна синя лента ──
+  const box=document.getElementById(`gkInfo-${id}`);
+  if(!box) return;
+  const lines=[];
+
+  if(root.dataset.kind==='part'){
+    // Преградна стена
+    const Lp=parseFloat(root.querySelector('.pLen2')?.value)||0;
+    const Hp=parseFloat(root.querySelector('.pHgt')?.value)||0;
+    // Лява колона
+    const leftBox2=document.getElementById(`gkInfoLeft-${id}`);
+    const ceilEl2=document.getElementById(`gkInfoCeil-${id}`);
+    const totalEl2=document.getElementById(`gkInfoTotal-${id}`);
+    if(leftBox2 && Lp>0 && Hp>0){
+      leftBox2.style.display='flex';
+      if(ceilEl2) ceilEl2.textContent=(Lp*Hp).toFixed(1);
+      if(totalEl2) totalEl2.textContent=(Lp*Hp*2).toFixed(1);
+    } else if(leftBox2){ leftBox2.style.display='none'; }
+    if(Lp<=0||Hp<=0){box.style.display='none';return;}
+    lines.push(`<span style="color:#a78bfa;">🚪 Преградна:</span> <strong>${(Lp*Hp).toFixed(1)} м²</strong> × 2 страни = <strong>${(Lp*Hp*2).toFixed(1)} м²</strong>`);
+  } else {
+    // Нормална стая
+    if(L<=0||W<=0||H<=0){box.style.display='none';return;}
+    const ceilOn=root.querySelector('.ceil-card')?.dataset.on==='1';
+    if(ceilOn) lines.push(`<span style="color:#d9a441;">🏠 Таван:</span> <strong>${(L*W).toFixed(1)} м²</strong>`);
+    let wallM2=0, glueM2=0;
+    root.querySelectorAll('.wall-btn[data-state]').forEach(wb=>{
+      const s=wb.dataset.state||'off'; if(s==='off') return;
+      const wl=(wb.dataset.wall==='N'||wb.dataset.wall==='S')?L:W;
+      const a=wl*H;
+      if(s==='wall') wallM2+=a;
+      else if(s==='glue') glueM2+=a;
+    });
+    if(wallM2>0) lines.push(`<span style="color:#f59e0b;">🧱 Предстена:</span> <strong>${wallM2.toFixed(1)} м²</strong>`);
+    if(glueM2>0) lines.push(`<span style="color:#22c55e;">🟩 Лепене:</span> <strong>${glueM2.toFixed(1)} м²</strong>`);
+  }
+
+  if(lines.length===0){box.style.display='none';return;}
+  box.style.display='block';
+  box.innerHTML=lines.join(' &nbsp;|&nbsp; ');
+}
 
 // ═══ RENDER ROW ═══
 function mkR(id,lbl,rawQty,rawUnit,rawCalc){
@@ -1320,6 +1498,7 @@ function updateMarkupLive(){
   const allP=[
     show2.board?['board_std',d.board_std]:null,(show2.board&&d.hasGreen)?['board_grn',d.board_grn]:null,
     show2.profile?['prof_ud',d.prof_ud]:null,show2.profile?['prof_cd',d.prof_cd]:null,
+    (show2.profile&&(d.prof_uw||0)>0)?['prof_uw',d.prof_uw]:null,(show2.profile&&(d.prof_cw||0)>0)?['prof_cw',d.prof_cw]:null,
     show2.hanger?['hangers',d.hangers]:null,show2.button?['buttons',d.buttons]:null,
     show2.screws?['screws',d.screws]:null,show2.dowel?['dowels',d.dowels]:null,
     show2.joint?['joint',d.joint]:null,show2.finish?['finish',d.finish]:null,
@@ -1369,7 +1548,7 @@ function renderResults(){
   if(hasGK){
     html+=`<div class="section-divider">🏗️ ГИПСОКАРТОН</div>`;
     if(show.board) html+=mkGroup('mat-group g-boards','🟦 ПЛОСКОСТИ',[mkR('board_std',`ГК Стандартен ${bL}`,d.board_std,'бр'),d.hasGreen?mkR('board_grn',`ГК Зелен ${bL}`,d.board_grn,'бр'):'']);
-    if(show.profile||show.hanger||show.button||show.dowel) html+=mkGroup('mat-group g-struct','🟧 КОНСТРУКЦИЯ',[show.profile?mkR('prof_ud',`UD ${pL}`,d.prof_ud,'бр'):'',show.profile?mkR('prof_cd',`CD ${pL}`,d.prof_cd,'бр'):'',show.hanger?mkR('hangers','Окачвачи',d.hangers,'бр'):'',show.button?mkR('buttons','Копчета',d.buttons,'бр'):'',show.dowel?mkR('dowels','Дюбели',d.dowels,'бр'):'']);
+    if(show.profile||show.hanger||show.button||show.dowel) html+=mkGroup('mat-group g-struct','🟧 КОНСТРУКЦИЯ',[show.profile?mkR('prof_ud',`UD ${pL}`,d.prof_ud,'бр'):'',show.profile?mkR('prof_cd',`CD ${pL}`,d.prof_cd,'бр'):'',show.profile&&(d.prof_uw>0)?mkR('prof_uw',`UW ${pL}`,d.prof_uw,'бр'):'',show.profile&&(d.prof_cw>0)?mkR('prof_cw',`CW ${pL}`,d.prof_cw,'бр'):'',show.hanger?mkR('hangers','Окачвачи',d.hangers,'бр'):'',show.button?mkR('buttons','Копчета',d.buttons,'бр'):'',show.dowel?mkR('dowels','Дюбели',d.dowels,'бр'):'']);
     if(show.screws) html+=mkGroup('mat-group g-fix','🟥 КРЕПЕЖИ',[mkR('screws','Винтове (рапидки)',d.screws,'бр')]);
     if(show.joint||show.finish||show.tape||show.primer) html+=mkGroup('mat-group g-finish','🟩 ФИНИШ',[show.joint?mkR('joint','Фугираща смес',d.joint,'кг',d.joint_r):'',show.finish?mkR('finish','Шпакловка (фина)',d.finish,'кг',d.finish_r):'',show.tape?mkR('tape','Лента',d.tape,'м',d.tape_r):'',show.primer?mkR('primer','Грунд',d.primer,'л',d.primer_r):'']);
     if(show.ins||show.glue||show.foam) html+=mkGroup('mat-group g-extra','🟪 ДОПЪЛНИТЕЛНИ',[show.ins&&d.ins>0?mkR('ins','Изолация',d.ins,'м²'):'',show.glue&&d.glue>0?mkR('glue','Лепило за ГК',d.glue,'кг',d.glue_r):'',show.foam&&d.foam>0?mkR('foam','Монтажна пяна',d.foam,'бр',d.foam_r):'']);
@@ -1505,6 +1684,7 @@ function renderResults(){
       show.board?['board_std',GKD.board_std]:null,
       (show.board&&GKD.hasGreen)?['board_grn',GKD.board_grn]:null,
       show.profile?['prof_ud',GKD.prof_ud]:null,
+      (show.profile&&(GKD.prof_uw||0)>0)?['prof_uw',GKD.prof_uw]:null,
       show.profile?['prof_cd',GKD.prof_cd]:null,
       show.hanger?['hangers',GKD.hangers]:null,
       show.button?['buttons',GKD.buttons]:null,
@@ -1877,6 +2057,8 @@ function sendToOffer(){
   if(show.profile){
     push(mkMat('prof_ud', d.prof_ud, `UD профил ${d.pLen}м`));
     push(mkMat('prof_cd', d.prof_cd, `CD профил ${d.pLen}м`));
+    if((d.prof_uw||0)>0) push(mkMat('prof_uw', d.prof_uw, `UW профил ${d.pLen}м`));
+    if((d.prof_cw||0)>0) push(mkMat('prof_cw', d.prof_cw, `CW профил ${d.pLen}м`));
   }
   if(show.hanger) push(mkMat('hangers', d.hangers, 'Директни окачвачи'));
   if(show.button) push(mkMat('buttons', d.buttons, 'Копчета LN'));
