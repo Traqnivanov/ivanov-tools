@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IVANOV REMONTI – Авансов отчет v2</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root {
+            --gold: #e9a825;
+            --gold-light: #fef3d0;
+            --gold-dim: #c8891a;
+            --dark: #141c2b;
+            --dark2: #1e2a3e;
+            --dark3: #263045;
+            --mid: #3d5166;
+            --muted: #6b85a0;
+            --soft: #9eb3c7;
+            --bg: #f0f4f8;
+            --bg2: #e6ecf3;
+            --white: #ffffff;
+            --border: #d5e0ea;
+            --green: #1a7a52;
+            --green-bg: #e6f7ef;
+            --red: #c0392b;
+            --red-bg: #fdecea;
+            --orange: #d35400;
+            --orange-bg: #fef0e6;
+            --blue: #1a5fa8;
+            --blue-bg: #e8f1fb;
+            --radius: 18px;
+            --radius-sm: 10px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--dark);
+            min-height: 100vh;
+            padding: 24px 16px 48px;
+        }
+
+        .app {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        /* ───── HEADER ───── */
+        .header {
+            background: linear-gradient(135deg, #0d1117 0%, #1a1f2e 50%, #0d1117 100%);
+            border-radius: 24px;
+            padding: 22px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(233,168,37,0.15);
+            border: 1px solid rgba(233,168,37,0.12);
+        }
+        .logo-area { display: flex; flex-direction: column; gap: 4px; }
+        .logo {
+            font-family: 'Cinzel', serif;
+            font-size: 1.75rem;
+            font-weight: 900;
+            color: var(--white);
+            letter-spacing: 0.08em;
+            text-shadow: 0 2px 12px rgba(233,168,37,0.3);
+        }
+        .logo span { color: var(--gold); }
+        .logo-sub {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.65rem;
+            color: rgba(233,168,37,0.7);
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            border-top: 1px solid rgba(233,168,37,0.25);
+            padding-top: 4px;
+            margin-top: 2px;
+        }
+        .tagline { font-size: 0.72rem; color: var(--soft); font-weight: 400; letter-spacing: 0.05em; }
+        .header-right { display: flex; align-items: center; gap: 12px; }
+        .phone-badge {
+            background: rgba(233,168,37,0.15);
+            border: 1px solid rgba(233,168,37,0.3);
+            color: var(--gold);
+            padding: 8px 18px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.88rem;
+        }
+        .header-btn {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: var(--white);
+            padding: 8px 16px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            font-family: 'DM Sans', sans-serif;
+        }
+        .header-btn:hover { background: rgba(255,255,255,0.15); }
+
+        /* ───── SEARCH BAR ───── */
+        .search-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .search-wrap {
+            flex: 1;
+            min-width: 200px;
+            position: relative;
+        }
+        .search-wrap input {
+            width: 100%;
+            padding: 11px 18px 11px 42px;
+            border-radius: 40px;
+            border: 1.5px solid var(--border);
+            background: var(--white);
+            font-size: 0.88rem;
+            font-family: 'DM Sans', sans-serif;
+            color: var(--dark);
+            outline: none;
+            transition: border 0.2s;
+        }
+        .search-wrap input:focus { border-color: var(--gold); }
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--muted);
+            font-size: 1rem;
+        }
+        .filter-select {
+            padding: 11px 18px;
+            border-radius: 40px;
+            border: 1.5px solid var(--border);
+            background: var(--white);
+            font-size: 0.85rem;
+            font-family: 'DM Sans', sans-serif;
+            color: var(--dark);
+            outline: none;
+            cursor: pointer;
+        }
+
+        /* ───── TWO-COLUMN LAYOUT ───── */
+        .layout { display: grid; grid-template-columns: 300px 1fr; gap: 16px; align-items: start; }
+        @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
+
+        /* ───── CLIENT LIST ───── */
+        .client-panel {
+            background: var(--white);
+            border-radius: var(--radius);
+            border: 1.5px solid var(--border);
+            overflow: hidden;
+        }
+        .panel-header {
+            padding: 16px 18px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .panel-title { font-weight: 700; font-size: 0.85rem; color: var(--mid); text-transform: uppercase; letter-spacing: 0.06em; }
+        .btn-new {
+            background: var(--dark2);
+            color: var(--white);
+            border: none;
+            border-radius: 30px;
+            padding: 7px 14px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            transition: background 0.2s;
+        }
+        .btn-new:hover { background: var(--dark3); }
+
+        .client-list { max-height: 460px; overflow-y: auto; }
+        .client-item {
+            padding: 14px 18px;
+            border-bottom: 1px solid #f0f4f8;
+            cursor: pointer;
+            transition: background 0.15s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .client-item:hover { background: #f7fafc; }
+        .client-item.active { background: var(--gold-light); border-left: 3px solid var(--gold); }
+        .client-item-name { font-weight: 600; font-size: 0.88rem; color: var(--dark); }
+        .client-item-sub { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+        .status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .status-active { background: var(--green); }
+        .status-done { background: var(--blue); }
+        .status-cancelled { background: var(--red); }
+        .no-clients { padding: 28px; text-align: center; color: var(--muted); font-size: 0.85rem; }
+
+        /* ───── MAIN DETAIL PANEL ───── */
+        .detail-panel { display: flex; flex-direction: column; gap: 14px; }
+
+        .card {
+            background: var(--white);
+            border-radius: var(--radius);
+            border: 1.5px solid var(--border);
+            padding: 22px 24px;
+        }
+        .card-title {
+            font-weight: 700;
+            font-size: 0.78rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 16px;
+        }
+
+        /* Client form fields */
+        .fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        @media (max-width: 600px) { .fields-grid { grid-template-columns: 1fr; } }
+        .field-full { grid-column: 1 / -1; }
+
+        .field label {
+            display: block;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--muted);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .field input, .field select, .field textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            border: 1.5px solid var(--border);
+            font-size: 0.88rem;
+            font-family: 'DM Sans', sans-serif;
+            color: var(--dark);
+            outline: none;
+            transition: border 0.2s;
+            background: var(--white);
+        }
+        .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--gold); }
+        .field textarea { resize: vertical; min-height: 68px; }
+
+        /* Currency toggle */
+        .currency-row { display: flex; gap: 8px; margin-bottom: 12px; }
+        .cur-btn {
+            padding: 6px 16px;
+            border-radius: 30px;
+            border: 1.5px solid var(--border);
+            background: var(--white);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            color: var(--muted);
+            transition: all 0.2s;
+        }
+        .cur-btn.active {
+            background: var(--dark2);
+            color: var(--white);
+            border-color: var(--dark2);
+        }
+
+        /* Status badge row */
+        .status-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+        .status-chip {
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1.5px solid transparent;
+            transition: all 0.2s;
+            font-family: 'DM Sans', sans-serif;
+        }
+        .status-chip.s-active { background: var(--green-bg); color: var(--green); border-color: #b7e4cf; }
+        .status-chip.s-done { background: var(--blue-bg); color: var(--blue); border-color: #bdd5f5; }
+        .status-chip.s-cancelled { background: var(--red-bg); color: var(--red); border-color: #f5c0bb; }
+        .status-chip.selected { box-shadow: 0 0 0 2px currentColor; }
+
+        /* Stats row */
+        .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        @media (max-width: 600px) { .stats-row { grid-template-columns: 1fr 1fr; } }
+        .stat {
+            background: var(--bg);
+            border-radius: var(--radius-sm);
+            padding: 14px 16px;
+        }
+        .stat-label { font-size: 0.7rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+        .stat-val { font-size: 1.55rem; font-weight: 800; color: var(--dark); font-family: 'DM Serif Display', serif; }
+        .stat-val.negative { color: var(--red); }
+        .stat-val.zero { color: var(--green); }
+
+        /* Advances table */
+        table { width: 100%; border-collapse: collapse; }
+        thead th {
+            padding: 10px 14px;
+            text-align: left;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            background: var(--bg);
+            border-bottom: 1.5px solid var(--border);
+        }
+        tbody td { padding: 11px 14px; border-bottom: 1px solid #f0f4f8; font-size: 0.86rem; vertical-align: top; }
+        tbody tr:last-child td { border-bottom: none; }
+        tbody tr:hover td { background: #fafcfe; }
+        .adv-note { font-size: 0.74rem; color: var(--muted); font-style: italic; margin-top: 2px; }
+        .adv-amount { font-weight: 700; }
+        .adv-actions { display: flex; gap: 6px; }
+        .btn-sm {
+            padding: 5px 12px;
+            border-radius: 20px;
+            border: none;
+            font-size: 0.74rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            transition: opacity 0.2s;
+        }
+        .btn-sm:hover { opacity: 0.8; }
+        .btn-edit { background: var(--bg2); color: var(--mid); }
+        .btn-del { background: var(--red-bg); color: var(--red); }
+
+        /* Add advance form */
+        .add-form {
+            background: var(--gold-light);
+            border-radius: var(--radius);
+            border: 1.5px solid #f0d896;
+            padding: 18px 22px;
+        }
+        .add-form-title { font-weight: 700; font-size: 0.82rem; color: var(--gold-dim); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.06em; }
+        .add-form-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+        .add-form .field { flex: 1; min-width: 130px; }
+        .btn-save {
+            background: var(--dark2);
+            color: var(--white);
+            border: none;
+            border-radius: 30px;
+            padding: 11px 22px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+        .btn-save:hover { background: var(--dark3); }
+        .btn-cancel-sm {
+            background: #e2e8f0;
+            color: var(--mid);
+            border: none;
+            border-radius: 30px;
+            padding: 11px 18px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            display: none;
+        }
+
+        /* Action buttons row */
+        .action-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+        .btn-danger {
+            background: var(--red-bg);
+            color: var(--red);
+            border: 1.5px solid #f5c0bb;
+            border-radius: 30px;
+            padding: 9px 18px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+        }
+        .btn-pdf {
+            background: var(--dark2);
+            color: var(--white);
+            border: none;
+            border-radius: 30px;
+            padding: 9px 22px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-backup {
+            background: var(--blue-bg);
+            color: var(--blue);
+            border: 1.5px solid #bdd5f5;
+            border-radius: 30px;
+            padding: 9px 18px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+        }
+        .btn-import {
+            background: var(--green-bg);
+            color: var(--green);
+            border: 1.5px solid #b7e4cf;
+            border-radius: 30px;
+            padding: 9px 18px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .empty-msg { text-align: center; padding: 28px; color: var(--muted); font-size: 0.85rem; }
+
+        /* Import file hidden */
+        #importFile { display: none; }
+
+        /* Toast */
+        #toast {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            background: var(--dark2);
+            color: var(--white);
+            padding: 12px 22px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        #toast.show { opacity: 1; transform: translateY(0); }
+
+        footer { text-align: center; font-size: 0.72rem; color: var(--muted); padding-top: 24px; }
+    </style>
+</head>
+<body>
+<div class="app">
+
+    <!-- HEADER -->
+    <div class="header">
+        <div class="logo-area">
+            <div class="logo">IVANOV <span>REMONTI</span></div>
+            <div class="logo-sub">— Строителни услуги —</div>
+        </div>
+        <div class="header-right">
+            <div class="phone-badge">📞 0877 810 418</div>
+            <button class="header-btn btn-backup" onclick="exportJSON()">⬇ Backup JSON</button>
+            <button class="header-btn btn-import" onclick="document.getElementById('importFile').click()">⬆ Внос JSON</button>
+            <input type="file" id="importFile" accept=".json" onchange="importJSON(event)">
+        </div>
+    </div>
+
+    <!-- SEARCH BAR -->
+    <div class="search-bar">
+        <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="searchInput" placeholder="Търсене по клиент или адрес..." oninput="renderClientList()">
+        </div>
+        <select class="filter-select" id="filterStatus" onchange="renderClientList()">
+            <option value="">Всички статуси</option>
+            <option value="active">В ход</option>
+            <option value="done">Приключен</option>
+            <option value="cancelled">Отменен</option>
+        </select>
+        <select class="filter-select" id="filterCurrency" onchange="renderClientList()">
+            <option value="">Всички валути</option>
+            <option value="EUR">EUR €</option>
+            <option value="BGN">BGN лв</option>
+        </select>
+    </div>
+
+    <!-- MAIN LAYOUT -->
+    <div class="layout">
+
+        <!-- CLIENT LIST -->
+        <div class="client-panel">
+            <div class="panel-header">
+                <span class="panel-title">Клиенти</span>
+                <button class="btn-new" onclick="newClient()">＋ Нов</button>
+            </div>
+            <div class="client-list" id="clientList">
+                <div class="no-clients">Няма клиенти. Натиснете "Нов".</div>
+            </div>
+        </div>
+
+        <!-- DETAIL PANEL -->
+        <div class="detail-panel" id="detailPanel">
+            <div class="card" style="text-align:center; color:var(--muted); padding: 48px;">
+                Изберете клиент от лявото меню или създайте нов.
+            </div>
+        </div>
+
+    </div>
+
+    <footer>✓ Данните се записват автоматично в браузъра. | ИВАНОВ РЕМОНТИ ЕООД</footer>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── STATE ───
+let clients = {};
+let currentId = null;
+let editMode = false;
+let editIndex = -1;
+let currentCurrency = 'EUR';
+
+// ─── INIT ───
+function init() {
+    const s = localStorage.getItem('ivanov_v2_clients');
+    if (s) {
+        clients = JSON.parse(s);
+        for (let id in clients) {
+            if (!clients[id].advances) clients[id].advances = [];
+            if (!clients[id].extra) clients[id].extra = '';
+            if (!clients[id].currency) clients[id].currency = 'EUR';
+            if (!clients[id].status) clients[id].status = 'active';
+            if (!clients[id].lastChangeISO) clients[id].lastChangeISO = new Date().toISOString();
+            // ensure advances have notes
+            clients[id].advances = clients[id].advances.map(a => ({ note: '', ...a }));
+        }
+    }
+    const savedId = localStorage.getItem('ivanov_v2_current');
+    if (savedId && clients[savedId]) currentId = savedId;
+    else if (Object.keys(clients).length > 0) currentId = Object.keys(clients)[0];
+
+    renderClientList();
+    renderDetail();
+}
+
+function save() {
+    localStorage.setItem('ivanov_v2_clients', JSON.stringify(clients));
+    localStorage.setItem('ivanov_v2_current', currentId || '');
+}
+
+function touch() {
+    if (currentId && clients[currentId]) {
+        clients[currentId].lastChangeISO = new Date().toISOString();
+        save();
+    }
+}
+
+function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// ─── CLIENT LIST ───
+function renderClientList() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const filterStatus = document.getElementById('filterStatus').value;
+    const filterCurrency = document.getElementById('filterCurrency').value;
+    const list = document.getElementById('clientList');
+    const ids = Object.keys(clients);
+
+    const filtered = ids.filter(id => {
+        const c = clients[id];
+        const matchSearch = !search ||
+            (c.name || '').toLowerCase().includes(search) ||
+            (c.extra || '').toLowerCase().includes(search);
+        const matchStatus = !filterStatus || c.status === filterStatus;
+        const matchCurrency = !filterCurrency || c.currency === filterCurrency;
+        return matchSearch && matchStatus && matchCurrency;
+    });
+
+    if (filtered.length === 0) {
+        list.innerHTML = '<div class="no-clients">Няма намерени клиенти.</div>';
+        return;
+    }
+
+    list.innerHTML = filtered.map(id => {
+        const c = clients[id];
+        const totalPaid = getTotalPaid(c.advances);
+        const totalServ = parseFloat(c.totalService) || 0;
+        const remain = totalServ - totalPaid;
+        const cur = c.currency === 'BGN' ? 'лв' : '€';
+        const statusClass = { active: 'status-active', done: 'status-done', cancelled: 'status-cancelled' }[c.status] || 'status-active';
+        const statusLabel = { active: 'В ход', done: 'Приключен', cancelled: 'Отменен' }[c.status] || '';
+        return `
+        <div class="client-item ${id === currentId ? 'active' : ''}" onclick="selectClient('${id}')">
+            <div>
+                <div class="client-item-name">${escHtml(c.name || 'Без име')}</div>
+                <div class="client-item-sub">${escHtml(c.extra || '–')} · ${statusLabel}</div>
+                <div class="client-item-sub" style="margin-top:3px;">Остатък: <strong>${fmt(remain, c.currency)}</strong></div>
+            </div>
+            <span class="status-dot ${statusClass}" title="${statusLabel}"></span>
+        </div>`;
+    }).join('');
+}
+
+function selectClient(id) {
+    currentId = id;
+    currentCurrency = clients[id].currency || 'EUR';
+    save();
+    cancelEdit();
+    renderClientList();
+    renderDetail();
+}
+
+function newClient() {
+    const id = Date.now().toString();
+    clients[id] = {
+        name: '',
+        totalService: 0,
+        extra: '',
+        currency: 'EUR',
+        status: 'active',
+        advances: [],
+        lastChangeISO: new Date().toISOString()
+    };
+    currentId = id;
+    save();
+    renderClientList();
+    renderDetail();
+    setTimeout(() => document.getElementById('clientNameInput')?.focus(), 50);
+}
+
+function deleteCurrentClient() {
+    if (!currentId) return;
+    const name = clients[currentId].name || 'без име';
+    if (!confirm(`Изтриване на клиент "${name}"?\nТова ще изтрие и всички аванси.`)) return;
+    delete clients[currentId];
+    const ids = Object.keys(clients);
+    currentId = ids.length ? ids[0] : null;
+    save();
+    renderClientList();
+    renderDetail();
+    toast('🗑️ Клиентът е изтрит.');
+}
+
+// ─── DETAIL PANEL ───
+function renderDetail() {
+    const dp = document.getElementById('detailPanel');
+    if (!currentId || !clients[currentId]) {
+        dp.innerHTML = '<div class="card" style="text-align:center; color:var(--muted); padding: 48px;">Изберете клиент от лявото меню или създайте нов.</div>';
+        return;
+    }
+
+    const c = clients[currentId];
+    const totalPaid = getTotalPaid(c.advances);
+    const totalServ = parseFloat(c.totalService) || 0;
+    const remain = totalServ - totalPaid;
+    const cur = c.currency === 'BGN' ? 'лв' : '€';
+    const curSymbol = c.currency === 'BGN' ? 'BGN' : 'EUR';
+
+    const statusMap = {
+        active: { label: '🟢 В ход', cls: 's-active' },
+        done: { label: '🔵 Приключен', cls: 's-done' },
+        cancelled: { label: '🔴 Отменен', cls: 's-cancelled' },
+    };
+
+    const advRows = c.advances.length ? c.advances.map((adv, i) => {
+        const d = formatDate(adv.date);
+        return `<tr>
+            <td>📅 ${d}</td>
+            <td class="adv-amount">${fmt(adv.amount, c.currency)}</td>
+            <td>${adv.note ? `<span class="adv-note">💬 ${escHtml(adv.note)}</span>` : '<span style="color:#c8d6e5">—</span>'}</td>
+            <td><div class="adv-actions">
+                <button class="btn-sm btn-edit" onclick="startEdit(${i})">✏️ Редакция</button>
+                <button class="btn-sm btn-del" onclick="delAdv(${i})">🗑️</button>
+            </div></td>
+        </tr>`;
+    }).join('') : `<tr><td colspan="4" class="empty-msg">Няма добавени аванси</td></tr>`;
+
+    const editFormTitle = editMode ? '✏️ Редактиране на аванс' : '➕ Добавяне на аванс';
+    const editBtnLabel = editMode ? '✅ Актуализирай' : 'Запази аванс';
+
+    dp.innerHTML = `
+    <!-- Client info card -->
+    <div class="card">
+        <div class="card-title">Данни за клиент</div>
+        <div class="fields-grid">
+            <div class="field field-full">
+                <label>Клиент / Собственик</label>
+                <input type="text" id="clientNameInput" value="${escAttr(c.name)}" oninput="updateField('name', this.value)" placeholder="напр. Иван Иванов">
+            </div>
+            <div class="field field-full">
+                <label>Адрес / Обект</label>
+                <input type="text" id="clientExtraInput" value="${escAttr(c.extra)}" oninput="updateField('extra', this.value)" placeholder="напр. бул. Витоша 23, ет.4">
+            </div>
+            <div class="field">
+                <label>Обща стойност на услугата</label>
+                <input type="number" id="totalServiceInput" value="${c.totalService || ''}" oninput="updateField('totalService', this.value)" placeholder="0.00" step="any">
+            </div>
+            <div class="field">
+                <label>Валута</label>
+                <div class="currency-row" style="margin-bottom:0; margin-top:5px;">
+                    <button class="cur-btn ${c.currency === 'EUR' ? 'active' : ''}" onclick="setCurrency('EUR')">€ EUR</button>
+                    <button class="cur-btn ${c.currency === 'BGN' ? 'active' : ''}" onclick="setCurrency('BGN')">лв BGN</button>
+                </div>
+            </div>
+            <div class="field field-full">
+                <label>Статус на проект</label>
+                <div class="status-row">
+                    ${['active','done','cancelled'].map(s => `<button class="status-chip ${statusMap[s].cls} ${c.status===s?'selected':''}" onclick="setStatus('${s}')">${statusMap[s].label}</button>`).join('')}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="card">
+        <div class="card-title">Финансово обобщение</div>
+        <div class="stats-row">
+            <div class="stat">
+                <div class="stat-label">💰 Обща стойност</div>
+                <div class="stat-val">${fmt(totalServ, c.currency)}</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">✅ Внесени аванси</div>
+                <div class="stat-val">${fmt(totalPaid, c.currency)}</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">⚖️ Оставащо дължимо</div>
+                <div class="stat-val ${remain < 0 ? 'negative' : remain === 0 && totalServ > 0 ? 'zero' : ''}">${fmt(remain, c.currency)}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Advances table -->
+    <div class="card">
+        <div class="card-title">📋 Авансови плащания</div>
+        <table>
+            <thead>
+                <tr><th>Дата</th><th>Сума</th><th>Бележка</th><th>Действия</th></tr>
+            </thead>
+            <tbody id="advBody">${advRows}</tbody>
+        </table>
+    </div>
+
+    <!-- Add advance form -->
+    <div class="add-form">
+        <div class="add-form-title">${editFormTitle}</div>
+        <div class="add-form-row">
+            <div class="field">
+                <label>📅 Дата</label>
+                <input type="date" id="advDate" value="${new Date().toISOString().slice(0,10)}">
+            </div>
+            <div class="field">
+                <label>💶 Сума (${curSymbol})</label>
+                <input type="number" id="advAmount" placeholder="0.00" step="any">
+            </div>
+            <div class="field" style="flex:2;">
+                <label>💬 Бележка (по избор)</label>
+                <input type="text" id="advNote" placeholder="напр. банков превод, кеш...">
+            </div>
+            <button class="btn-save" onclick="handleSaveAdv()">${editBtnLabel}</button>
+            <button class="btn-cancel-sm" id="cancelEditBtn" onclick="cancelEdit()">Отказ</button>
+        </div>
+    </div>
+
+    <!-- Actions row -->
+    <div class="action-row">
+        <button class="btn-danger" onclick="deleteCurrentClient()">🗑️ Изтрий клиент</button>
+        <button class="btn-backup btn-sm" style="padding:9px 18px; font-size:0.82rem;" onclick="exportJSON()">⬇ Backup JSON</button>
+        <button class="btn-pdf" onclick="generatePDF()">📄 Свали PDF отчет</button>
+    </div>
+    `;
+}
+
+// ─── FIELD UPDATES ───
+function updateField(field, val) {
+    if (!currentId) return;
+    if (field === 'totalService') clients[currentId][field] = parseFloat(val) || 0;
+    else clients[currentId][field] = val;
+    touch();
+    // update stats only
+    const c = clients[currentId];
+    const totalPaid = getTotalPaid(c.advances);
+    const totalServ = parseFloat(c.totalService) || 0;
+    const remain = totalServ - totalPaid;
+    const statVals = document.querySelectorAll('.stat-val');
+    if (statVals[0]) statVals[0].textContent = fmt(totalServ, c.currency);
+    if (statVals[1]) statVals[1].textContent = fmt(totalPaid, c.currency);
+    if (statVals[2]) {
+        statVals[2].textContent = fmt(remain, c.currency);
+        statVals[2].className = 'stat-val' + (remain < 0 ? ' negative' : remain === 0 && totalServ > 0 ? ' zero' : '');
+    }
+    // update client list sub
+    renderClientList();
+}
+
+function setCurrency(cur) {
+    if (!currentId) return;
+    clients[currentId].currency = cur;
+    touch();
+    renderClientList();
+    renderDetail();
+}
+
+function setStatus(s) {
+    if (!currentId) return;
+    clients[currentId].status = s;
+    touch();
+    renderClientList();
+    renderDetail();
+}
+
+// ─── ADVANCES ───
+function getTotalPaid(advs) {
+    return (advs || []).reduce((sum, a) => sum + (parseFloat(a.amount) || 0), 0);
+}
+
+function handleSaveAdv() {
+    const date = document.getElementById('advDate')?.value;
+    const amount = parseFloat(document.getElementById('advAmount')?.value);
+    const note = document.getElementById('advNote')?.value?.trim() || '';
+    if (!date) { alert('Изберете дата'); return; }
+    if (isNaN(amount) || amount <= 0) { alert('Въведете положителна сума'); return; }
+    if (!currentId) return;
+
+    if (editMode && editIndex !== -1) {
+        clients[currentId].advances[editIndex] = { date, amount, note };
+        toast('✅ Авансът е обновен.');
+        cancelEdit();
+    } else {
+        clients[currentId].advances.push({ date, amount, note });
+        toast('✅ Авансът е добавен.');
+        document.getElementById('advAmount').value = '';
+        document.getElementById('advNote').value = '';
+    }
+    touch();
+    renderDetail();
+    renderClientList();
+}
+
+function delAdv(idx) {
+    if (!currentId) return;
+    if (!confirm('Изтриване на аванса?')) return;
+    clients[currentId].advances.splice(idx, 1);
+    touch();
+    renderDetail();
+    renderClientList();
+    toast('🗑️ Авансът е изтрит.');
+}
+
+function startEdit(idx) {
+    if (!currentId) return;
+    const adv = clients[currentId].advances[idx];
+    editMode = true;
+    editIndex = idx;
+    renderDetail();
+    // fill form
+    document.getElementById('advDate').value = adv.date;
+    document.getElementById('advAmount').value = adv.amount;
+    document.getElementById('advNote').value = adv.note || '';
+    document.getElementById('cancelEditBtn').style.display = 'inline-block';
+    document.querySelector('.add-form-title').textContent = '✏️ Редактиране на аванс';
+    document.querySelector('.btn-save').textContent = '✅ Актуализирай';
+}
+
+function cancelEdit() {
+    editMode = false;
+    editIndex = -1;
+    const btn = document.getElementById('cancelEditBtn');
+    if (btn) btn.style.display = 'none';
+    const title = document.querySelector('.add-form-title');
+    if (title) title.textContent = '➕ Добавяне на аванс';
+    const saveBtn = document.querySelector('.btn-save');
+    if (saveBtn) saveBtn.textContent = 'Запази аванс';
+    const amtInput = document.getElementById('advAmount');
+    if (amtInput) amtInput.value = '';
+    const noteInput = document.getElementById('advNote');
+    if (noteInput) noteInput.value = '';
+}
+
+// ─── BACKUP / IMPORT ───
+function exportJSON() {
+    const data = JSON.stringify(clients, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    const now = new Date().toISOString().slice(0,10);
+    a.download = `IvanovRemonti_backup_${now}.json`;
+    a.click();
+    toast('⬇ Backup изтеглен.');
+}
+
+function importJSON(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        try {
+            const imported = JSON.parse(ev.target.result);
+            if (typeof imported !== 'object') throw new Error();
+            if (!confirm('Вносът ще обедини данните с текущите. Продължавате?')) return;
+            // merge
+            for (let id in imported) {
+                if (!imported[id].advances) imported[id].advances = [];
+                if (!imported[id].currency) imported[id].currency = 'EUR';
+                if (!imported[id].status) imported[id].status = 'active';
+                clients[id] = imported[id];
+            }
+            save();
+            renderClientList();
+            renderDetail();
+            toast('⬆ Данните са внесени успешно.');
+        } catch {
+            alert('Грешен файл. Изберете валиден JSON backup.');
+        }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+}
+
+// ─── PDF ───
+async function generatePDF() {
+    if (!currentId || !clients[currentId]) { alert('Няма избран клиент.'); return; }
+    const c = clients[currentId];
+    const totalPaid = getTotalPaid(c.advances);
+    const totalServ = parseFloat(c.totalService) || 0;
+    const remain = totalServ - totalPaid;
+    const now = new Date();
+    const pdfDate = now.toLocaleDateString('bg-BG');
+    const pdfTime = now.toLocaleTimeString('bg-BG', { hour: '2-digit', minute: '2-digit' });
+    const statusLabel = { active: 'В ход', done: 'Приключен', cancelled: 'Отменен' }[c.status] || '';
+
+    // Load Cyrillic font
+    async function loadTTF(url) {
+        const resp = await fetch(url);
+        const buf = await resp.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        let bin = '';
+        for (let i = 0; i < bytes.byteLength; i++) bin += String.fromCharCode(bytes[i]);
+        return btoa(bin);
+    }
+    let fontB64 = null, fontBoldB64 = null;
+    try {
+        [fontB64, fontBoldB64] = await Promise.all([
+            loadTTF('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/fonts/Roboto/Roboto-Regular.ttf'),
+            loadTTF('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/fonts/Roboto/Roboto-Medium.ttf')
+        ]);
+    } catch(e) { console.warn('Font CDN failed:', e); }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    const W = 210, M = 14, cW = W - M * 2;
+
+    if (fontB64) {
+        doc.addFileToVFS('Roboto-Regular.ttf', fontB64);
+        doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
+        doc.addFileToVFS('Roboto-Bold.ttf', fontBoldB64 || fontB64);
+        doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold');
+    }
+    const F = fontB64 ? 'Roboto' : 'helvetica';
+
+    function rgb(hex) { return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)]; }
+    function fill(hex) { doc.setFillColor(...rgb(hex)); }
+    function col(hex)  { doc.setTextColor(...rgb(hex)); }
+    function drw(hex)  { doc.setDrawColor(...rgb(hex)); }
+    function lw(n)     { doc.setLineWidth(n); }
+
+    const GOLD='#c8901a', GOLD_MID='#e9a825', GOLD_LITE='#fdf3dc';
+    const DARK='#1a1a2e', MUTED='#7a8a9a', LIGHT='#f5f7fa', BORDER='#e0e6ed';
+    const WHITE='#ffffff', GREEN='#1a7a52', RED='#c0392b';
+
+    let y = 0;
+
+    // ── GOLD TOP STRIPE
+    fill(GOLD_MID); doc.rect(0, 0, W, 2.5, 'F');
+
+    // ── WHITE HEADER
+    fill(WHITE); doc.rect(0, 2.5, W, 30, 'F');
+    fill(BORDER); doc.rect(0, 32.5, W, 0.4, 'F');
+
+    // Logo left
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(22);
+    col(DARK);    doc.text('IVANOV', M, 18);
+    const ivW = doc.getTextWidth('IVANOV ');
+    col(GOLD);    doc.text('REMONTI', M + ivW, 18);
+    doc.setFont(F, 'normal'); doc.setFontSize(7);
+    col(MUTED);   doc.text('СТРОИТЕЛНИ УСЛУГИ · СОФИЯ И РЕГИОН', M, 24.5);
+
+    // Contact right — 3 clean lines
+    doc.setFontSize(7.5); col(MUTED);
+    doc.text('0877 810 418',                W - M, 13, { align: 'right' });
+    doc.text('ivanovremontibg@gmail.com',   W - M, 19, { align: 'right' });
+    doc.text('ivanov-remonti.com',          W - M, 25, { align: 'right' });
+
+    y = 38;
+
+    // ── DOCUMENT TITLE
+    doc.setFont(F, 'bold'); doc.setFontSize(13); col(DARK);
+    doc.text('АВАНСОВ ОТЧЕТ', M, y);
+    fill(GOLD_MID); doc.rect(M, y + 1.5, 44, 0.7, 'F');
+    doc.setFont(F, 'normal'); doc.setFontSize(8); col(MUTED);
+    doc.text('Дата: ' + pdfDate, W - M, y, { align: 'right' });
+
+    y += 11;
+
+    // ── CLIENT CARD
+    fill(LIGHT); drw(BORDER); lw(0.3);
+    doc.roundedRect(M, y, cW, 32, 2, 2, 'FD');
+    fill(GOLD_MID); doc.roundedRect(M, y, 3, 32, 1, 1, 'F');
+
+    const LX = M + 8, VX = M + 50, C2X = M + cW / 2 + 6;
+
+    doc.setFont(F, 'normal'); doc.setFontSize(7); col(MUTED);
+    doc.text('КЛИЕНТ',        LX, y + 9);
+    doc.text('ОБЕКТ / АДРЕС', LX, y + 19);
+    doc.text('ОБЩА СТОЙНОСТ', LX, y + 29);
+    doc.text('СТАТУС',        C2X, y + 9);
+
+    doc.setFont(F, 'bold'); doc.setFontSize(10); col(DARK);
+    doc.text(c.name || '—', VX, y + 9);
+
+    doc.setFont(F, 'normal'); doc.setFontSize(8.5); col(DARK);
+    const extraLines = doc.splitTextToSize(c.extra || '—', cW / 2 - 8);
+    doc.text(extraLines, VX, y + 19);
+
+    doc.setFont(F, 'bold'); doc.setFontSize(10); col(DARK);
+    doc.text(fmt(totalServ, c.currency), VX, y + 29);
+
+    // Status badge
+    const stC = c.status==='done' ? GREEN : c.status==='cancelled' ? RED : GOLD;
+    const stBg= c.status==='done' ? '#e8f6ef' : c.status==='cancelled' ? '#fdecea' : GOLD_LITE;
+    fill(stBg); drw(stC); lw(0.4);
+    doc.roundedRect(C2X + 10, y + 3.5, 32, 8, 2, 2, 'FD');
+    doc.setFont(F, 'bold'); doc.setFontSize(7.5); col(stC);
+    doc.text(statusLabel, C2X + 10 + 16, y + 9, { align: 'center' });
+
+    y += 40;
+
+    // ── TABLE TITLE
+    doc.setFont(F, 'bold'); doc.setFontSize(8); col(DARK);
+    doc.text('АВАНСОВИ ПЛАЩАНИЯ', M, y);
+    y += 5;
+
+    // Table header — dark bg
+    fill(DARK); lw(0); doc.rect(M, y, cW, 8, 'F');
+    doc.setFont(F, 'bold'); doc.setFontSize(7.5); col(WHITE);
+    doc.text('ДАТА',    M + 4,  y + 5.3);
+    doc.text('СУМА',    M + 52, y + 5.3);
+    doc.text('БЕЛЕЖКА', M + 90, y + 5.3);
+    y += 8;
+
+    // Rows
+    if (!c.advances || c.advances.length === 0) {
+        fill(WHITE); drw(BORDER); lw(0.2);
+        doc.rect(M, y, cW, 10, 'FD');
+        doc.setFont(F, 'normal'); doc.setFontSize(8.5); col(MUTED);
+        doc.text('Няма добавени аванси', W/2, y + 6.5, { align: 'center' });
+        y += 10;
+    } else {
+        c.advances.forEach((adv, i) => {
+            const rH = 9;
+            fill(i%2===0 ? WHITE : '#f9fafb'); drw(BORDER); lw(0.2);
+            doc.rect(M, y, cW, rH, 'FD');
+            doc.setFont(F, 'normal'); doc.setFontSize(8.5); col(DARK);
+            doc.text(formatDate(adv.date), M + 4, y + 6);
+            doc.setFont(F, 'bold');
+            doc.text(fmt(adv.amount, c.currency), M + 52, y + 6);
+            doc.setFont(F, 'normal'); col(MUTED);
+            doc.text(doc.splitTextToSize(adv.note || '—', cW - 82), M + 90, y + 6);
+            y += rH;
+        });
+    }
+
+    y += 8;
+
+    // ── TOTAL PAID row
+    fill(LIGHT); drw(BORDER); lw(0.3);
+    doc.roundedRect(M, y, cW, 11, 1.5, 1.5, 'FD');
+    doc.setFont(F, 'normal'); doc.setFontSize(9); col(MUTED);
+    doc.text('Общо внесени аванси', M + 5, y + 7.2);
+    doc.setFont(F, 'bold'); col(DARK);
+    doc.text(fmt(totalPaid, c.currency), W - M - 5, y + 7.2, { align: 'right' });
+    y += 14;
+
+    // ── REMAINDER — big highlighted box
+    const remBg  = remain===0&&totalServ>0 ? '#e8f6ef' : remain<0 ? '#fdecea' : GOLD_LITE;
+    const remBrd = remain===0&&totalServ>0 ? GREEN : remain<0 ? RED : GOLD;
+    const remTxt = remBrd;
+    fill(remBg); drw(remBrd); lw(0.5);
+    doc.roundedRect(M, y, cW, 14, 2, 2, 'FD');
+    fill(remBrd); doc.roundedRect(M, y, 3, 14, 1, 1, 'F');
+    doc.setFont(F, 'bold'); doc.setFontSize(10); col(DARK);
+    doc.text('Остатък дължимо', M + 8, y + 9);
+    doc.setFontSize(14); col(remTxt);
+    doc.text(fmt(remain, c.currency), W - M - 5, y + 9.5, { align: 'right' });
+
+    y += 22;
+
+    // ── FOOTER
+    fill(GOLD_MID); doc.rect(M, y, cW, 0.5, 'F');
+    y += 5;
+    doc.setFont(F, 'normal'); doc.setFontSize(7); col(MUTED);
+    doc.text('Генериран: ' + pdfDate + ' в ' + pdfTime, M, y);
+    doc.text('Работим с договор и писмена гаранция · ivanov-remonti.com', W - M, y, { align: 'right' });
+    y += 5;
+    doc.setFont(F, 'bold'); doc.setFontSize(6.5); col(GOLD);
+    doc.text('IVANOV REMONTI · 0877 810 418 · ivanovremontibg@gmail.com', W/2, y, { align: 'center' });
+
+    // ── SAVE
+    const safe = (c.name||'klient').replace(/\s+/g,'_').replace(/[^\u0400-\u04FFa-zA-Z0-9_\-]/g,'');
+    doc.save('Avans_' + safe + '_' + now.toISOString().slice(0,10) + '.pdf');
+    toast('PDF е изтеглен успешно.');
+}
+
+// ─── HELPERS ───
+function fmt(val, currency) {
+    const n = parseFloat(val) || 0;
+    if (currency === 'BGN') return n.toFixed(2) + ' лв';
+    return n.toFixed(2) + ' €';
+}
+
+function formatDate(d) {
+    try {
+        const dt = new Date(d);
+        if (!isNaN(dt)) return dt.toLocaleDateString('bg-BG');
+    } catch(e) {}
+    return d;
+}
+
+function escHtml(s) {
+    if (!s) return '';
+    return s.replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+}
+
+function escAttr(s) {
+    if (!s) return '';
+    return s.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// ─── START ───
+init();
+</script>
+</body>
+</html>
