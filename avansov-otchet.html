@@ -863,13 +863,16 @@ async function generatePDF() {
 
     // ── БЕЛЕЖКА ──
     if (c.note && c.note.trim()) {
-        fill(GOLD_LITE); drw(GOLD); lw(0.3); doc.roundedRect(M, y, cW, 16, 2, 2, 'FD');
-        fill(GOLD_MID); doc.roundedRect(M, y, 3, 16, 1, 1, 'F');
-        doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED); doc.text('БЕЛЕЖКА', M+8, y+6);
-        doc.setFont(F,'normal'); doc.setFontSize(8.5); col(DARK);
+        doc.setFont(F,'normal'); doc.setFontSize(8.5);
         const noteLines = doc.splitTextToSize(c.note, cW-16);
-        doc.text(noteLines, M+8, y+12);
-        y += Math.max(16, noteLines.length * 5 + 8) + 6;
+        const lineH = 5;
+        const noteBoxH = 8 + noteLines.length * lineH + 6;
+        fill(GOLD_LITE); drw(GOLD); lw(0.3); doc.roundedRect(M, y, cW, noteBoxH, 2, 2, 'FD');
+        fill(GOLD_MID); doc.roundedRect(M, y, 3, noteBoxH, 1, 1, 'F');
+        doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED); doc.text('БЕЛЕЖКА', M+8, y+5);
+        doc.setFont(F,'normal'); doc.setFontSize(8.5); col(DARK);
+        doc.text(noteLines, M+8, y+5+lineH);
+        y += noteBoxH + 6;
     }
 
     // ── БЛОК ПОДПИСИ ──
@@ -883,7 +886,7 @@ async function generatePDF() {
     doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED);
     doc.text('ИЗПЪЛНИТЕЛ', M+8, sigY+7);
     doc.setFont(F,'bold'); doc.setFontSize(9); col(DARK);
-    doc.text('Тряна Първанов', M+8, sigY+14);
+    doc.text('Траян Първанов', M+8, sigY+14);
     // линия за подпис + автоматична дата
     drw(DARK); lw(0.4); doc.line(M+8, sigY+24, M+sigW-6, sigY+24);
     doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED);
