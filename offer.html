@@ -16,7 +16,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap') layer(online);
 :root{--gold:#C9A84C;--gold-dark:#9A7530;--dark:#0E0D0B;--dark2:#1A1916;--dark3:#252320;--dark4:#2E2C28;--text:#F0EDE6;--text2:#B8B4AC;--muted:#6E6B64;--red:#C0392B;--border:rgba(201,168,76,0.18);--border2:rgba(201,168,76,0.08);--radius:12px;--radius-lg:18px;}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'DM Sans',sans-serif;background:var(--dark);color:var(--text);min-height:100vh;font-size:15px;}
+body{padding-bottom:68px;font-family:'DM Sans',sans-serif;background:var(--dark);color:var(--text);min-height:100vh;font-size:15px;}
 ::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:var(--dark2);}::-webkit-scrollbar-thumb{background:var(--gold-dark);border-radius:3px;}
 .app-header{background:linear-gradient(135deg,#0F0E0C,#1C1A12,#221F0E);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:64px;position:sticky;top:0;z-index:100;gap:12px;}
 .header-logo{display:flex;align-items:center;gap:12px;}
@@ -156,7 +156,6 @@ window._fs = { doc, setDoc, getDoc, getDocs, collection, deleteDoc };
 window._fbReady = true;
 window.dispatchEvent(new Event('fbReady'));
 </script>
-
 </head>
 <body>
 
@@ -460,7 +459,6 @@ let services=[], offerRows=[], settings={}, history=[], rowIdSeq=1;
 let checkedIds = new Set();
 
 async function init(){
-  // Зареждане от localStorage (fallback)
   settings = JSON.parse(localStorage.getItem('ir_settings')||'{}');
   settings.firmName  = settings.firmName  ||'IVANOV REMONTI';
   settings.firmPhone = settings.firmPhone ||'0877810418';
@@ -472,41 +470,20 @@ async function init(){
   const sv=localStorage.getItem('ir_services');
   services=sv?JSON.parse(sv):JSON.parse(JSON.stringify(DEFAULT_SERVICES));
   history=JSON.parse(localStorage.getItem('ir_history')||'[]');
-
-  // Зареждане от Firebase (ако е налично)
   if(window._fbReady){
     try{
       const {getDoc,getDocs,doc,collection}=window._fs;
       const db=window._db;
-      // Настройки
       const sSnap=await getDoc(doc(db,'offer_settings','main'));
-      if(sSnap.exists()){
-        const fd=sSnap.data();
-        settings={...settings,...fd};
-        localStorage.setItem('ir_settings',JSON.stringify(settings));
-      } else {
-        // Първо отваряне — качи настройките от localStorage
-        await fbSaveSettings();
-      }
-      // Услуги
+      if(sSnap.exists()){settings={...settings,...sSnap.data()};localStorage.setItem('ir_settings',JSON.stringify(settings));}
+      else{await fbSaveSettings();}
       const svSnap=await getDoc(doc(db,'offer_services','list'));
-      if(svSnap.exists()){
-        services=svSnap.data().services||services;
-        localStorage.setItem('ir_services',JSON.stringify(services));
-      } else {
-        await fbSaveServices();
-      }
-      // История
+      if(svSnap.exists()){services=svSnap.data().services||services;localStorage.setItem('ir_services',JSON.stringify(services));}
+      else{await fbSaveServices();}
       const hSnap=await getDocs(collection(db,'offer_history'));
-      if(!hSnap.empty){
-        history=[];
-        hSnap.forEach(d=>history.push(d.data()));
-        history.sort((a,b)=>(parseInt(b.num)||0)-(parseInt(a.num)||0));
-        localStorage.setItem('ir_history',JSON.stringify(history));
-      }
-    }catch(e){console.warn('[Firebase] Грешка при зареждане:',e);}
+      if(!hSnap.empty){history=[];hSnap.forEach(d=>history.push(d.data()));history.sort((a,b)=>(parseInt(b.num)||0)-(parseInt(a.num)||0));localStorage.setItem('ir_history',JSON.stringify(history));}
+    }catch(e){console.warn('[FB]',e);}
   }
-
   applyLogo(settings.logo);
   document.getElementById('offer-date').value=todayISO();
   document.getElementById('offer-num').value=settings.nextNum;
@@ -791,11 +768,9 @@ function saveOffer(){
   if(!isNaN(nv)&&nv>=settings.nextNum){settings.nextNum=nv+1;document.getElementById('offer-num').value=settings.nextNum;}
   localStorage.setItem('ir_history',JSON.stringify(history));
   saveSettingsData();
-  // Firebase — запази офертата като отделен документ
   if(window._fbReady){
     const {doc,setDoc}=window._fs;
-    setDoc(doc(window._db,'offer_history','offer_'+data.num),data)
-      .catch(e=>console.warn('[Firebase] Грешка оферта:',e));
+    setDoc(doc(window._db,'offer_history','offer_'+data.num),data).catch(e=>console.warn('[FB]',e));
   }
   toast('✅ Запазена!','success');
 }
@@ -1342,11 +1317,9 @@ function deleteOffer(i){
   const num=history[i].num;
   history.splice(i,1);
   localStorage.setItem('ir_history',JSON.stringify(history));
-  // Firebase — изтрий документа
   if(window._fbReady){
     const {doc,deleteDoc}=window._fs;
-    deleteDoc(doc(window._db,'offer_history','offer_'+num))
-      .catch(e=>console.warn('[Firebase] Грешка изтриване:',e));
+    deleteDoc(doc(window._db,'offer_history','offer_'+num)).catch(e=>console.warn('[FB]',e));
   }
   renderHistory();
   toast('🗑 Изтрита','success');
@@ -1376,8 +1349,7 @@ function saveSettingsData(){
 function fbSaveSettings(){
   if(!window._fbReady) return;
   const {doc,setDoc}=window._fs;
-  return setDoc(doc(window._db,'offer_settings','main'),settings)
-    .catch(e=>console.warn('[Firebase] Грешка настройки:',e));
+  return setDoc(doc(window._db,'offer_settings','main'),settings).catch(e=>console.warn('[FB]',e));
 }
 function uploadLogo(event){
   const file=event.target.files[0];if(!file)return;
@@ -1412,8 +1384,7 @@ function saveServices(){
 function fbSaveServices(){
   if(!window._fbReady) return;
   const {doc,setDoc}=window._fs;
-  return setDoc(doc(window._db,'offer_services','list'),{services})
-    .catch(e=>console.warn('[Firebase] Грешка услуги:',e));
+  return setDoc(doc(window._db,'offer_services','list'),{services}).catch(e=>console.warn('[FB]',e));
 }
 
 // ── IMPORT/EXPORT ──
@@ -1528,13 +1499,23 @@ function clearQuickTexts(){
   document.querySelectorAll('.qt-cb').forEach(c=>c.checked=false);
 }
 
-// Стартиране — изчакваме Firebase или timeout 4 сек
-if(window._fbReady){
-  init();
-} else {
-  window.addEventListener('fbReady', ()=>init(), {once:true});
-  setTimeout(()=>{ if(!window._initDone) init(); }, 4000);
-}
+if(window._fbReady){init();}
+else{window.addEventListener('fbReady',()=>init(),{once:true});setTimeout(()=>{if(!window._initDone)init();},4000);}
 </script>
+
+<!-- ── BOTTOM NAV ── -->
+<style>
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:1000;background:#1e293b;border-top:1px solid #334155;display:flex;padding:0;padding-bottom:env(safe-area-inset-bottom);}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px 8px;text-decoration:none;color:#64748b;font-size:0.62rem;font-weight:600;letter-spacing:0.03em;transition:all 0.15s;gap:3px;cursor:pointer;border:none;background:none;font-family:inherit;}
+.nav-item:hover,.nav-item.active{color:#d9a441;}
+.nav-item .nav-icon{font-size:1.3rem;line-height:1;}
+</style>
+<nav class="bottom-nav">
+  <a class="nav-item" href="calculator.html"><span class="nav-icon">📐</span>Калкулатор</a>
+  <a class="nav-item" href="room.html"><span class="nav-icon">🏠</span>Стая</a>
+  <a class="nav-item active" href="offer.html"><span class="nav-icon">📋</span>Оферта</a>
+  <a class="nav-item" href="avansov-otchet.html"><span class="nav-icon">💰</span>Аванси</a>
+  <a class="nav-item" href="index.html"><span class="nav-icon">🏗️</span>Меню</a>
+</nav>
 </body>
 </html>
