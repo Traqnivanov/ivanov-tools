@@ -4,79 +4,229 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ivanov Remonti — Офис</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
+
 body {
-    font-family: system-ui, -apple-system, sans-serif;
-    background: #0f172a;
+    font-family: 'DM Sans', sans-serif;
+    background: #0a0f1a;
     min-height: 100vh;
+    overflow: hidden;
+}
+
+.bg {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at 20% 50%, rgba(217,164,65,0.07) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(217,164,65,0.05) 0%, transparent 50%),
+                linear-gradient(135deg, #0a0f1a 0%, #111827 50%, #0a0f1a 100%);
+    z-index: 0;
+}
+.bg::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(217,164,65,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(217,164,65,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+}
+
+#loginScreen {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 24px;
+}
+
+.login-brand {
+    text-align: center;
+    margin-bottom: 32px;
+}
+.login-logo-text {
+    font-family: 'Cinzel', serif;
+    font-size: 2.4rem;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 0.1em;
+    text-shadow: 0 0 40px rgba(217,164,65,0.3);
+}
+.login-logo-text span { color: #d9a441; }
+.login-tagline {
+    font-size: 0.7rem;
+    color: rgba(217,164,65,0.5);
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    margin-top: 8px;
+    border-top: 1px solid rgba(217,164,65,0.15);
+    padding-top: 8px;
+}
+.login-sub {
+    font-size: 0.75rem;
+    color: #475569;
+    margin-top: 6px;
+    letter-spacing: 0.06em;
+}
+
+.login-box {
+    background: rgba(30, 41, 59, 0.9);
+    border: 1px solid rgba(217,164,65,0.2);
+    border-radius: 24px;
+    padding: 36px 36px 32px;
+    width: 100%;
+    max-width: 340px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03) inset;
+    backdrop-filter: blur(12px);
+}
+
+.login-field-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: -8px;
+}
+
+.login-input {
+    width: 100%;
+    padding: 14px 18px;
+    border-radius: 12px;
+    border: 1.5px solid rgba(255,255,255,0.08);
+    background: rgba(0,0,0,0.3);
+    color: #fff;
+    font-size: 1.1rem;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    letter-spacing: 0.15em;
+    transition: border 0.2s, box-shadow 0.2s;
+}
+.login-input:focus {
+    border-color: rgba(217,164,65,0.5);
+    box-shadow: 0 0 0 3px rgba(217,164,65,0.1);
+}
+.login-input::placeholder { letter-spacing: 0.05em; color: #334155; }
+
+.login-btn {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #d9a441 0%, #b8862d 100%);
+    border: none;
+    border-radius: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #0a0f1a;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: opacity 0.2s, transform 0.15s;
+    margin-top: 4px;
+}
+.login-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+.login-btn:active { transform: translateY(0); }
+
+.login-error {
+    font-size: 0.8rem;
+    color: #f87171;
+    text-align: center;
+    display: none;
+    padding: 10px;
+    background: rgba(248,113,113,0.1);
+    border-radius: 8px;
+    border: 1px solid rgba(248,113,113,0.2);
+}
+.login-error.show { display: block; }
+
+.login-footer {
+    text-align: center;
+    font-size: 0.7rem;
+    color: #1e293b;
+    margin-top: 24px;
+    letter-spacing: 0.05em;
+}
+
+#mainApp {
+    display: none;
+    position: relative;
+    z-index: 10;
+    min-height: 100vh;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 24px;
     gap: 32px;
 }
-.logo {
-    text-align: center;
-}
+#mainApp.visible { display: flex; }
+
+.logo { text-align: center; }
 .logo-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #d9a441;
-    letter-spacing: 0.5px;
+    font-family: 'Cinzel', serif;
+    font-size: 2rem;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 0.1em;
+    text-shadow: 0 0 30px rgba(217,164,65,0.25);
 }
+.logo-title span { color: #d9a441; }
 .logo-sub {
-    font-size: 0.85rem;
-    color: #64748b;
-    margin-top: 4px;
+    font-size: 0.68rem;
+    color: rgba(217,164,65,0.45);
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    border-top: 1px solid rgba(217,164,65,0.15);
+    padding-top: 7px;
+    margin-top: 8px;
 }
+.logo-desc { font-size: 0.78rem; color: #475569; margin-top: 6px; }
+
 .cards {
     display: flex;
     gap: 16px;
     flex-wrap: wrap;
     justify-content: center;
     width: 100%;
-    max-width: 900px;
+    max-width: 960px;
 }
+
 .card {
     flex: 1;
     min-width: 220px;
-    background: #1e293b;
-    border: 1px solid #334155;
-    border-radius: 18px;
-    padding: 28px 24px;
+    background: rgba(30,41,59,0.85);
+    border: 1px solid #1e293b;
+    border-radius: 20px;
+    padding: 30px 24px;
     text-align: center;
     cursor: pointer;
     text-decoration: none;
-    transition: all 0.2s;
+    transition: all 0.25s;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 12px;
+    backdrop-filter: blur(8px);
 }
 .card:hover {
     border-color: #d9a441;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(217,164,65,0.15);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 32px rgba(217,164,65,0.15);
+    background: rgba(36,50,74,0.95);
 }
-.card-icon {
-    font-size: 2.5rem;
-}
-.card-title {
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: #e2e8f0;
-}
-.card-desc {
-    font-size: 0.8rem;
-    color: #64748b;
-    line-height: 1.5;
-}
+.card-icon { font-size: 2.6rem; }
+.card-title { font-size: 1.05rem; font-weight: 700; color: #e2e8f0; }
+.card-desc { font-size: 0.8rem; color: #64748b; line-height: 1.5; }
 .card-btn {
     margin-top: 4px;
     background: linear-gradient(135deg, #d9a441, #b8862d);
-    color: #0f172a;
+    color: #0a0f1a;
     border: none;
     border-radius: 10px;
     padding: 10px 20px;
@@ -84,44 +234,128 @@ body {
     font-weight: 700;
     cursor: pointer;
     width: 100%;
+    font-family: 'DM Sans', sans-serif;
 }
-.footer {
-    font-size: 0.75rem;
+
+.app-footer {
+    font-size: 0.72rem;
+    color: #1e293b;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+.logout-btn {
+    background: none;
+    border: 1px solid #1e293b;
     color: #334155;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
 }
+.logout-btn:hover { border-color: #334155; color: #64748b; }
 </style>
 </head>
 <body>
 
-<div class="logo">
-    <div class="logo-title">🏗️ Ivanov Remonti</div>
-    <div class="logo-sub">Офис инструменти</div>
+<div class="bg"></div>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+    <div class="login-brand">
+        <div class="login-logo-text">IVANOV <span>REMONTI</span></div>
+        <div class="login-tagline">Строителни услуги · Офис</div>
+        <div class="login-sub">Въведете парола за достъп</div>
+    </div>
+    <div class="login-box">
+        <div class="login-field-label">🔒 Парола</div>
+        <input type="password" class="login-input" id="loginInput"
+               placeholder="••••••••"
+               onkeydown="if(event.key==='Enter') doLogin()">
+        <button class="login-btn" onclick="doLogin()">Влез →</button>
+        <div class="login-error" id="loginError">Грешна парола. Опитай отново.</div>
+    </div>
+    <div class="login-footer">ivanov-remonti.com · 0877 810 418</div>
 </div>
 
-<div class="cards">
-    <a class="card" href="calculator.html">
-        <div class="card-icon">📐</div>
-        <div class="card-title">Калкулатор</div>
-        <div class="card-desc">Изчисли материали за ГК и шпакловка по стаи и размери</div>
-        <div class="card-btn">Отвори →</div>
-    </a>
+<!-- MAIN APP -->
+<div id="mainApp">
+    <div class="logo">
+        <div class="logo-title">IVANOV <span>REMONTI</span></div>
+        <div class="logo-sub">Офис инструменти</div>
+        <div class="logo-desc">Добре дошъл 👋</div>
+    </div>
 
-    <a class="card" href="offer.html">
-        <div class="card-icon">📋</div>
-        <div class="card-title">Оферта</div>
-        <div class="card-desc">Създай оферта за клиент и генерирай PDF</div>
-        <div class="card-btn">Отвори →</div>
-    </a>
+    <div class="cards">
+        <a class="card" href="calculator.html">
+            <div class="card-icon">📐</div>
+            <div class="card-title">Калкулатор</div>
+            <div class="card-desc">Изчисли материали за ГК и шпакловка по стаи и размери</div>
+            <div class="card-btn">Отвори →</div>
+        </a>
+        <a class="card" href="offer.html">
+            <div class="card-icon">📋</div>
+            <div class="card-title">Оферта</div>
+            <div class="card-desc">Създай оферта за клиент и генерирай PDF</div>
+            <div class="card-btn">Отвори →</div>
+        </a>
+        <a class="card" href="room.html">
+            <div class="card-icon">🛋️</div>
+            <div class="card-title">Стая</div>
+            <div class="card-desc">Изчисли материали и площи за конкретна стая</div>
+            <div class="card-btn">Отвори →</div>
+        </a>
+        <a class="card" href="profiles.html">
+            <div class="card-icon">👤</div>
+            <div class="card-title">Профили</div>
+            <div class="card-desc">Управление на клиентски профили</div>
+            <div class="card-btn">Отвори →</div>
+        </a>
+        <a class="card" href="avansov-otchet.html">
+            <div class="card-icon">💰</div>
+            <div class="card-title">Авансов отчет</div>
+            <div class="card-desc">Проследявай клиенти, аванси и оставащи плащания</div>
+            <div class="card-btn">Отвори →</div>
+        </a>
+    </div>
 
-    <a class="card" href="avansov-otchet.html">
-        <div class="card-icon">💰</div>
-        <div class="card-title">Авансов отчет</div>
-        <div class="card-desc">Проследявай клиенти, аванси и оставащи плащания</div>
-        <div class="card-btn">Отвори →</div>
-    </a>
+    <div class="app-footer">
+        <span>ivanov-remonti.com · 0877 810 418</span>
+        <button class="logout-btn" onclick="logout()">🔒 Изход</button>
+    </div>
 </div>
 
-<div class="footer">ivanov-remonti.com · 0877 810 418</div>
+<script>
+const PASSWORD = 'ivanov2025';
+const SESSION_KEY = 'ir_site_auth';
 
+function doLogin() {
+    const val = document.getElementById('loginInput').value;
+    if (val === PASSWORD) {
+        sessionStorage.setItem(SESSION_KEY, '1');
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('mainApp').classList.add('visible');
+    } else {
+        document.getElementById('loginError').classList.add('show');
+        document.getElementById('loginInput').value = '';
+        document.getElementById('loginInput').focus();
+        setTimeout(() => document.getElementById('loginError').classList.remove('show'), 3000);
+    }
+}
+
+function logout() {
+    sessionStorage.removeItem(SESSION_KEY);
+    location.reload();
+}
+
+if (sessionStorage.getItem(SESSION_KEY) === '1') {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainApp').classList.add('visible');
+} else {
+    setTimeout(() => document.getElementById('loginInput').focus(), 100);
+}
+</script>
 </body>
 </html>
