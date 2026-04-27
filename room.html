@@ -152,6 +152,24 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#0f172a;color:#e2e8f0;mi
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, setDoc, getDoc, getDocs, collection, deleteDoc, orderBy, query } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+const firebaseConfig = {
+  apiKey: "AIzaSyDpgJazYtTHvU-fWuWlAQnbYTLOGcfnkhA",
+  authDomain: "ivanov-tools.firebaseapp.com",
+  projectId: "ivanov-tools",
+  storageBucket: "ivanov-tools.firebasestorage.app",
+  messagingSenderId: "212062400948",
+  appId: "1:212062400948:web:e52380c5096e8dba68c2e1"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+window._db = db;
+window._fs = { doc, setDoc, getDoc, getDocs, collection, deleteDoc, orderBy, query };
+window._fbReady = true;
+window.dispatchEvent(new Event('fbReady'));
+</script>
 </head>
 <body>
 
@@ -161,6 +179,8 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#0f172a;color:#e2e8f0;mi
   <label>Дата <input type="date" id="pDate" onchange="saveState()"></label>
   <label>Профил <select id="pLen" onchange="calcAll()"><option value="3">3м</option><option value="4">4м</option></select></label>
   <div class="top-bar-actions">
+  <button onclick="fbSaveProject()" id="btnCloudSave" style="background:linear-gradient(135deg,#d9a441,#b8862d);border:none;color:#0a0f1a;border-radius:6px;padding:5px 10px;font-size:0.78rem;cursor:pointer;font-weight:700;">☁️ Запази</button>
+  <button onclick="fbOpenProjects()" style="background:none;border:1px solid #3b82f6;color:#3b82f6;border-radius:6px;padding:5px 10px;font-size:0.78rem;cursor:pointer;font-weight:600;">📂 Обекти</button>
   <button onclick="newProject()" style="background:none;border:1px solid #334155;color:#475569;border-radius:6px;padding:5px 10px;font-size:0.78rem;cursor:pointer;">🗑 Нов</button>
   <button onclick="saveToFile()" style="background:none;border:1px solid #334155;color:#475569;border-radius:6px;padding:5px 10px;font-size:0.78rem;cursor:pointer;">💾 Запази</button>
   <label style="background:none;border:1px solid #334155;color:#475569;border-radius:6px;padding:5px 10px;font-size:0.78rem;cursor:pointer;">📂 Зареди<input type="file" accept=".json" onchange="loadFromFile(event)" style="display:none;"></label>
@@ -1425,6 +1445,133 @@ body { padding-bottom: 68px; }
     if(el) el.classList.add('active');
   }
 })();
+</script>
+
+
+<!-- Панел: Моите обекти -->
+<div id="projectsOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:24px;width:90%;max-width:480px;max-height:80vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="font-size:1rem;font-weight:700;color:#e2e8f0;">📂 Запазени обекти</div>
+      <button onclick="fbCloseProjects()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.2rem;">✕</button>
+    </div>
+    <div id="projectsList" style="display:flex;flex-direction:column;gap:8px;">
+      <div style="color:#475569;font-size:0.85rem;">Зареждане...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── FIREBASE ФУНКЦИИ ──
+
+function fbGetState(){
+  return {
+    rooms, rc, extraMats, extraMarkup, extraLaborMarkup,
+    pName: document.getElementById('pName').value,
+    pDate: document.getElementById('pDate').value,
+    pLen:  document.getElementById('pLen').value,
+    savedAt: new Date().toISOString()
+  };
+}
+
+async function fbSaveProject(){
+  if(!window._fbReady){ showToast('Няма връзка с облака'); return; }
+  const state = fbGetState();
+  const name = state.pName || ('Обект_' + state.pDate);
+  if(!name.trim()){ showToast('Въведи име на проекта!'); return; }
+  const id = name.trim().replace(/[^a-zA-Zа-яА-Я0-9_\- ]/g,'_').substring(0,60);
+  try{
+    const {doc,setDoc} = window._fs;
+    await setDoc(doc(window._db,'room_projects',id), {...state, id});
+    // Запази и в localStorage
+    localStorage.setItem('ir_room_state', JSON.stringify(state));
+    localStorage.setItem('ir_room_last_id', id);
+    showToast('☁️ Запазено: ' + name);
+  } catch(e){
+    console.error('[Firebase] Грешка запазване:', e);
+    showToast('Грешка при запазване!');
+  }
+}
+
+async function fbOpenProjects(){
+  if(!window._fbReady){ showToast('Няма връзка с облака'); return; }
+  document.getElementById('projectsOverlay').style.display='flex';
+  const list = document.getElementById('projectsList');
+  list.innerHTML = '<div style="color:#475569;font-size:0.85rem;">Зареждане...</div>';
+  try{
+    const {collection,getDocs} = window._fs;
+    const snap = await getDocs(collection(window._db,'room_projects'));
+    if(snap.empty){
+      list.innerHTML='<div style="color:#475569;font-size:0.85rem;">Няма запазени обекти.</div>';
+      return;
+    }
+    const projects = [];
+    snap.forEach(d => projects.push(d.data()));
+    projects.sort((a,b) => (b.savedAt||'').localeCompare(a.savedAt||''));
+    list.innerHTML = projects.map(p => `
+      <div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <div>
+          <div style="font-weight:600;color:#e2e8f0;font-size:0.9rem;">${p.pName||'(без име)'}</div>
+          <div style="font-size:0.72rem;color:#475569;">${p.pDate||''} · ${(p.rooms||[]).length} помещения · запазен ${(p.savedAt||'').substring(0,10)}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button onclick="fbLoadProject('${p.id}')" style="background:#3b82f6;border:none;color:#fff;border-radius:6px;padding:5px 10px;font-size:0.78rem;cursor:pointer;font-weight:600;">Зареди</button>
+          <button onclick="fbDeleteProject('${p.id}',this)" style="background:#ef4444;border:none;color:#fff;border-radius:6px;padding:5px 8px;font-size:0.78rem;cursor:pointer;">🗑</button>
+        </div>
+      </div>
+    `).join('');
+  } catch(e){
+    list.innerHTML='<div style="color:#f87171;font-size:0.85rem;">Грешка при зареждане.</div>';
+    console.error('[Firebase]', e);
+  }
+}
+
+function fbCloseProjects(){
+  document.getElementById('projectsOverlay').style.display='none';
+}
+
+async function fbLoadProject(id){
+  if(!window._fbReady) return;
+  try{
+    const {doc,getDoc} = window._fs;
+    const snap = await getDoc(doc(window._db,'room_projects',id));
+    if(!snap.exists()){ showToast('Проектът не е намерен!'); return; }
+    const s = snap.data();
+    rooms = s.rooms||[]; rc = s.rc||0;
+    extraMats = s.extraMats||[]; extraMarkup = s.extraMarkup||0; extraLaborMarkup = s.extraLaborMarkup||0;
+    if(s.pName) document.getElementById('pName').value = s.pName;
+    if(s.pDate) document.getElementById('pDate').value = s.pDate;
+    if(s.pLen)  document.getElementById('pLen').value  = s.pLen;
+    localStorage.setItem('ir_room_state', JSON.stringify(s));
+    localStorage.setItem('ir_room_last_id', id);
+    fbCloseProjects();
+    renderAll();
+    renderExtraMats();
+    calcAll();
+    showToast('✅ Зареден: ' + (s.pName||id));
+  } catch(e){
+    console.error('[Firebase]', e);
+    showToast('Грешка при зареждане!');
+  }
+}
+
+async function fbDeleteProject(id, btn){
+  if(!confirm('Изтриване на обект "' + id + '"?')) return;
+  try{
+    const {doc,deleteDoc} = window._fs;
+    await deleteDoc(doc(window._db,'room_projects',id));
+    btn.closest('div[style]').remove();
+    showToast('🗑 Изтрит');
+  } catch(e){
+    console.error('[Firebase]', e);
+    showToast('Грешка при изтриване!');
+  }
+}
+
+// Затваряне с Escape
+document.addEventListener('keydown', e => {
+  if(e.key==='Escape') fbCloseProjects();
+});
 </script>
 
 </body>
