@@ -4,17 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ivanov Remonti — Офис</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#d9a441">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="IR Офис">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-
 body {
     font-family: 'DM Sans', sans-serif;
     background: #0a0f1a;
     min-height: 100vh;
     overflow: hidden;
 }
-
 .bg {
     position: fixed;
     inset: 0;
@@ -32,7 +36,6 @@ body {
         linear-gradient(90deg, rgba(217,164,65,0.04) 1px, transparent 1px);
     background-size: 60px 60px;
 }
-
 #loginScreen {
     position: fixed;
     inset: 0;
@@ -44,11 +47,7 @@ body {
     gap: 0;
     padding: 24px;
 }
-
-.login-brand {
-    text-align: center;
-    margin-bottom: 32px;
-}
+.login-brand { text-align: center; margin-bottom: 32px; }
 .login-logo-text {
     font-family: 'Cinzel', serif;
     font-size: 2.4rem;
@@ -67,13 +66,7 @@ body {
     border-top: 1px solid rgba(217,164,65,0.15);
     padding-top: 8px;
 }
-.login-sub {
-    font-size: 0.75rem;
-    color: #475569;
-    margin-top: 6px;
-    letter-spacing: 0.06em;
-}
-
+.login-sub { font-size: 0.75rem; color: #475569; margin-top: 6px; letter-spacing: 0.06em; }
 .login-box {
     background: rgba(30, 41, 59, 0.9);
     border: 1px solid rgba(217,164,65,0.2);
@@ -84,178 +77,87 @@ body {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03) inset;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.6);
     backdrop-filter: blur(12px);
 }
-
-.login-field-label {
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: -8px;
-}
-
+.login-field-label { font-size: 0.72rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: -8px; }
 .login-input {
-    width: 100%;
-    padding: 14px 18px;
-    border-radius: 12px;
+    width: 100%; padding: 14px 18px; border-radius: 12px;
     border: 1.5px solid rgba(255,255,255,0.08);
-    background: rgba(0,0,0,0.3);
-    color: #fff;
-    font-size: 1.1rem;
-    font-family: 'DM Sans', sans-serif;
-    outline: none;
-    letter-spacing: 0.15em;
-    transition: border 0.2s, box-shadow 0.2s;
+    background: rgba(0,0,0,0.3); color: #fff;
+    font-size: 1.1rem; font-family: 'DM Sans', sans-serif;
+    outline: none; letter-spacing: 0.15em; transition: border 0.2s, box-shadow 0.2s;
 }
-.login-input:focus {
-    border-color: rgba(217,164,65,0.5);
-    box-shadow: 0 0 0 3px rgba(217,164,65,0.1);
-}
+.login-input:focus { border-color: rgba(217,164,65,0.5); box-shadow: 0 0 0 3px rgba(217,164,65,0.1); }
 .login-input::placeholder { letter-spacing: 0.05em; color: #334155; }
-
 .login-btn {
-    width: 100%;
-    padding: 14px;
+    width: 100%; padding: 14px;
     background: linear-gradient(135deg, #d9a441 0%, #b8862d 100%);
-    border: none;
-    border-radius: 12px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: #0a0f1a;
-    cursor: pointer;
-    letter-spacing: 0.05em;
-    transition: opacity 0.2s, transform 0.15s;
-    margin-top: 4px;
+    border: none; border-radius: 12px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 700;
+    color: #0a0f1a; cursor: pointer; letter-spacing: 0.05em;
+    transition: opacity 0.2s, transform 0.15s; margin-top: 4px;
 }
 .login-btn:hover { opacity: 0.88; transform: translateY(-1px); }
-.login-btn:active { transform: translateY(0); }
-
 .login-error {
-    font-size: 0.8rem;
-    color: #f87171;
-    text-align: center;
-    display: none;
-    padding: 10px;
-    background: rgba(248,113,113,0.1);
-    border-radius: 8px;
+    font-size: 0.8rem; color: #f87171; text-align: center; display: none;
+    padding: 10px; background: rgba(248,113,113,0.1); border-radius: 8px;
     border: 1px solid rgba(248,113,113,0.2);
 }
 .login-error.show { display: block; }
-
-.login-footer {
-    text-align: center;
-    font-size: 0.7rem;
-    color: #1e293b;
-    margin-top: 24px;
-    letter-spacing: 0.05em;
-}
-
+.login-footer { text-align: center; font-size: 0.7rem; color: #1e293b; margin-top: 24px; letter-spacing: 0.05em; }
 #mainApp {
-    display: none;
-    position: relative;
-    z-index: 10;
-    min-height: 100vh;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-    gap: 32px;
+    display: none; position: relative; z-index: 10;
+    min-height: 100vh; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 24px; gap: 32px;
 }
 #mainApp.visible { display: flex; }
-
 .logo { text-align: center; }
 .logo-title {
-    font-family: 'Cinzel', serif;
-    font-size: 2rem;
-    font-weight: 900;
-    color: #fff;
-    letter-spacing: 0.1em;
+    font-family: 'Cinzel', serif; font-size: 2rem; font-weight: 900;
+    color: #fff; letter-spacing: 0.1em;
     text-shadow: 0 0 30px rgba(217,164,65,0.25);
 }
 .logo-title span { color: #d9a441; }
 .logo-sub {
-    font-size: 0.68rem;
-    color: rgba(217,164,65,0.45);
-    letter-spacing: 0.25em;
-    text-transform: uppercase;
+    font-size: 0.68rem; color: rgba(217,164,65,0.45);
+    letter-spacing: 0.25em; text-transform: uppercase;
     border-top: 1px solid rgba(217,164,65,0.15);
-    padding-top: 7px;
-    margin-top: 8px;
+    padding-top: 7px; margin-top: 8px;
 }
-.logo-desc { font-size: 0.78rem; color: #475569; margin-top: 6px; }
-
 .cards {
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-    justify-content: center;
-    width: 100%;
-    max-width: 960px;
+    display: flex; gap: 16px; flex-wrap: wrap;
+    justify-content: center; width: 100%; max-width: 860px;
 }
-
 .card {
-    flex: 1;
-    min-width: 220px;
+    flex: 1; min-width: 200px;
     background: rgba(30,41,59,0.85);
-    border: 1px solid #1e293b;
-    border-radius: 20px;
-    padding: 30px 24px;
-    text-align: center;
-    cursor: pointer;
-    text-decoration: none;
-    transition: all 0.25s;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
+    border: 1px solid #1e293b; border-radius: 20px;
+    padding: 28px 22px; text-align: center; cursor: pointer;
+    text-decoration: none; transition: all 0.25s;
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
     backdrop-filter: blur(8px);
 }
 .card:hover {
-    border-color: #d9a441;
-    transform: translateY(-3px);
+    border-color: #d9a441; transform: translateY(-3px);
     box-shadow: 0 12px 32px rgba(217,164,65,0.15);
     background: rgba(36,50,74,0.95);
 }
-.card-icon { font-size: 2.6rem; }
-.card-title { font-size: 1.05rem; font-weight: 700; color: #e2e8f0; }
-.card-desc { font-size: 0.8rem; color: #64748b; line-height: 1.5; }
+.card-icon { font-size: 2.4rem; }
+.card-title { font-size: 1rem; font-weight: 700; color: #e2e8f0; }
+.card-desc { font-size: 0.78rem; color: #64748b; line-height: 1.5; }
 .card-btn {
     margin-top: 4px;
     background: linear-gradient(135deg, #d9a441, #b8862d);
-    color: #0a0f1a;
-    border: none;
-    border-radius: 10px;
-    padding: 10px 20px;
-    font-size: 0.85rem;
-    font-weight: 700;
-    cursor: pointer;
-    width: 100%;
-    font-family: 'DM Sans', sans-serif;
+    color: #0a0f1a; border: none; border-radius: 10px;
+    padding: 10px 20px; font-size: 0.85rem; font-weight: 700;
+    cursor: pointer; width: 100%; font-family: 'DM Sans', sans-serif;
 }
-
 .app-footer {
-    font-size: 0.72rem;
-    color: #1e293b;
-    display: flex;
-    gap: 16px;
-    align-items: center;
+    font-size: 0.72rem; color: #1e293b;
+    display: flex; gap: 16px; align-items: center;
 }
-.logout-btn {
-    background: none;
-    border: 1px solid #1e293b;
-    color: #334155;
-    padding: 5px 14px;
-    border-radius: 20px;
-    font-size: 0.72rem;
-    cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
-    transition: all 0.2s;
-}
-.logout-btn:hover { border-color: #334155; color: #64748b; }
 </style>
 </head>
 <body>
@@ -285,14 +187,19 @@ body {
     <div class="logo">
         <div class="logo-title">IVANOV <span>REMONTI</span></div>
         <div class="logo-sub">Офис инструменти</div>
-        <div class="logo-desc">Добре дошъл 👋</div>
     </div>
 
     <div class="cards">
         <a class="card" href="calculator.html">
             <div class="card-icon">📐</div>
             <div class="card-title">Калкулатор</div>
-            <div class="card-desc">Изчисли материали за ГК и шпакловка по стаи и размери</div>
+            <div class="card-desc">Материали за ГК и шпакловка по позиции</div>
+            <div class="card-btn">Отвори →</div>
+        </a>
+        <a class="card" href="room.html">
+            <div class="card-icon">🏠</div>
+            <div class="card-title">Стая</div>
+            <div class="card-desc">Изчисление по помещение с визуална схема</div>
             <div class="card-btn">Отвори →</div>
         </a>
         <a class="card" href="offer.html">
@@ -301,29 +208,16 @@ body {
             <div class="card-desc">Създай оферта за клиент и генерирай PDF</div>
             <div class="card-btn">Отвори →</div>
         </a>
-        <a class="card" href="room.html">
-            <div class="card-icon">🛋️</div>
-            <div class="card-title">Стая</div>
-            <div class="card-desc">Изчисли материали и площи за конкретна стая</div>
-            <div class="card-btn">Отвори →</div>
-        </a>
-        <a class="card" href="profiles.html">
-            <div class="card-icon">👤</div>
-            <div class="card-title">Профили</div>
-            <div class="card-desc">Управление на клиентски профили</div>
-            <div class="card-btn">Отвори →</div>
-        </a>
         <a class="card" href="avansov-otchet.html">
             <div class="card-icon">💰</div>
             <div class="card-title">Авансов отчет</div>
-            <div class="card-desc">Проследявай клиенти, аванси и оставащи плащания</div>
+            <div class="card-desc">Клиенти, аванси и оставащи плащания</div>
             <div class="card-btn">Отвори →</div>
         </a>
     </div>
 
     <div class="app-footer">
         <span>ivanov-remonti.com · 0877 810 418</span>
-        <button class="logout-btn" onclick="logout()">🔒 Изход</button>
     </div>
 </div>
 
@@ -334,7 +228,7 @@ const SESSION_KEY = 'ir_site_auth';
 function doLogin() {
     const val = document.getElementById('loginInput').value;
     if (val === PASSWORD) {
-        sessionStorage.setItem(SESSION_KEY, '1');
+        localStorage.setItem(SESSION_KEY, '1');
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('mainApp').classList.add('visible');
     } else {
@@ -345,16 +239,18 @@ function doLogin() {
     }
 }
 
-function logout() {
-    sessionStorage.removeItem(SESSION_KEY);
-    location.reload();
-}
-
-if (sessionStorage.getItem(SESSION_KEY) === '1') {
+if (localStorage.getItem(SESSION_KEY) === '1') {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainApp').classList.add('visible');
 } else {
     setTimeout(() => document.getElementById('loginInput').focus(), 100);
+}
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+            .catch(err => console.log('SW грешка:', err));
+    });
 }
 </script>
 </body>
