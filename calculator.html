@@ -240,6 +240,24 @@ tr.overridden td.col-pkg .n { color:#f59e0b; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, setDoc, getDoc, getDocs, collection, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+const firebaseConfig = {
+  apiKey: "AIzaSyDpgJazYtTHvU-fWuWlAQnbYTLOGcfnkhA",
+  authDomain: "ivanov-tools.firebaseapp.com",
+  projectId: "ivanov-tools",
+  storageBucket: "ivanov-tools.firebasestorage.app",
+  messagingSenderId: "212062400948",
+  appId: "1:212062400948:web:e52380c5096e8dba68c2e1"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+window._db = db;
+window._fs = { doc, setDoc, getDoc, getDocs, collection, deleteDoc };
+window._fbReady = true;
+window.dispatchEvent(new Event('fbReady'));
+</script>
 </head>
 <body>
 <div class="main">
@@ -331,7 +349,9 @@ tr.overridden td.col-pkg .n { color:#f59e0b; }
     <div class="action-row" id="actionRow" style="display:none;flex-wrap:wrap;gap:6px;align-items:center;">
       <button onclick="pdf()">📤 PDF</button>
       <label style="display:flex;align-items:center;gap:5px;font-size:0.78rem;color:#64748b;cursor:pointer;font-weight:normal;background:none;box-shadow:none;padding:0;"><input type="checkbox" id="showLaborInPDF" style="width:auto;accent-color:#3b82f6;"> Труд в PDF</label>
-      <button onclick="sendToOffer()" style="background:linear-gradient(135deg,#16a34a,#15803d);">📋 Прати в оферта</button>
+      <button onclick="fbSaveCalcProject()" style="background:linear-gradient(135deg,#d9a441,#b8862d);border:none;color:#0a0f1a;border-radius:6px;padding:7px 14px;font-size:0.82rem;cursor:pointer;font-weight:700;">☁️ Запази</button>
+    <button onclick="fbOpenCalcProjects()" style="background:none;border:1px solid #3b82f6;color:#3b82f6;border-radius:6px;padding:7px 12px;font-size:0.82rem;cursor:pointer;font-weight:600;">📂 Проекти</button>
+    <button onclick="sendToOffer()" style="background:linear-gradient(135deg,#16a34a,#15803d);">📋 Прати в оферта</button>
       <button onclick="openProfiles()" style="background:linear-gradient(135deg,#1d4ed8,#1e40af);">📐 Профили</button>
       <button class="sec" onclick="clearOvr();renderResults()">↺ Корекции</button>
       <button class="sec" onclick="resetAll()">🔄 Нов</button>
@@ -2183,6 +2203,242 @@ body { padding-bottom: 68px; }
     if(el) el.classList.add('active');
   }
 })();
+</script>
+
+
+<!-- Панел: Моите проекти -->
+<div id="calcProjectsOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:2000;align-items:center;justify-content:center;">
+  <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:24px;width:92%;max-width:500px;max-height:82vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="font-size:1rem;font-weight:700;color:#e2e8f0;">📂 Запазени проекти</div>
+      <button onclick="fbCloseCalcProjects()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.2rem;">✕</button>
+    </div>
+    <div id="calcProjectsList" style="display:flex;flex-direction:column;gap:8px;">
+      <div style="color:#475569;font-size:0.85rem;">Зареждане...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CALCULATOR FIREBASE ──
+
+function getCalcState(){
+  // GK стаи
+  const gkRooms=[];
+  document.querySelectorAll('#roomsContainer .room[data-kind="room"]').forEach(r=>{
+    const walls={};
+    r.querySelectorAll('.wall-btn[data-wall]').forEach(wb=>{
+      walls[wb.dataset.wall]=wb.dataset.state||'off';
+    });
+    gkRooms.push({
+      name:r.querySelector('.title-input').value||'',
+      L:parseFloat(r.querySelector('.rLen').value)||0,
+      W:parseFloat(r.querySelector('.rWid').value)||0,
+      H:parseFloat(r.querySelector('.rHgt').value)||0,
+      ceil:r.querySelector('.ceil-card').dataset.on||'0',
+      walls
+    });
+  });
+
+  // Шпакловка стаи
+  const puttyRooms=[];
+  document.querySelectorAll('#puttyContainer .room[data-kind="putty"]').forEach(r=>{
+    const ceilLayers=[];
+    r.querySelectorAll('.pceil-card').forEach(c=>{
+      ceilLayers.push(c.dataset.pservice||'off');
+    });
+    const walls={};
+    r.querySelectorAll('.wall-btn[data-wall]').forEach(wb=>{
+      walls[wb.dataset.wall]=wb.dataset.pservice||'off';
+    });
+    puttyRooms.push({
+      name:r.querySelector('.title-input').value||'',
+      L:parseFloat(r.querySelector('.pL').value)||0,
+      W:parseFloat(r.querySelector('.pW').value)||0,
+      H:parseFloat(r.querySelector('.pH').value)||0,
+      ceilLayers,walls
+    });
+  });
+
+  // Материали чекбоксове
+  const checks={};
+  ['mBoard','mProfile','mHanger','mButton','mScrews','mDowel','mJoint','mFinish','mTape','mIns','mPrimer','mGlue','mFoam'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) checks[id]=el.checked;
+  });
+
+  return {
+    pName:document.getElementById('pName').value||'',
+    pDate:document.getElementById('pDate').value||'',
+    pLen:document.getElementById('pLen').value||'3',
+    bSize:document.getElementById('bSize')?.value||'',
+    checks, gkRooms, puttyRooms,
+    savedAt:new Date().toISOString()
+  };
+}
+
+function restoreCalcState(s){
+  // Изчисти стаите
+  document.getElementById('roomsContainer').innerHTML='';
+  document.getElementById('puttyContainer').innerHTML='';
+  rc=0; pc=0;
+
+  // Глобални настройки
+  if(s.pName) document.getElementById('pName').value=s.pName;
+  if(s.pDate) document.getElementById('pDate').value=s.pDate;
+  if(s.pLen)  document.getElementById('pLen').value=s.pLen;
+  if(s.bSize) document.getElementById('bSize').value=s.bSize;
+  if(s.checks) Object.entries(s.checks).forEach(([id,val])=>{
+    const el=document.getElementById(id);
+    if(el) el.checked=val;
+  });
+
+  // GK стаи
+  const GK_STATES=['off','wall','glue'];
+  (s.gkRooms||[]).forEach(rm=>{
+    addRoom();
+    const id=rc-1;
+    const r=document.getElementById('r-'+id);
+    if(!r) return;
+    r.querySelector('.title-input').value=rm.name||'';
+    r.querySelector('.rLen').value=rm.L||'';
+    r.querySelector('.rWid').value=rm.W||'';
+    r.querySelector('.rHgt').value=rm.H||'';
+    // Таван
+    if(rm.ceil==='1'){
+      const cc=r.querySelector('.ceil-card');
+      if(cc&&cc.dataset.on!=='1') cc.click();
+    }
+    // Стени
+    if(rm.walls){
+      r.querySelectorAll('.wall-btn[data-wall]').forEach(wb=>{
+        const target=rm.walls[wb.dataset.wall]||'off';
+        const cur=wb.dataset.state||'off';
+        if(target===cur) return;
+        const steps=(GK_STATES.indexOf(target)-GK_STATES.indexOf(cur)+3)%3;
+        for(let i=0;i<steps;i++) cycleGKWall(wb);
+      });
+    }
+    updateGKSchema(id);
+  });
+
+  // Шпакловка стаи
+  (s.puttyRooms||[]).forEach(rm=>{
+    addPuttyRoom();
+    const id=pc-1;
+    const r=document.getElementById('p-'+id);
+    if(!r) return;
+    r.querySelector('.title-input').value=rm.name||'';
+    r.querySelector('.pL').value=rm.L||'';
+    r.querySelector('.pW').value=rm.W||'';
+    r.querySelector('.pH').value=rm.H||'';
+    updatePuttySchema(id);
+    // Таван
+    if(rm.ceilLayers&&rm.ceilLayers[0]&&rm.ceilLayers[0]!=='off'){
+      const cc=document.getElementById('pceil-'+id);
+      if(cc){
+        const target=rm.ceilLayers[0];
+        const steps=PCYCLE.indexOf(target);
+        for(let i=0;i<steps;i++) cyclePCeil(cc,id);
+      }
+    }
+    // Стени
+    if(rm.walls){
+      r.querySelectorAll('.wall-btn[data-wall]').forEach(wb=>{
+        const target=rm.walls[wb.dataset.wall]||'off';
+        if(target==='off') return;
+        const steps=PCYCLE.indexOf(target);
+        for(let i=0;i<steps;i++) cyclePWall(wb,id);
+      });
+    }
+  });
+
+  clearOvr();
+  calcAll();
+}
+
+async function fbSaveCalcProject(){
+  if(!window._fbReady){ alert('Няма връзка с облака'); return; }
+  const state=getCalcState();
+  const name=state.pName||('Проект_'+state.pDate);
+  if(!name.trim()){ alert('Въведи име на проекта!'); return; }
+  const id=name.trim().replace(/[^a-zA-ZЀ-ӿ0-9_ -]/g,'_').substring(0,60);
+  try{
+    const {doc,setDoc}=window._fs;
+    await setDoc(doc(window._db,'calc_projects',id),{...state,id});
+    showToast('☁️ Запазено: '+name);
+  } catch(e){
+    console.error('[Firebase]',e);
+    showToast('Грешка при запазване!');
+  }
+}
+
+async function fbOpenCalcProjects(){
+  if(!window._fbReady){ showToast('Няма връзка с облака'); return; }
+  document.getElementById('calcProjectsOverlay').style.display='flex';
+  const list=document.getElementById('calcProjectsList');
+  list.innerHTML='<div style="color:#475569;font-size:0.85rem;">Зареждане...</div>';
+  try{
+    const {collection,getDocs}=window._fs;
+    const snap=await getDocs(collection(window._db,'calc_projects'));
+    if(snap.empty){
+      list.innerHTML='<div style="color:#475569;font-size:0.85rem;">Няма запазени проекти.</div>';
+      return;
+    }
+    const projects=[];
+    snap.forEach(d=>projects.push(d.data()));
+    projects.sort((a,b)=>(b.savedAt||'').localeCompare(a.savedAt||''));
+    list.innerHTML=projects.map(p=>`
+      <div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <div>
+          <div style="font-weight:600;color:#e2e8f0;font-size:0.9rem;">${p.pName||'(без име)'}</div>
+          <div style="font-size:0.72rem;color:#475569;">${p.pDate||''} · ${(p.gkRooms||[]).length} ГК + ${(p.puttyRooms||[]).length} шп. · ${(p.savedAt||'').substring(0,10)}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button onclick="fbLoadCalcProject('${p.id}')" style="background:#3b82f6;border:none;color:#fff;border-radius:6px;padding:5px 10px;font-size:0.78rem;cursor:pointer;font-weight:600;">Зареди</button>
+          <button onclick="fbDeleteCalcProject('${p.id}',this)" style="background:#ef4444;border:none;color:#fff;border-radius:6px;padding:5px 8px;font-size:0.78rem;cursor:pointer;">🗑</button>
+        </div>
+      </div>
+    `).join('');
+  } catch(e){
+    list.innerHTML='<div style="color:#f87171;font-size:0.85rem;">Грешка при зареждане.</div>';
+    console.error('[Firebase]',e);
+  }
+}
+
+function fbCloseCalcProjects(){
+  document.getElementById('calcProjectsOverlay').style.display='none';
+}
+
+async function fbLoadCalcProject(id){
+  if(!window._fbReady) return;
+  try{
+    const {doc,getDoc}=window._fs;
+    const snap=await getDoc(doc(window._db,'calc_projects',id));
+    if(!snap.exists()){ showToast('Проектът не е намерен!'); return; }
+    restoreCalcState(snap.data());
+    fbCloseCalcProjects();
+    showToast('✅ Зареден: '+(snap.data().pName||id));
+  } catch(e){
+    console.error('[Firebase]',e);
+    showToast('Грешка при зареждане!');
+  }
+}
+
+async function fbDeleteCalcProject(id,btn){
+  if(!confirm('Изтриване на проект "'+id+'"?')) return;
+  try{
+    const {doc,deleteDoc}=window._fs;
+    await deleteDoc(doc(window._db,'calc_projects',id));
+    btn.closest('div[style]').remove();
+    showToast('🗑 Изтрит');
+  } catch(e){
+    console.error('[Firebase]',e);
+    showToast('Грешка!');
+  }
+}
+
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') fbCloseCalcProjects(); });
 </script>
 
 </body>
