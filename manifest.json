@@ -1,0 +1,25 @@
+{
+  "name": "Ivanov Remonti — Офис",
+  "short_name": "IR Офис",
+  "description": "Офис инструменти за Ivanov Remonti",
+  "start_url": "/ivanov-tools/",
+  "scope": "/ivanov-tools/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0f1a",
+  "theme_color": "#d9a441",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
