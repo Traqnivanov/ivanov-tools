@@ -405,6 +405,31 @@ async function loadAllFromCloud() {
         const ids = Object.keys(clients);
         if (ids.length > 0) currentId = ids[0];
         setSyncStatus('synced');
+
+        // Ако идваме от клиентския хъб — ?client=id или ?name=...
+        const urlParams = new URLSearchParams(window.location.search);
+        const clientId = urlParams.get('client');
+        const clientName = urlParams.get('name');
+        const clientObject = urlParams.get('object');
+
+        if (clientId && clients[clientId]) {
+            // Клиентът вече съществува — просто го избираме
+            currentId = clientId;
+        } else if (clientName) {
+            // Нов клиент от хъба — създаваме го автоматично
+            const newId = 'client_' + Date.now();
+            clients[newId] = {
+                name: decodeURIComponent(clientName),
+                extra: decodeURIComponent(clientObject || ''),
+                totalService: 0,
+                currency: 'EUR',
+                status: 'active',
+                advances: [],
+                lastChangeISO: new Date().toISOString()
+            };
+            currentId = newId;
+            saveClientToCloud(newId);
+        }
     } catch(e) {
         console.error('Load error:', e);
         setSyncStatus('error');
