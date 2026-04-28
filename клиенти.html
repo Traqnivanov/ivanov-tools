@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Клиенти — Ivanov Remonti</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#C9A84C;--gold-dark:#9A7530;--gold-glow:rgba(201,168,76,0.15);
+  --dark:#0E0D0B;--dark2:#1A1916;--dark3:#252320;--dark4:#2E2C28;
+  --text:#F0EDE6;--text2:#B8B4AC;--muted:#6E6B64;
+  --border:rgba(201,168,76,0.18);--border2:rgba(201,168,76,0.07);
+  --green:#27AE60;--red:#C0392B;--blue:#2980B9;
+  --radius:12px;--radius-lg:18px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--dark);color:var(--text);min-height:100vh;padding-bottom:80px;}
+::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:var(--dark2);}::-webkit-scrollbar-thumb{background:var(--gold-dark);border-radius:3px;}
+
+/* HEADER */
+.header{background:linear-gradient(135deg,#0F0E0C,#1C1A12,#221F0E);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100;}
+.header-left{display:flex;align-items:center;gap:10px;}
+.header-logo{font-family:'Playfair Display',serif;font-size:16px;color:var(--gold);}
+.header-nav{display:flex;gap:4px;}
+.nav-btn{background:transparent;border:1px solid transparent;color:var(--text2);padding:7px 12px;border-radius:var(--radius);cursor:pointer;font-size:13px;font-weight:500;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:5px;}
+.nav-btn:hover{background:var(--dark3);color:var(--text);border-color:var(--border);}
+.nav-btn.active{background:var(--gold-glow);color:var(--gold);border-color:var(--border);}
+
+/* BODY */
+.body{max-width:960px;margin:0 auto;padding:24px 16px;}
+
+/* SEARCH + ADD */
+.top-bar{display:flex;gap:12px;margin-bottom:20px;align-items:center;}
+.search-wrap{flex:1;position:relative;}
+.search-wrap input{width:100%;background:var(--dark2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 14px 10px 38px;outline:none;transition:border-color .2s;}
+.search-wrap input:focus{border-color:var(--gold);}
+.search-wrap .search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;}
+.btn-add{background:linear-gradient(135deg,var(--gold),var(--gold-dark));color:#0E0D0B;border:none;border-radius:var(--radius);padding:10px 18px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:filter .2s;}
+.btn-add:hover{filter:brightness(1.1);}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+.stat-card{background:var(--dark2);border:1px solid var(--border2);border-radius:var(--radius);padding:14px 16px;}
+.stat-num{font-family:'Playfair Display',serif;font-size:28px;color:var(--gold);font-weight:700;}
+.stat-label{font-size:12px;color:var(--muted);margin-top:2px;}
+
+/* CLIENT CARDS */
+.clients-list{display:flex;flex-direction:column;gap:10px;}
+.client-card{background:var(--dark2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:16px 18px;display:flex;align-items:center;gap:16px;transition:border-color .2s,box-shadow .2s;cursor:pointer;}
+.client-card:hover{border-color:var(--border);box-shadow:0 4px 20px rgba(201,168,76,0.08);}
+.client-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--dark3),var(--dark4));border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:17px;color:var(--gold);flex-shrink:0;}
+.client-info{flex:1;min-width:0;}
+.client-name{font-size:15px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.client-object{font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.client-status{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;margin-top:5px;}
+.status-active{background:rgba(39,174,96,0.15);color:var(--green);border:1px solid rgba(39,174,96,0.3);}
+.status-done{background:rgba(41,128,185,0.15);color:var(--blue);border:1px solid rgba(41,128,185,0.3);}
+.status-new{background:var(--gold-glow);color:var(--gold);border:1px solid var(--border);}
+
+/* TOOL ICONS */
+.client-tools{display:flex;gap:6px;align-items:center;flex-shrink:0;}
+.tool-btn{width:36px;height:36px;border-radius:9px;background:var(--dark3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;transition:all .2s;text-decoration:none;position:relative;}
+.tool-btn:hover{background:var(--gold-glow);border-color:var(--border);transform:translateY(-1px);}
+.tool-btn.inactive{opacity:0.25;pointer-events:none;}
+.tool-btn .badge{position:absolute;top:-4px;right:-4px;width:14px;height:14px;background:var(--gold);border-radius:50%;font-size:9px;font-weight:700;color:#0E0D0B;display:flex;align-items:center;justify-content:center;}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--dark2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;width:100%;max-width:480px;transform:translateY(20px);transition:transform .2s;}
+.modal-overlay.open .modal{transform:translateY(0);}
+.modal-title{font-family:'Playfair Display',serif;font-size:18px;color:var(--gold);margin-bottom:20px;}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+.field label{font-size:12px;font-weight:600;color:var(--gold);letter-spacing:.5px;text-transform:uppercase;}
+.field input,.field select,.field textarea{background:var(--dark3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 14px;outline:none;transition:border-color .2s;width:100%;}
+.field input:focus,.field select:focus{border-color:var(--gold);}
+.field select option{background:var(--dark3);}
+.modal-actions{display:flex;gap:10px;margin-top:20px;}
+.btn-save{flex:1;background:linear-gradient(135deg,var(--gold),var(--gold-dark));color:#0E0D0B;border:none;border-radius:var(--radius);padding:11px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;}
+.btn-cancel{background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:var(--radius);padding:11px 18px;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;}
+.btn-delete{background:rgba(192,57,43,0.1);border:1px solid rgba(192,57,43,0.3);color:#E07070;border-radius:var(--radius);padding:11px 14px;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;}
+
+/* TOOLS SECTION IN MODAL */
+.tools-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:8px;}
+.tool-toggle{background:var(--dark3);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;transition:all .2s;}
+.tool-toggle:hover{border-color:var(--border);}
+.tool-toggle.on{background:var(--gold-glow);border-color:var(--border);}
+.tool-toggle span{font-size:20px;}
+.tool-toggle label{font-size:10px;color:var(--muted);text-align:center;cursor:pointer;}
+.tool-toggle.on label{color:var(--gold);}
+
+/* EMPTY */
+.empty{text-align:center;padding:60px 20px;color:var(--muted);}
+.empty-icon{font-size:48px;margin-bottom:12px;}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--dark3);border:1px solid var(--border);border-radius:var(--radius);padding:11px 20px;font-size:13px;color:var(--text);z-index:999;transition:transform .25s;pointer-events:none;}
+#toast.show{transform:translateX(-50%) translateY(0);}
+#toast.ok{border-color:rgba(39,174,96,.5);color:#5DBE82;}
+#toast.err{border-color:rgba(192,57,43,.5);color:#E07070;}
+
+@media(max-width:600px){
+  .stats{grid-template-columns:repeat(3,1fr);}
+  .client-tools{gap:4px;}
+  .tool-btn{width:32px;height:32px;font-size:14px;}
+  .header-logo{display:none;}
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <span style="font-size:22px;">👥</span>
+    <span class="header-logo">Клиенти</span>
+  </div>
+  <nav class="header-nav">
+    <a class="nav-btn" href="index.html">🏠</a>
+    <a class="nav-btn" href="калкулатор.html">📐</a>
+    <a class="nav-btn" href="стая.html">🏠</a>
+    <a class="nav-btn" href="оферта.html">📋</a>
+    <a class="nav-btn" href="договор.html">📜</a>
+    <a class="nav-btn" href="avansov-otchet.html">💰</a>
+  </nav>
+</header>
+
+<div class="body">
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Търси по име или обект..." oninput="renderClients()">
+    </div>
+    <button class="btn-add" onclick="openModal()">＋ Нов клиент</button>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-num" id="statTotal">0</div>
+      <div class="stat-label">Всички клиенти</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="statActive" style="color:#27AE60;">0</div>
+      <div class="stat-label">В ход</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="statDone" style="color:#2980B9;">0</div>
+      <div class="stat-label">Приключени</div>
+    </div>
+  </div>
+
+  <!-- CLIENTS -->
+  <div class="clients-list" id="clientsList"></div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOnBg(event)">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">Нов клиент</div>
+
+    <div class="field">
+      <label>Име</label>
+      <input type="text" id="fName" placeholder="Радиана Николова Аждерян">
+    </div>
+    <div class="field">
+      <label>Обект / Адрес</label>
+      <input type="text" id="fObject" placeholder="София обл., общ. Челопеч, ул. Моргана 26">
+    </div>
+    <div class="field">
+      <label>Телефон</label>
+      <input type="text" id="fPhone" placeholder="0888 123 456">
+    </div>
+    <div class="field">
+      <label>Статус</label>
+      <select id="fStatus">
+        <option value="new">🆕 Нов</option>
+        <option value="active">🟢 В ход</option>
+        <option value="done">🔵 Приключен</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Използвани инструменти</label>
+      <div class="tools-grid" id="toolsGrid">
+        <div class="tool-toggle" id="t-kalk" onclick="toggleTool('kalk')">
+          <span>📐</span>
+          <label>Калкул.</label>
+        </div>
+        <div class="tool-toggle" id="t-staq" onclick="toggleTool('staq')">
+          <span>🏠</span>
+          <label>Стая</label>
+        </div>
+        <div class="tool-toggle" id="t-offer" onclick="toggleTool('offer')">
+          <span>📋</span>
+          <label>Оферта</label>
+        </div>
+        <div class="tool-toggle" id="t-contract" onclick="toggleTool('contract')">
+          <span>📜</span>
+          <label>Договор</label>
+        </div>
+        <div class="tool-toggle" id="t-avans" onclick="toggleTool('avans')">
+          <span>💰</span>
+          <label>Аванс</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Отказ</button>
+      <button class="btn-delete" id="btnDelete" onclick="deleteClient()" style="display:none;">🗑</button>
+      <button class="btn-save" onclick="saveClient()">Запази</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, setDoc, getDocs, deleteDoc, collection } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDpgJazYtTHvU-fWuWlAQnbYTLOGcfnkhA",
+  authDomain: "ivanov-tools.firebaseapp.com",
+  projectId: "ivanov-tools",
+  storageBucket: "ivanov-tools.firebasestorage.app",
+  messagingSenderId: "212062400948",
+  appId: "1:212062400948:web:e52380c5096e8dba68c2e1"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ── ДАННИ ──
+let clients = {};
+let editingId = null;
+let activatedTools = new Set();
+
+const TOOLS = {
+  kalk:     { icon:'📐', label:'Калкулатор', url:'калкулатор.html' },
+  staq:     { icon:'🏠', label:'Стая',       url:'стая.html' },
+  offer:    { icon:'📋', label:'Оферта',     url:'оферта.html' },
+  contract: { icon:'📜', label:'Договор',    url:'договор.html' },
+  avans:    { icon:'💰', label:'Аванси',     url:'avansov-otchet.html' },
+};
+
+// ── ЗАРЕДИ ──
+async function load() {
+  try {
+    const snap = await getDocs(collection(db, 'clients'));
+    clients = {};
+    snap.forEach(d => clients[d.id] = d.data());
+    renderClients();
+  } catch(e) {
+    toast('Грешка при зареждане', 'err');
+  }
+}
+
+// ── РЕНДЕР ──
+window.renderClients = function() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const list = document.getElementById('clientsList');
+
+  const filtered = Object.entries(clients).filter(([,c]) =>
+    c.name?.toLowerCase().includes(q) || c.object?.toLowerCase().includes(q)
+  ).sort((a,b) => (b[1].updatedAt||'').localeCompare(a[1].updatedAt||''));
+
+  // Stats
+  document.getElementById('statTotal').textContent = Object.keys(clients).length;
+  document.getElementById('statActive').textContent = Object.values(clients).filter(c=>c.status==='active').length;
+  document.getElementById('statDone').textContent = Object.values(clients).filter(c=>c.status==='done').length;
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">👥</div><div>${q ? 'Няма намерени клиенти' : 'Добавете първия клиент'}</div></div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(([id, c]) => {
+    const initials = (c.name||'?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+    const statusMap = { active:'status-active', done:'status-done', new:'status-new' };
+    const statusLabel = { active:'🟢 В ход', done:'🔵 Приключен', new:'🆕 Нов' };
+
+    const tools = Object.entries(TOOLS).map(([key, t]) => {
+      const active = c.tools?.includes(key);
+      const url = `${t.url}?client=${id}&name=${encodeURIComponent(c.name||'')}&object=${encodeURIComponent(c.object||'')}`;
+      return `<a class="tool-btn ${active?'':'inactive'}" href="${active?url:'#'}" title="${t.label}" ${active?'target="_blank"':''}>
+        ${t.icon}
+      </a>`;
+    }).join('');
+
+    return `<div class="client-card" onclick="openModal('${id}')">
+      <div class="client-avatar">${initials}</div>
+      <div class="client-info">
+        <div class="client-name">${c.name||'—'}</div>
+        <div class="client-object">📍 ${c.object||'—'}</div>
+        <div class="client-status ${statusMap[c.status]||'status-new'}">${statusLabel[c.status]||'🆕 Нов'}</div>
+      </div>
+      <div class="client-tools" onclick="event.stopPropagation()">
+        ${tools}
+      </div>
+    </div>`;
+  }).join('');
+};
+
+// ── MODAL ──
+window.openModal = function(id) {
+  editingId = id || null;
+  activatedTools = new Set();
+
+  if (id && clients[id]) {
+    const c = clients[id];
+    document.getElementById('modalTitle').textContent = 'Редактирай клиент';
+    document.getElementById('fName').value = c.name || '';
+    document.getElementById('fObject').value = c.object || '';
+    document.getElementById('fPhone').value = c.phone || '';
+    document.getElementById('fStatus').value = c.status || 'new';
+    activatedTools = new Set(c.tools || []);
+    document.getElementById('btnDelete').style.display = 'block';
+  } else {
+    document.getElementById('modalTitle').textContent = 'Нов клиент';
+    document.getElementById('fName').value = '';
+    document.getElementById('fObject').value = '';
+    document.getElementById('fPhone').value = '';
+    document.getElementById('fStatus').value = 'new';
+    document.getElementById('btnDelete').style.display = 'none';
+  }
+
+  renderToolToggles();
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('fName').focus();
+};
+
+window.closeModal = function() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  editingId = null;
+};
+
+window.closeModalOnBg = function(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+};
+
+window.toggleTool = function(key) {
+  if (activatedTools.has(key)) activatedTools.delete(key);
+  else activatedTools.add(key);
+  renderToolToggles();
+};
+
+function renderToolToggles() {
+  Object.keys(TOOLS).forEach(key => {
+    const el = document.getElementById('t-' + key);
+    if (el) el.classList.toggle('on', activatedTools.has(key));
+  });
+}
+
+// ── ЗАПАЗИ ──
+window.saveClient = async function() {
+  const name = document.getElementById('fName').value.trim();
+  if (!name) { toast('Въведи име', 'err'); return; }
+
+  const id = editingId || 'client_' + Date.now();
+  const data = {
+    name,
+    object: document.getElementById('fObject').value.trim(),
+    phone: document.getElementById('fPhone').value.trim(),
+    status: document.getElementById('fStatus').value,
+    tools: Array.from(activatedTools),
+    updatedAt: new Date().toISOString(),
+  };
+
+  try {
+    await setDoc(doc(db, 'clients', id), data);
+    clients[id] = data;
+    closeModal();
+    renderClients();
+    toast('✓ Запазено', 'ok');
+  } catch(e) {
+    toast('Грешка при запазване', 'err');
+  }
+};
+
+// ── ИЗТРИЙ ──
+window.deleteClient = async function() {
+  if (!editingId) return;
+  const name = clients[editingId]?.name || 'клиента';
+  if (!confirm(`Изтрий "${name}"?`)) return;
+  try {
+    await deleteDoc(doc(db, 'clients', editingId));
+    delete clients[editingId];
+    closeModal();
+    renderClients();
+    toast('✓ Изтрит', 'ok');
+  } catch(e) {
+    toast('Грешка', 'err');
+  }
+};
+
+// ── TOAST ──
+window.toast = function(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = type ? `show ${type}` : 'show';
+  setTimeout(() => t.className = '', 2200);
+};
+
+// ── СТАРТ ──
+load();
+</script>
+</body>
+</html>
