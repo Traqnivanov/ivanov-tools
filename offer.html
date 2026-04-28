@@ -493,6 +493,17 @@ async function init(){
   window.calcMaterials = [];
   importFromCalculator();
   window._initDone=true;
+
+  // Попълване от клиентски хъб (?client=id&name=...&object=...)
+  const _urlP = new URLSearchParams(window.location.search);
+  const _cName = _urlP.get('name');
+  const _cObj = _urlP.get('object');
+  if (_cName) {
+    document.getElementById('client-name').value = decodeURIComponent(_cName);
+  }
+  if (_cObj) {
+    document.getElementById('client-address').value = decodeURIComponent(_cObj);
+  }
 }
 
 function importFromCalculator(){
