@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ivanov Remonti — Договори</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+:root{
+  --gold:#C9A84C;--gold-dark:#9A7530;--dark:#0E0D0B;--dark2:#1A1916;
+  --dark3:#252320;--dark4:#2E2C28;--text:#F0EDE6;--text2:#B8B4AC;
+  --muted:#6E6B64;--red:#C0392B;--green:#27AE60;
+  --border:rgba(201,168,76,0.18);--border2:rgba(201,168,76,0.08);
+  --radius:12px;--radius-lg:18px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--dark);color:var(--text);min-height:100vh;font-size:15px;padding-bottom:80px;}
+::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:var(--dark2);}::-webkit-scrollbar-thumb{background:var(--gold-dark);border-radius:3px;}
+
+/* HEADER */
+.app-header{background:linear-gradient(135deg,#0F0E0C,#1C1A12,#221F0E);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:64px;position:sticky;top:0;z-index:100;gap:12px;}
+.header-logo{display:flex;align-items:center;gap:10px;}
+.header-logo-icon{font-size:28px;}
+.header-title{font-family:'Playfair Display',serif;font-size:17px;color:var(--gold);}
+.header-nav{display:flex;gap:4px;}
+.nav-btn{background:transparent;border:1px solid transparent;color:var(--text2);padding:8px 14px;border-radius:var(--radius);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
+.nav-btn:hover{background:var(--dark3);color:var(--text);border-color:var(--border);}
+.nav-btn.active{background:rgba(201,168,76,.12);color:var(--gold);border-color:var(--border);}
+
+/* BODY */
+.app-body{max-width:900px;margin:0 auto;padding:28px 20px;}
+
+/* TABS */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:24px;}
+.tab{padding:10px 20px;cursor:pointer;font-size:14px;font-weight:500;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;}
+.tab:hover{color:var(--text);}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+
+/* SCREEN */
+.screen{display:none;}.screen.active{display:block;}
+
+/* CARD */
+.card{background:var(--dark2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;margin-bottom:20px;}
+.card-title{font-family:'Playfair Display',serif;font-size:16px;color:var(--gold);margin-bottom:18px;display:flex;align-items:center;gap:8px;}
+
+/* FORM */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.form-grid.g3{grid-template-columns:1fr 1fr 1fr;}
+.field{display:flex;flex-direction:column;gap:6px;}
+.field label{font-size:12px;font-weight:600;color:var(--gold);letter-spacing:.5px;text-transform:uppercase;}
+.field input,.field select,.field textarea{background:var(--dark3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 14px;outline:none;transition:border-color .2s;width:100%;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold);}
+.field textarea{resize:vertical;min-height:80px;}
+.field select option{background:var(--dark3);}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:var(--radius);border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;transition:all .2s;white-space:nowrap;}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold-dark));color:#0E0D0B;}
+.btn-gold:hover{filter:brightness(1.1);transform:translateY(-1px);}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text2);}
+.btn-outline:hover{border-color:var(--gold);color:var(--gold);}
+.btn-danger{background:transparent;border:1px solid rgba(192,57,43,.3);color:#E07070;}
+.btn-danger:hover{background:rgba(192,57,43,.1);}
+.btn-sm{padding:6px 12px;font-size:12px;}
+
+/* SERVICES CHECKLIST */
+.services-list{display:flex;flex-direction:column;gap:4px;margin-bottom:12px;}
+.room-title{font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px;padding-left:4px;}
+.svc-item{display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;border-radius:8px;transition:background .15s;}
+.svc-item:hover{background:rgba(201,168,76,.06);}
+.svc-item.checked{background:rgba(201,168,76,.1);}
+.svc-cb{width:18px;height:18px;border:2px solid var(--border);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.svc-item.checked .svc-cb{background:var(--gold);border-color:var(--gold);color:#0E0D0B;}
+.svc-name{flex:1;font-size:13px;color:var(--text);}
+
+/* SUMMARY */
+.summary-box{background:var(--dark3);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;}
+.summary-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border2);}
+.summary-row:last-child{border-bottom:none;}
+.summary-label{font-size:13px;color:var(--text2);}
+.summary-val{font-size:14px;font-weight:600;color:var(--text);}
+.summary-row.total .summary-label{color:var(--gold);font-weight:700;font-size:15px;}
+.summary-row.total .summary-val{color:var(--gold);font-size:20px;}
+
+/* CONTRACT LIST */
+.contract-card{background:var(--dark2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px;transition:border-color .2s;}
+.contract-card:hover{border-color:rgba(201,168,76,.35);}
+.contract-num{font-family:'Playfair Display',serif;font-size:18px;color:var(--gold);}
+.contract-client{font-size:14px;color:var(--text);margin-top:2px;}
+.contract-meta{font-size:12px;color:var(--muted);margin-top:4px;}
+.contract-eur{font-size:20px;font-weight:700;color:var(--gold);}
+.contract-actions{display:flex;gap:8px;}
+
+/* PRINT PREVIEW */
+.print-preview{background:white;color:#111;padding:40px;border-radius:var(--radius-lg);font-family:'Times New Roman',serif;line-height:1.6;font-size:11pt;}
+.print-preview h1{text-align:center;font-size:16pt;font-weight:700;margin-bottom:4px;}
+.print-preview .doc-num{text-align:center;font-size:11pt;margin-bottom:24px;}
+.print-preview .section-title{font-weight:700;font-size:12pt;margin:16px 0 8px;}
+.print-preview p{margin-bottom:8px;text-align:justify;}
+.print-preview .highlight{background:#FFF9C4;border:1.5px solid #C9A800;padding:10px 14px;margin:12px 0;border-radius:4px;font-weight:700;}
+.print-preview table{width:100%;border-collapse:collapse;margin:12px 0;}
+.print-preview table th{background:#2E75B6;color:white;padding:8px;text-align:left;font-size:10pt;}
+.print-preview table td{padding:6px 8px;border:1px solid #ddd;font-size:10pt;}
+.print-preview table tr:nth-child(even) td{background:#f9f9f9;}
+.print-preview table tfoot td{background:#D9E2F3;font-weight:700;}
+.print-preview .signatures{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:32px;}
+.print-preview .sig-block{border-top:1px solid #ccc;padding-top:12px;}
+.print-preview .sig-label{font-weight:700;font-size:11pt;margin-bottom:8px;}
+.print-preview .sig-line{margin:8px 0;font-size:10pt;}
+
+/* TOAST */
+#toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--dark3);border:1px solid var(--border);border-radius:var(--radius);padding:12px 20px;font-size:14px;color:var(--text);z-index:999;transition:transform .3s;pointer-events:none;}
+#toast.show{transform:translateX(-50%) translateY(0);}
+#toast.success{border-color:rgba(39,174,96,.5);color:#5DBE82;}
+#toast.error{border-color:rgba(192,57,43,.5);color:#E07070;}
+
+.empty-state{text-align:center;padding:48px 20px;color:var(--muted);}
+.empty-icon{font-size:40px;margin-bottom:12px;}
+.actions-row{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-top:16px;}
+
+@media(max-width:700px){
+  .form-grid,.form-grid.g3{grid-template-columns:1fr 1fr;}
+  .app-header{padding:0 14px;}
+  .header-title{display:none;}
+}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-logo">
+    <span class="header-logo-icon">📜</span>
+    <span class="header-title">Договори</span>
+  </div>
+  <nav class="header-nav">
+    <a class="nav-btn" href="index.html">🏠 Начало</a>
+    <a class="nav-btn" href="offer.html">📋 Оферти</a>
+    <a class="nav-btn active" href="contract.html">📜 Договори</a>
+  </nav>
+</header>
+
+<div class="app-body">
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('new')">➕ Нов договор</div>
+    <div class="tab" onclick="switchTab('list')">📂 Всички договори</div>
+  </div>
+
+  <!-- ══ НОВ ДОГОВОР ══ -->
+  <div id="screen-new" class="screen active">
+
+    <!-- СТРАНИ -->
+    <div class="card">
+      <div class="card-title">👤 Страни по договора</div>
+      <div class="form-grid g3" style="margin-bottom:16px;">
+        <div class="field">
+          <label>Договор №</label>
+          <input type="text" id="contractNum" placeholder="087" value="087">
+        </div>
+        <div class="field">
+          <label>Дата на подписване</label>
+          <input type="date" id="contractDate">
+        </div>
+        <div class="field">
+          <label>Град</label>
+          <input type="text" id="contractCity" value="София">
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--border2);padding-top:16px;margin-bottom:12px;">
+        <div style="font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;">Възложител</div>
+        <div class="form-grid" style="margin-bottom:12px;">
+          <div class="field"><label>Три имена</label><input type="text" id="clientName" placeholder="Радиана Николова Аждерян"></div>
+          <div class="field"><label>Л.к. №</label><input type="text" id="clientLK" placeholder="651326193"></div>
+        </div>
+        <div class="form-grid">
+          <div class="field"><label>МВР / издадена от</label><input type="text" id="clientMVR" placeholder="МВР София"></div>
+          <div class="field"><label>Дата на издаване</label><input type="date" id="clientLKDate"></div>
+        </div>
+        <div class="field" style="margin-top:12px;"><label>Адрес</label><input type="text" id="clientAddress" placeholder="гр. София, жк. Света Троица, бл. 303, вх. Г, ап. 106"></div>
+      </div>
+      <div style="border-top:1px solid var(--border2);padding-top:16px;">
+        <div style="font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;">Изпълнител (твоите данни)</div>
+        <div class="form-grid">
+          <div class="field"><label>Три имена</label><input type="text" id="execName" value="Траян Иванов Първанов"></div>
+          <div class="field"><label>Л.к. №</label><input type="text" id="execLK" value="651388677"></div>
+        </div>
+        <div class="form-grid" style="margin-top:12px;">
+          <div class="field"><label>МВР / издадена от</label><input type="text" id="execMVR" value="МВР Монтана"></div>
+          <div class="field"><label>Адрес</label><input type="text" id="execAddress" value="гр. Лом, ул. Георги Спасов 15"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ОБЕКТ И СРОК -->
+    <div class="card">
+      <div class="card-title">🏠 Обект и срок</div>
+      <div class="form-grid" style="margin-bottom:12px;">
+        <div class="field"><label>Адрес на обекта</label><input type="text" id="objectAddress" placeholder="София обл., общ. Челопеч, ул. Моргана 26"></div>
+        <div class="field"><label>Крайна дата</label><input type="text" id="deadline" placeholder="30.06.2026 г."></div>
+      </div>
+      <div class="form-grid g3">
+        <div class="field"><label>Обща сума (EUR)</label><input type="number" id="totalEur" placeholder="8710" oninput="updateCalc()"></div>
+        <div class="field"><label>Аванс (%)</label><input type="number" id="advancePct" value="10" oninput="updateCalc()"></div>
+        <div class="field"><label>Аванс (EUR)</label><input type="text" id="advanceEur" readonly style="background:var(--dark4);color:var(--gold);font-weight:700;"></div>
+      </div>
+      <div id="calcSummary" style="margin-top:12px;padding:12px;background:var(--dark3);border-radius:var(--radius);font-size:13px;color:var(--text2);display:none;"></div>
+    </div>
+
+    <!-- УСЛУГИ -->
+    <div class="card">
+      <div class="card-title">🔨 Включени дейности</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Избери услугите за този клиент</div>
+
+      <div class="services-list" id="servicesList"></div>
+
+      <div style="margin-top:12px;border-top:1px solid var(--border2);padding-top:12px;">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);">Добави персонализирана услуга:</div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <input type="text" id="customService" placeholder="Описание на услугата..." style="flex:1;background:var(--dark3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:13px;padding:8px 12px;outline:none;">
+          <button class="btn btn-outline btn-sm" onclick="addCustomService()">+ Добави</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- БЕЗПЛАТНИ -->
+    <div class="card">
+      <div class="card-title">🎁 Безплатни допълнителни услуги</div>
+      <div id="freeServicesList" style="margin-bottom:12px;"></div>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="freeServiceInput" placeholder="Напр. Боядисване на врата № 1..." style="flex:1;background:var(--dark3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:13px;padding:8px 12px;outline:none;">
+        <button class="btn btn-outline btn-sm" onclick="addFreeService()">+ Добави</button>
+      </div>
+    </div>
+
+    <!-- ГРАФИК ПЛАЩАНИЯ -->
+    <div class="card">
+      <div class="card-title">💳 График на плащанията</div>
+      <div id="paymentStages"></div>
+      <button class="btn btn-outline btn-sm" onclick="addStage()" style="margin-top:12px;">+ Добави етап</button>
+    </div>
+
+    <div class="actions-row">
+      <button class="btn btn-outline" onclick="clearForm()">🗑 Изчисти</button>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-outline" onclick="saveContract()">💾 Запази</button>
+        <button class="btn btn-gold" onclick="generateContract()">📄 Генерирай договор</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ ВСИЧКИ ДОГОВОРИ ══ -->
+  <div id="screen-list" class="screen">
+    <div id="contractsList"></div>
+  </div>
+
+  <!-- ══ ПРЕГЛЕД ══ -->
+  <div id="screen-preview" class="screen">
+    <div class="actions-row" style="margin-bottom:16px;">
+      <button class="btn btn-outline" onclick="switchTab('new')">← Назад</button>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-outline" onclick="window.print()">🖨 Принтирай</button>
+        <button class="btn btn-gold" onclick="saveContract()">💾 Запази</button>
+      </div>
+    </div>
+    <div id="contractPreview" class="print-preview"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, setDoc, getDoc, getDocs, collection, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDpgJazYtTHvU-fWuWlAQnbYTLOGcfnkhA",
+  authDomain: "ivanov-tools.firebaseapp.com",
+  projectId: "ivanov-tools",
+  storageBucket: "ivanov-tools.firebasestorage.app",
+  messagingSenderId: "212062400948",
+  appId: "1:212062400948:web:e52380c5096e8dba68c2e1"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ── ДАННИ ──
+const BGN_RATE = 1.95583;
+const DEFAULT_SERVICES = [
+  { room: 'Стая 1 / Стая 2 / Кухня', services: [
+    'Монтаж на гипсокартон по таван',
+    'Подово изравняване (ОСБ плоскости на конструкция)',
+    'Облицовка на стена с гипсокартон',
+    'Оформяне на куфар',
+    'Шпакловка на стени и тавани',
+    'Грундиране преди шпакловка',
+    'Шлайфане на шпакловка',
+    'Боядисване на стени и тавани',
+    'Електромонтажи — контакти и ключове',
+    'Монтаж на ръбохранители',
+  ]},
+  { room: 'Кухня (допълнително)', services: [
+    'Обръщане на врата',
+    'Обръщане на прозорец',
+    'Преработка на водопровод и канализация',
+  ]},
+  { room: 'Баня', services: [
+    'Преработка на ВиК и канализация',
+    'Къртене',
+    'Изграждане на предстенки',
+    'Монтаж на сифони',
+    'Лепене на плочки по стени и под',
+    'Фугиране',
+    'Шпакловка и боядисване на таван',
+    'Монтаж на санитария',
+    'Електромонтажи — контакти и ключове',
+  ]},
+  { room: 'Отделни позиции', services: [
+    'Монтаж на цокъл на стълбище',
+    'Изграждане на куфар',
+  ]},
+];
+
+let checkedServices = new Set();
+let freeServices = [];
+let paymentStages = [];
+let editingId = null;
+
+// ── ИНИЦИАЛИЗАЦИЯ ──
+window.addEventListener('DOMContentLoaded', () => {
+  // Днешна дата
+  document.getElementById('contractDate').value = new Date().toISOString().split('T')[0];
+
+  renderServicesList();
+  renderPaymentStages();
+  updateCalc();
+  loadContracts();
+
+  // Попълване от клиентски хъб (?client=id&name=...&object=...)
+  const _p = new URLSearchParams(window.location.search);
+  const _name = _p.get('name');
+  const _obj = _p.get('object');
+  if (_name) document.getElementById('clientName').value = decodeURIComponent(_name);
+  if (_obj) {
+    document.getElementById('clientAddress').value = decodeURIComponent(_obj);
+    document.getElementById('objectAddress').value = decodeURIComponent(_obj);
+  }
+});
+
+// ── УСЛУГИ ──
+function renderServicesList() {
+  const list = document.getElementById('servicesList');
+  list.innerHTML = '';
+  DEFAULT_SERVICES.forEach(group => {
+    const title = document.createElement('div');
+    title.className = 'room-title';
+    title.textContent = group.room;
+    list.appendChild(title);
+    group.services.forEach(svc => {
+      const item = document.createElement('div');
+      const id = svc;
+      const isChecked = checkedServices.has(id);
+      item.className = 'svc-item' + (isChecked ? ' checked' : '');
+      item.innerHTML = `
+        <div class="svc-cb">${isChecked ? '✓' : ''}</div>
+        <span class="svc-name">${svc}</span>
+      `;
+      item.onclick = () => {
+        if (checkedServices.has(id)) checkedServices.delete(id);
+        else checkedServices.add(id);
+        renderServicesList();
+      };
+      list.appendChild(item);
+    });
+  });
+}
+
+window.addCustomService = function() {
+  const inp = document.getElementById('customService');
+  const val = inp.value.trim();
+  if (!val) return;
+  checkedServices.add(val);
+  // Add to last group visually
+  DEFAULT_SERVICES[DEFAULT_SERVICES.length - 1].services.push(val);
+  inp.value = '';
+  renderServicesList();
+};
+
+// ── БЕЗПЛАТНИ ──
+function renderFreeServices() {
+  const list = document.getElementById('freeServicesList');
+  list.innerHTML = '';
+  freeServices.forEach((s, i) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 0;';
+    row.innerHTML = `
+      <span style="font-size:13px;color:var(--text);flex:1;">${i+1}. ${s}</span>
+      <button onclick="removeFreeService(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;">✕</button>
+    `;
+    list.appendChild(row);
+  });
+}
+
+window.addFreeService = function() {
+  const inp = document.getElementById('freeServiceInput');
+  const val = inp.value.trim();
+  if (!val) return;
+  freeServices.push(val);
+  inp.value = '';
+  renderFreeServices();
+};
+
+window.removeFreeService = function(i) {
+  freeServices.splice(i, 1);
+  renderFreeServices();
+};
+
+// ── КАЛКУЛАТОР ──
+window.updateCalc = function() {
+  const total = parseFloat(document.getElementById('totalEur').value) || 0;
+  const pct = parseFloat(document.getElementById('advancePct').value) || 10;
+  const advance = Math.round(total * pct / 100 * 100) / 100;
+  const rest = Math.round((total - advance) * 100) / 100;
+  document.getElementById('advanceEur').value = advance.toFixed(2);
+  const summary = document.getElementById('calcSummary');
+  if (total > 0) {
+    summary.style.display = 'block';
+    const bgn = (total * BGN_RATE).toFixed(2);
+    const advBgn = (advance * BGN_RATE).toFixed(2);
+    const restBgn = (rest * BGN_RATE).toFixed(2);
+    summary.innerHTML = `
+      <span style="color:var(--gold);font-weight:700;">Обща сума:</span> ${total.toFixed(2)} EUR / ${bgn} лв. &nbsp;|&nbsp;
+      <span style="color:var(--gold);font-weight:700;">Аванс:</span> ${advance.toFixed(2)} EUR / ${advBgn} лв. &nbsp;|&nbsp;
+      <span style="color:var(--gold);font-weight:700;">Остатък:</span> ${rest.toFixed(2)} EUR / ${restBgn} лв.
+    `;
+  } else {
+    summary.style.display = 'none';
+  }
+};
+
+// ── ЕТАПИ ──
+function renderPaymentStages() {
+  const cont = document.getElementById('paymentStages');
+  cont.innerHTML = '';
+  if (paymentStages.length === 0) {
+    cont.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0;">Няма добавени етапи. Добавете поне един етап на плащане.</div>';
+    return;
+  }
+  paymentStages.forEach((stage, i) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;padding:8px;background:var(--dark3);border-radius:8px;margin-bottom:8px;';
+    row.innerHTML = `
+      <span style="font-size:12px;font-weight:700;color:var(--gold);min-width:24px;">${i+1}</span>
+      <input type="text" value="${stage.name}" onchange="paymentStages[${i}].name=this.value" style="background:var(--dark4);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:6px 10px;outline:none;width:100%;" placeholder="Описание на етапа...">
+      <input type="number" value="${stage.eur}" onchange="paymentStages[${i}].eur=parseFloat(this.value)||0" style="background:var(--dark4);border:1px solid var(--border);border-radius:8px;color:var(--gold);font-size:13px;padding:6px 10px;outline:none;width:90px;font-weight:700;" placeholder="EUR">
+      <button onclick="removeStage(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;">✕</button>
+    `;
+    cont.appendChild(row);
+  });
+  // Total
+  const total = paymentStages.reduce((s, st) => s + (st.eur || 0), 0);
+  const totalRow = document.createElement('div');
+  totalRow.style.cssText = 'display:flex;justify-content:flex-end;padding:8px;font-size:14px;font-weight:700;color:var(--gold);border-top:1px solid var(--border2);margin-top:4px;';
+  totalRow.textContent = `Общо етапи: ${total.toFixed(2)} EUR`;
+  cont.appendChild(totalRow);
+}
+
+window.addStage = function() {
+  paymentStages.push({ name: '', eur: 0 });
+  renderPaymentStages();
+};
+
+window.removeStage = function(i) {
+  paymentStages.splice(i, 1);
+  renderPaymentStages();
+};
+
+// ── ГЕНЕРИРАЙ ──
+window.generateContract = function() {
+  const num = document.getElementById('contractNum').value.trim() || '___';
+  const dateVal = document.getElementById('contractDate').value;
+  const date = dateVal ? new Date(dateVal).toLocaleDateString('bg-BG', {day:'2-digit',month:'2-digit',year:'numeric'}) : '__.__.____';
+  const city = document.getElementById('contractCity').value.trim() || 'гр. ___';
+  const clientName = document.getElementById('clientName').value.trim() || '[ИМЕ НА ВЪЗЛОЖИТЕЛ]';
+  const clientLK = document.getElementById('clientLK').value.trim();
+  const clientMVR = document.getElementById('clientMVR').value.trim();
+  const clientLKDateVal = document.getElementById('clientLKDate').value;
+  const clientLKDate = clientLKDateVal ? new Date(clientLKDateVal).toLocaleDateString('bg-BG', {day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const clientAddress = document.getElementById('clientAddress').value.trim();
+  const execName = document.getElementById('execName').value.trim();
+  const execLK = document.getElementById('execLK').value.trim();
+  const execMVR = document.getElementById('execMVR').value.trim();
+  const execAddress = document.getElementById('execAddress').value.trim();
+  const objectAddress = document.getElementById('objectAddress').value.trim() || '[АДРЕС НА ОБЕКТА]';
+  const deadline = document.getElementById('deadline').value.trim() || '__.__.____ г.';
+  const totalEur = parseFloat(document.getElementById('totalEur').value) || 0;
+  const advancePct = parseFloat(document.getElementById('advancePct').value) || 10;
+  const advanceEur = Math.round(totalEur * advancePct / 100 * 100) / 100;
+  const restEur = Math.round((totalEur - advanceEur) * 100) / 100;
+  const totalBgn = (totalEur * BGN_RATE).toFixed(2);
+  const advanceBgn = (advanceEur * BGN_RATE).toFixed(2);
+
+  const selectedServices = Array.from(checkedServices);
+
+  // Group services by room
+  let servicesHTML = '';
+  DEFAULT_SERVICES.forEach(group => {
+    const groupSvcs = group.services.filter(s => checkedServices.has(s));
+    if (groupSvcs.length === 0) return;
+    servicesHTML += `<p style="font-weight:700;margin-top:10px;margin-bottom:4px;">${group.room}:</p>`;
+    groupSvcs.forEach((s, i) => {
+      servicesHTML += `<p style="margin-left:16px;margin-bottom:2px;">${i+1}. ${s}</p>`;
+    });
+  });
+
+  // Payment table
+  let payTableRows = '';
+  paymentStages.forEach((s, i) => {
+    payTableRows += `<tr><td style="text-align:center;">${i+1}</td><td>${s.name}</td><td style="text-align:right;font-weight:700;">${s.eur.toFixed(2)}</td></tr>`;
+  });
+  const payTotal = paymentStages.reduce((s, st) => s + (st.eur || 0), 0);
+
+  // Free services
+  let freeHTML = '';
+  if (freeServices.length > 0) {
+    freeHTML = `
+      <div class="section-title" style="margin-top:16px;">БЕЗПЛАТНИ ДОПЪЛНИТЕЛНИ УСЛУГИ</div>
+      ${freeServices.map((s, i) => `<p style="margin-left:16px;font-weight:700;text-decoration:underline;">${i+1}. ${s}</p>`).join('')}
+    `;
+  }
+
+  const html = `
+    <h1>ДОГОВОР ЗА СТРОИТЕЛНИ УСЛУГИ</h1>
+    <div class="doc-num">№ ${num} / ${date} г.</div>
+
+    <div class="section-title">I. КОЙ СКЛЮЧВА ДОГОВОРА</div>
+    <p>Днес, ${date} г., в ${city}, между:</p>
+    <p><strong>${clientName}</strong>, л.к. №: ${clientLK}${clientMVR ? ', издадена от ' + clientMVR : ''}${clientLKDate ? ' на ' + clientLKDate + ' г.' : ''}${clientAddress ? ', адрес: ' + clientAddress : ''}, наричана по-долу <strong>ВЪЗЛОЖИТЕЛ</strong>,</p>
+    <p>и</p>
+    <p><strong>${execName}</strong>, л.к. №: ${execLK}${execMVR ? ', издадена от ' + execMVR : ''}, адрес: ${execAddress}, наричан по-долу <strong>ИЗПЪЛНИТЕЛ</strong>,</p>
+    <p>се договориха за следното:</p>
+
+    <div class="section-title">II. КАКВО ЩЕ СЕ ПРАВИ</div>
+    <p>Чл. 1. Обектът се намира на адрес: <strong>${objectAddress}</strong>.</p>
+    <p>Чл. 2. Изпълнителят приема да извърши следните строителни дейности. Посочената в договора сума е единствено за труд — материалите не са включени и са за сметка на Възложителя:</p>
+    ${servicesHTML}
+    ${freeHTML}
+
+    <div class="highlight">
+      ОБЩА СТОЙНОСТ НА ДОГОВОРА:<br>
+      ${totalEur.toFixed(2)} EUR / ${totalBgn} лв.
+    </div>
+
+    <p>Чл. 3. Всички материали се осигуряват и заплащат от Възложителя. Първата доставка на материали се осигурява и заплаща от Възложителя. Следващите доставки се извършват от Изпълнителя със средства, предоставени предварително от Възложителя при поискване.</p>
+
+    <div class="section-title">III. ЦЕНА И ПЛАЩАНЕ</div>
+    <div class="highlight">
+      Чл. 4. Общата стойност на договора е <strong>${totalEur.toFixed(2)} EUR (${numberToWords(totalEur)} евро) / ${totalBgn} лв.</strong> От тях <strong>${advanceEur.toFixed(2)} EUR</strong> се заплащат като аванс при подписването, а остатъкът от <strong>${restEur.toFixed(2)} EUR</strong> се изплаща поетапно.
+    </div>
+
+    <p>Чл. 5. Обща сума: <strong>${totalEur.toFixed(2)} EUR</strong> — Аванс: <strong>${advanceEur.toFixed(2)} EUR</strong> = Остатък за поетапно плащане: <strong>${restEur.toFixed(2)} EUR</strong></p>
+
+    ${paymentStages.length > 0 ? `
+    <table>
+      <thead><tr><th>Етап</th><th>Дейност</th><th style="text-align:right;">Сума EUR</th></tr></thead>
+      <tbody>${payTableRows}</tbody>
+      <tfoot><tr><td colspan="2"><strong>ОБЩО</strong></td><td style="text-align:right;"><strong>${payTotal.toFixed(2)}</strong></td></tr></tfoot>
+    </table>` : ''}
+
+    <p>Чл. 6. Плащанията се извършват в брой или по банков път. При получаване на аванса Изпълнителят издава авансова бележка в два екземпляра. При всяко следващо плащане Изпълнителят издава разписка, подписана от двете страни.</p>
+
+    <div class="section-title">IV. СРОК НА ИЗПЪЛНЕНИЕ</div>
+    <div class="highlight">
+      Чл. 8. Изпълнителят се задължава да завърши всички дейности в срок от 30 (тридесет) работни дни от датата на първата доставка на материали, но не по-късно от ${deadline}.<br>
+      За работни дни се считат дните от понеделник до петък включително, с изключение на официалните държавни празници.<br>
+      <strong>При неспазване на 30-те работни дни Изпълнителят дължи неустойка от 17.42 EUR за всеки просрочен работен ден, но не повече от ${advanceEur.toFixed(2)} EUR общо.</strong>
+    </div>
+
+    <div class="section-title">V. ЗАДЪЛЖЕНИЯ</div>
+    <p>Чл. 10. Изпълнителят се задължава: да извърши всички дейности качествено и в срок; да осигури квалифицирани работници; да спазва правилата за безопасност; да уведомява Възложителя при отклонения от плана.</p>
+    <p>Чл. 11. Възложителят се задължава: да осигури свободен достъп до обекта; да осигурява средства за материали при поискване в срок до 2 работни дни; да приема извършените работи лично или чрез снимки/видео; да осигури ток и вода на обекта.</p>
+
+    <div class="section-title">VI. НАМЕСА НА ТРЕТИ СТРАНИ</div>
+    <p>Чл. 12. Възложителят се задължава да не допуска трети лица да се намесват в работния процес без съгласие на Изпълнителя.</p>
+    <p>Чл. 13. Гаранцията отпада за части от работата, по които са извършени намеса или промени без знанието на Изпълнителя.</p>
+
+    <div class="section-title">VII. НЕУСТОЙКИ</div>
+    <p>Чл. 16. При закъснение на Изпълнителя: <strong>17.42 EUR за всеки просрочен работен ден, максимум ${advanceEur.toFixed(2)} EUR</strong>.</p>
+    <p>Чл. 17. При закъснение на Възложителя с плащане: 17.42 EUR за всеки просрочен ден.</p>
+    <p>Чл. 18. При спряна работа поради неосигурени средства за материали от Възложителя — Изпълнителят не дължи неустойка.</p>
+
+    <div class="section-title">VIII. ГАРАНЦИЯ</div>
+    <p>Чл. 19. Изпълнителят гарантира качеството на работата за 2 (две) години от датата на приемане.</p>
+
+    <div class="section-title">XI. НЕРАЗДЕЛНИ ЧАСТИ</div>
+    <div class="highlight">
+      Чл. 26. Неразделна част от настоящия договор са:<br>
+      • Авансова бележка — в два екземпляра, по един за всяка страна.<br>
+      • Копие от касова бележка или фактура за първата доставка на материали.<br>
+      • Разписки за извършени плащания по всеки завършен и приет етап.
+    </div>
+
+    <div style="margin-top:32px;border-top:2px solid #111;padding-top:16px;">
+      <p style="font-weight:700;font-size:12pt;margin-bottom:8px;">ПОДПИСИ:</p>
+      <p style="font-size:10pt;margin-bottom:4px;">Обект: ${objectAddress}</p>
+      <p style="font-size:10pt;margin-bottom:4px;">Сума: ${totalEur.toFixed(2)} EUR / ${totalBgn} лв. &nbsp;|&nbsp; Аванс: ${advanceEur.toFixed(2)} EUR &nbsp;|&nbsp; Остатък: ${restEur.toFixed(2)} EUR</p>
+      <p style="font-size:10pt;margin-bottom:16px;">Срок: 30 работни дни от първа доставка, не по-късно от ${deadline} (вж. Чл. 8)</p>
+    </div>
+
+    <div class="signatures">
+      <div class="sig-block">
+        <div class="sig-label">ВЪЗЛОЖИТЕЛ:</div>
+        <div class="sig-line">${clientName}</div>
+        ${clientLK ? `<div class="sig-line">л.к. №: ${clientLK}</div>` : ''}
+        ${clientAddress ? `<div class="sig-line">${clientAddress}</div>` : ''}
+        <div class="sig-line" style="margin-top:16px;">Подпис: ............................................</div>
+        <div class="sig-line">Дата: 30.04.2026 г.</div>
+      </div>
+      <div class="sig-block">
+        <div class="sig-label">ИЗПЪЛНИТЕЛ:</div>
+        <div class="sig-line">${execName}</div>
+        <div class="sig-line">л.к. №: ${execLK}</div>
+        <div class="sig-line">${execAddress}</div>
+        <div class="sig-line" style="margin-top:16px;">Подпис: ............................................</div>
+        <div class="sig-line">Дата: 30.04.2026 г.</div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('contractPreview').innerHTML = html;
+  switchTab('preview');
+};
+
+// ── ПОМОЩНИ ──
+function numberToWords(n) {
+  // Simple Bulgarian number helper for round numbers
+  const map = {
+    8710: 'осем хиляди седемстотин и десет',
+    5000: 'пет хиляди',
+    10000: 'десет хиляди',
+  };
+  return map[n] || n.toFixed(2);
+}
+
+// ── ЗАПАЗИ ──
+window.saveContract = async function() {
+  const id = editingId || 'contract_' + Date.now();
+  const data = {
+    id,
+    num: document.getElementById('contractNum').value,
+    date: document.getElementById('contractDate').value,
+    city: document.getElementById('contractCity').value,
+    clientName: document.getElementById('clientName').value,
+    clientLK: document.getElementById('clientLK').value,
+    clientMVR: document.getElementById('clientMVR').value,
+    clientLKDate: document.getElementById('clientLKDate').value,
+    clientAddress: document.getElementById('clientAddress').value,
+    execName: document.getElementById('execName').value,
+    execLK: document.getElementById('execLK').value,
+    execMVR: document.getElementById('execMVR').value,
+    execAddress: document.getElementById('execAddress').value,
+    objectAddress: document.getElementById('objectAddress').value,
+    deadline: document.getElementById('deadline').value,
+    totalEur: document.getElementById('totalEur').value,
+    advancePct: document.getElementById('advancePct').value,
+    checkedServices: Array.from(checkedServices),
+    freeServices,
+    paymentStages,
+    savedAt: new Date().toISOString(),
+  };
+  try {
+    await setDoc(doc(db, 'contracts', id), data);
+    editingId = id;
+    showToast('✓ Договорът е запазен', 'success');
+    loadContracts();
+  } catch(e) {
+    showToast('Грешка при запазване', 'error');
+  }
+};
+
+// ── ЗАРЕДИ ──
+async function loadContracts() {
+  const list = document.getElementById('contractsList');
+  try {
+    const snap = await getDocs(collection(db, 'contracts'));
+    if (snap.empty) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-icon">📜</div><div>Няма запазени договори</div></div>';
+      return;
+    }
+    list.innerHTML = '';
+    const docs = [];
+    snap.forEach(d => docs.push(d.data()));
+    docs.sort((a, b) => (b.savedAt || '').localeCompare(a.savedAt || ''));
+    docs.forEach(c => {
+      const card = document.createElement('div');
+      card.className = 'contract-card';
+      const dateStr = c.date ? new Date(c.date).toLocaleDateString('bg-BG') : '';
+      card.innerHTML = `
+        <div>
+          <div class="contract-num">№ ${c.num || '—'}</div>
+          <div class="contract-client">${c.clientName || '—'}</div>
+          <div class="contract-meta">${dateStr} &nbsp;·&nbsp; ${c.objectAddress || ''}</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="contract-eur">${parseFloat(c.totalEur || 0).toFixed(2)} EUR</div>
+          <div class="contract-actions" style="margin-top:8px;">
+            <button class="btn btn-outline btn-sm" onclick="loadContract('${c.id}')">✏️ Редактирай</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteContract('${c.id}')">🗑</button>
+          </div>
+        </div>
+      `;
+      list.appendChild(card);
+    });
+  } catch(e) {
+    list.innerHTML = '<div class="empty-state"><div>Грешка при зареждане</div></div>';
+  }
+}
+
+window.loadContract = async function(id) {
+  try {
+    const snap = await getDoc(doc(db, 'contracts', id));
+    if (!snap.exists()) return;
+    const c = snap.data();
+    editingId = id;
+    document.getElementById('contractNum').value = c.num || '';
+    document.getElementById('contractDate').value = c.date || '';
+    document.getElementById('contractCity').value = c.city || 'София';
+    document.getElementById('clientName').value = c.clientName || '';
+    document.getElementById('clientLK').value = c.clientLK || '';
+    document.getElementById('clientMVR').value = c.clientMVR || '';
+    document.getElementById('clientLKDate').value = c.clientLKDate || '';
+    document.getElementById('clientAddress').value = c.clientAddress || '';
+    document.getElementById('execName').value = c.execName || '';
+    document.getElementById('execLK').value = c.execLK || '';
+    document.getElementById('execMVR').value = c.execMVR || '';
+    document.getElementById('execAddress').value = c.execAddress || '';
+    document.getElementById('objectAddress').value = c.objectAddress || '';
+    document.getElementById('deadline').value = c.deadline || '';
+    document.getElementById('totalEur').value = c.totalEur || '';
+    document.getElementById('advancePct').value = c.advancePct || 10;
+    checkedServices = new Set(c.checkedServices || []);
+    freeServices = c.freeServices || [];
+    paymentStages = c.paymentStages || [];
+    renderServicesList();
+    renderFreeServices();
+    renderPaymentStages();
+    updateCalc();
+    switchTab('new');
+    showToast('✓ Договорът е зареден', 'success');
+  } catch(e) {
+    showToast('Грешка при зареждане', 'error');
+  }
+};
+
+window.deleteContract = async function(id) {
+  if (!confirm('Изтрий договора?')) return;
+  try {
+    await deleteDoc(doc(db, 'contracts', id));
+    loadContracts();
+    showToast('✓ Изтрит', 'success');
+  } catch(e) {
+    showToast('Грешка', 'error');
+  }
+};
+
+window.clearForm = function() {
+  if (!confirm('Изчисти формата?')) return;
+  editingId = null;
+  checkedServices.clear();
+  freeServices = [];
+  paymentStages = [];
+  document.querySelectorAll('.field input, .field select, .field textarea').forEach(el => {
+    if (!['execName','execLK','execMVR','execAddress','advancePct'].includes(el.id)) el.value = '';
+  });
+  document.getElementById('advancePct').value = '10';
+  document.getElementById('contractDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('contractCity').value = 'София';
+  renderServicesList();
+  renderFreeServices();
+  renderPaymentStages();
+  updateCalc();
+};
+
+// ── ТАБ ──
+window.switchTab = function(tab) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', (tab === 'new' && i === 0) || (tab === 'list' && i === 1));
+  });
+  document.getElementById('screen-new').classList.toggle('active', tab === 'new');
+  document.getElementById('screen-list').classList.toggle('active', tab === 'list');
+  document.getElementById('screen-preview').classList.toggle('active', tab === 'preview');
+  if (tab === 'list') loadContracts();
+};
+
+// ── TOAST ──
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = type ? `show ${type}` : 'show';
+  setTimeout(() => t.className = '', 2500);
+}
+</script>
+
+<style>
+@media print {
+  body { background: white; color: black; padding: 0; }
+  .app-header, .tabs, .actions-row, #toast { display: none !important; }
+  .screen { display: none !important; }
+  #screen-preview { display: block !important; }
+  .print-preview { border-radius: 0; padding: 20px; }
+}
+</style>
+</body>
+</html>
