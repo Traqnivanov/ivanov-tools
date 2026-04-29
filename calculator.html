@@ -237,6 +237,16 @@ tr.overridden td.col-pkg .n { color:#f59e0b; }
 .p-fina-pill { background:#7c3aed;color:#fff; }
 .p-fugi-pill { background:#2563eb;color:#fff; }
 @media(max-width:900px){.main{flex-direction:column;}.right{position:static;flex:1 1 auto;max-height:none;}}
+@media(max-width:640px){
+  body { padding-bottom: 120px; }
+  .row { flex-wrap: wrap; }
+  input[type="number"] { width: 100%; max-width: 90px; }
+  input[type="text"] { width: 100%; }
+  .schema-wrap { padding: 72px 42px 42px; }
+  .mat-group { overflow-x: auto; }
+  .action-row { flex-direction: column; }
+  .action-row button { width: 100%; justify-content: center; }
+}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
