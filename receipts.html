@@ -534,10 +534,17 @@ function renderForm() {
       <button class="btn-save" onclick="doSave()">💾 Запази</button>
       <button class="btn-pdf-d" onclick="doSaveAndPDF('digital')">🎨 Дигитален PDF</button>
       <button class="btn-pdf-o" onclick="doSaveAndPDF('official')">📄 Официален PDF</button>
+      <button onclick="cancelForm()" style="background:none;border:1.5px solid var(--border);color:var(--muted);border-radius:10px;padding:10px 18px;font-size:.85rem;font-weight:600;cursor:pointer;font-family:inherit;">✕ Откажи</button>
     </div>`;
 }
 
 function switchType(t) { currentType = t; renderForm(); }
+
+function cancelForm() {
+  selectedId = null;
+  document.getElementById('rightPanel').innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:24px 0;">Избери бележка от списъка или създай нова.</div>';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
 
 function updateWords() {
   const a = parseFloat(document.getElementById('fAmount').value);
