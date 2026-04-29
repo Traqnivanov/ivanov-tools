@@ -379,7 +379,7 @@ let extraLaborMarkup=0;
 
 function addPartition(){
   const id=rc++;
-  rooms.push({id, name:'', L:0, H:2.7, type:'part',
+  rooms.push({id, name:'', L:0, H:0, type:'part',
     surfs:{ part:{gk:'part', pt:[]} }
   });
   renderAll();
@@ -388,7 +388,7 @@ function addPartition(){
 
 function addRoom(){
   const id=rc++;
-  rooms.push({id,name:'',L:0,W:0,H:2.7,
+  rooms.push({id,name:'',L:0,W:0,H:0,
     surfs:{ceil:{gk:null,pt:[]},N:{gk:null,pt:[]},S:{gk:null,pt:[]},W:{gk:null,pt:[]},E:{gk:null,pt:[]}}
   });
   renderAll();
@@ -471,7 +471,7 @@ function renderPartition(room,el){
     <div class="room-card-body">
       <div class="dims">
         <label>Дължина (м)<input type="number" value="${L||''}" min="0" step="0.1" placeholder="0" oninput="updPartDim(${id},'L',this.value)"></label>
-        <label>Височина (м)<input type="number" value="${H||2.7}" min="0" step="0.1" placeholder="2.7" oninput="updPartDim(${id},'H',this.value)"></label>
+        <label>Височина (м)<input type="number" value="${H||''}" min="0" step="0.1" placeholder="2.7" oninput="updPartDim(${id},'H',this.value)"></label>
         ${L>0&&H>0?`<div style="font-size:0.78rem;color:#94a3b8;align-self:flex-end;padding-bottom:4px;">= ${area.toFixed(1)} м² × 2 = ${(area*2).toFixed(1)} м² (двустранна)</div>`:''}
       </div>
       ${L>0&&H>0?`
@@ -486,7 +486,7 @@ function renderPartition(room,el){
 
 function updPartDim(id,field,val){
   const r=rooms.find(r=>r.id===id);
-  if(r){r[field]=parseFloat(val)||0;renderAll();calcAll();}
+  if(r){const parsed=parseFloat(val);r[field]=isNaN(parsed)?0:parsed;renderAll();calcAll();}
 }
 
 function renderRoom(room,el){
@@ -583,7 +583,7 @@ function renderRoom(room,el){
       <div class="dims">
         <label>Дължина (м)<input type="number" value="${L||''}" min="0" step="0.1" placeholder="0" oninput="updDim(${id},'L',this.value)"></label>
         <label>Ширина (м)<input type="number" value="${W||''}" min="0" step="0.1" placeholder="0" oninput="updDim(${id},'W',this.value)"></label>
-        <label>Височина (м)<input type="number" value="${H||2.7}" min="0" step="0.1" placeholder="2.7" oninput="updDim(${id},'H',this.value)"></label>
+        <label>Височина (м)<input type="number" value="${H||''}" min="0" step="0.1" placeholder="2.7" oninput="updDim(${id},'H',this.value)"></label>
       </div>
       ${hasSize?`
       <div class="surf-hint">Цъкни повърхност → избери ГК и/или шпакловка</div>
@@ -673,7 +673,7 @@ function buildSchema(room){
 
 function updDim(id,field,val){
   const r=rooms.find(r=>r.id===id);
-  if(r){r[field]=parseFloat(val)||0;renderAll();calcAll();}
+  if(r){const parsed=parseFloat(val);r[field]=isNaN(parsed)?0:parsed;renderAll();calcAll();}
 }
 
 function openSurf(roomId,surfKey){
