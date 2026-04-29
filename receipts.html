@@ -221,7 +221,7 @@ textarea{resize:vertical;min-height:68px;}
 const TYPES = {
   'АВ': {
     label: 'Авансова бележка',
-    descField: false, termField: false,
+    descField: false, termField: false, totalField: true,
     sumLabel: 'Получена сума',
     notePlaceholder: 'напр. Остатъкът се изплаща поетапно...',
     officialTitle: 'АВАНСОВА БЕЛЕЖКА',
@@ -242,7 +242,7 @@ const TYPES = {
   },
   'РЕ': {
     label: 'Разписка за завършен етап',
-    descField: true, termField: false,
+    descField: true, termField: false, totalField: true,
     descLabel: 'Описание на приетата дейност',
     descPlaceholder: 'напр. шпакловка на хол завършена, монтаж ГК таван...',
     sumLabel: 'Стойност на приетия етап',
@@ -524,6 +524,21 @@ function renderForm() {
         </div>
         <div class="words-box" id="wordsBox">–</div>
       </div>
+      ${tc.totalField ? `
+      <div class="fg">
+        <label>Обща стойност по договор <span class="opt-badge">незадължително</span></label>
+        <div class="amount-row">
+          <input type="number" id="fTotal" placeholder="0.00" min="0" step="0.01" oninput="updateRemaining()">
+          <span style="padding:10px 8px;font-size:.85rem;color:var(--muted);">EUR</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label>Остатък за доплащане</label>
+        <div class="amount-row">
+          <input type="number" id="fRemaining" placeholder="—" readonly style="background:var(--bg2);color:var(--green);font-weight:700;">
+          <span style="padding:10px 8px;font-size:.85rem;color:var(--muted);">EUR</span>
+        </div>
+      </div>` : ''}
       <div class="fg full">
         <label>Забележка <span class="opt-badge">незадължително</span></label>
         <textarea id="fNote" placeholder="${tc.notePlaceholder}" style="min-height:52px;"></textarea>
@@ -539,6 +554,13 @@ function renderForm() {
 }
 
 function switchType(t) { currentType = t; renderForm(); }
+
+function updateRemaining() {
+  const total = parseFloat(document.getElementById("fTotal")?.value) || 0;
+  const amount = parseFloat(document.getElementById("fAmount")?.value) || 0;
+  const rem = document.getElementById("fRemaining");
+  if (rem) rem.value = total > 0 ? (total - amount).toFixed(2) : "";
+}
 
 function cancelForm() {
   selectedId = null;
@@ -582,6 +604,13 @@ function collectFormData() {
   };
   if (tc.descField) data.description = (document.getElementById('fDesc').value||'').trim();
   if (tc.termField) data.term = fromInputDate(document.getElementById('fTerm').value);
+  if (tc.totalField) {
+    const tot = parseFloat(document.getElementById('fTotal')?.value) || 0;
+    if (tot > 0) {
+      data.contractTotal = tot;
+      data.remaining = parseFloat((tot - data.amount).toFixed(2));
+    }
+  }
   return data;
 }
 
@@ -621,12 +650,18 @@ async function generateDigitalPDF(id) {
   const tc = TYPES[r.type];
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({unit:'mm', format:'a4'});
-  // Зареждаме Roboto за кирилица
+  // Зареждаме Roboto за кирилица (normal + bold + italic)
   try {
-    const rb = await fetch('https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Regular.ttf');
-    const ab = await rb.arrayBuffer();
-    const b64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
-    doc.addFileToVFS('Roboto.ttf', b64); doc.addFont('Roboto.ttf','Roboto','normal'); doc.setFont('Roboto');
+    const loadFont = async (url, name, style) => {
+      const rb = await fetch(url);
+      const ab = await rb.arrayBuffer();
+      const b64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
+      doc.addFileToVFS(name, b64); doc.addFont(name, 'Roboto', style);
+    };
+    await loadFont('https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Regular.ttf','Roboto-Regular.ttf','normal');
+    await loadFont('https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Bold.ttf','Roboto-Bold.ttf','bold');
+    await loadFont('https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Italic.ttf','Roboto-Italic.ttf','italic');
+    doc.setFont('Roboto');
   } catch(e) { console.warn('Font load failed', e); }
   const W=210, M=14, cW=W-M*2, F='Roboto';
   const DARK='#141c2b', GOLD='#e9a825', MUTED='#6b85a0', WHITE='#ffffff';
@@ -699,6 +734,21 @@ async function generateDigitalPDF(id) {
   doc.text('С думи: '+r.amountWords,M+8,y+23);
   y+=30;
 
+  // REMAINING
+  if (r.contractTotal) {
+    fill('#e6f7ef'); drw('#1a7a52'); lw(0.4); doc.roundedRect(M,y,cW,18,2,2,'FD');
+    fill('#1a7a52'); doc.roundedRect(M,y,3,18,1,1,'F');
+    doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED);
+    doc.text('ОБЩА СТОЙНОСТ ПО ДОГОВОР',M+8,y+6);
+    doc.setFont(F,'normal'); doc.setFontSize(8.5); col(DARK);
+    doc.text(fmtNum(r.contractTotal)+' EUR',M+8,y+13);
+    doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED);
+    doc.text('ОСТАТЪК ЗА ДОПЛАЩАНЕ',M+cW/2,y+6);
+    doc.setFont(F,'bold'); doc.setFontSize(10); col('#1a7a52');
+    doc.text(fmtNum(r.remaining)+' EUR',M+cW/2,y+13);
+    y+=24;
+  }
+
   // TERM
   if (tc.termField && r.term) {
     fill(LIGHT); drw(BORDER); lw(0.3); doc.roundedRect(M,y,cW,10,2,2,'FD');
@@ -756,12 +806,18 @@ async function generateOfficialPDF(id) {
   const tc = TYPES[r.type];
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({unit:'mm', format:'a4'});
-  // Зареждаме Roboto за кирилица
+  // Зареждаме Roboto за кирилица (normal + bold + italic)
   try {
-    const rb = await fetch('https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Regular.ttf');
-    const ab = await rb.arrayBuffer();
-    const b64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
-    doc.addFileToVFS('Roboto.ttf', b64); doc.addFont('Roboto.ttf','Roboto','normal'); doc.setFont('Roboto');
+    const loadFont = async (url, name, style) => {
+      const rb = await fetch(url);
+      const ab = await rb.arrayBuffer();
+      const b64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
+      doc.addFileToVFS(name, b64); doc.addFont(name, 'Roboto', style);
+    };
+    await loadFont('https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Regular.ttf','Roboto-Regular.ttf','normal');
+    await loadFont('https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Bold.ttf','Roboto-Bold.ttf','bold');
+    await loadFont('https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Italic.ttf','Roboto-Italic.ttf','italic');
+    doc.setFont('Roboto');
   } catch(e) { console.warn('Font load failed', e); }
   const W=210, M=20, cW=W-M*2, F='Roboto';
   const DARK='#1a1a1a', MID='#444', LIGHT='#777', BORDER='#999';
@@ -812,8 +868,16 @@ async function generateOfficialPDF(id) {
     doc.setFont(F,'normal'); doc.setFontSize(10); col(DARK);
     doc.text(verb,M,y); y+=7;
     doc.setFont(F,'bold'); doc.text(r.object,M,y); y+=8;
+    // Остатък
+    if (r.contractTotal && r.type==='АВ') {
+      y+=4; drw(BORDER); lw(0.3); doc.line(M,y,W-M,y); y+=6;
+      doc.setFont(F,'normal'); doc.setFontSize(9); col(MID);
+      doc.text('Обща стойност по договор: '+fmtNum(r.contractTotal)+' EUR',M,y); y+=6;
+      doc.setFont(F,'bold'); doc.setFontSize(10); col('#1a7a52');
+      doc.text('Остатък за доплащане: '+fmtNum(r.remaining)+' EUR',M,y); y+=6;
+    }
 
-  } else if (r.type==='РЕ') {
+  } else if (r.type==="РЕ") {
     doc.setFont(F,'normal'); doc.setFontSize(10); col(MID); doc.text('Клиент:',M,y);
     doc.setFont(F,'bold'); col(DARK); doc.text(r.client,M+24,y); y+=8;
     doc.setFont(F,'normal'); col(MID); doc.text('Обект:',M,y);
