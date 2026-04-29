@@ -6,7 +6,6 @@
 <title>IVANOV REMONTI – Бележки и разписки</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -460,38 +459,6 @@ async function doDelete(id) {
   showToast('Бележката е изтрита.');
 }
 
-// ── EDIT ──
-function editReceipt(id) {
-  const r = allReceipts.find(x=>x.id===id);
-  if (!r) return;
-  selectedId = id;
-  currentType = r.type;
-  renderList();
-  renderForm();
-  // Попълваме полетата след рендера
-  setTimeout(() => {
-    const tc = TYPES[currentType];
-    document.getElementById('fClient').value = r.client || '';
-    document.getElementById('fObject').value = r.object || '';
-    document.getElementById('fContract').value = r.contractNo || '';
-    const dateISO = r.date ? r.date.split('.').reverse().join('-') : '';
-    document.getElementById('fDate').value = dateISO;
-    document.getElementById('fAmount').value = r.amount || '';
-    document.getElementById('fCurrency').value = r.currency || 'EUR';
-    if (tc.descField && document.getElementById('fDesc')) document.getElementById('fDesc').value = r.description || '';
-    if (tc.termField && document.getElementById('fTerm')) {
-      const termISO = r.term ? r.term.split('.').reverse().join('-') : '';
-      document.getElementById('fTerm').value = termISO;
-    }
-    if (tc.totalField && document.getElementById('fTotal')) {
-      document.getElementById('fTotal').value = r.contractTotal || '';
-      document.getElementById('fRemaining').value = r.remaining || '';
-    }
-    document.getElementById('fNote').value = r.note || '';
-    updateWords();
-  }, 50);
-}
-
 // ── FORM ──
 function showForm(type) {
   selectedId = null;
@@ -584,10 +551,39 @@ function renderForm() {
 function switchType(t) { currentType = t; renderForm(); }
 
 function updateRemaining() {
-  const total = parseFloat(document.getElementById("fTotal")?.value) || 0;
-  const amount = parseFloat(document.getElementById("fAmount")?.value) || 0;
-  const rem = document.getElementById("fRemaining");
-  if (rem) rem.value = total > 0 ? (total - amount).toFixed(2) : "";
+  const total = parseFloat(document.getElementById('fTotal')?.value) || 0;
+  const amount = parseFloat(document.getElementById('fAmount')?.value) || 0;
+  const rem = document.getElementById('fRemaining');
+  if (rem) rem.value = total > 0 ? (total - amount).toFixed(2) : '';
+}
+
+function editReceipt(id) {
+  const r = allReceipts.find(x=>x.id===id);
+  if (!r) return;
+  selectedId = id;
+  currentType = r.type;
+  renderList();
+  renderForm();
+  setTimeout(() => {
+    const tc = TYPES[currentType];
+    document.getElementById('fClient').value = r.client || '';
+    document.getElementById('fObject').value = r.object || '';
+    document.getElementById('fContract').value = r.contractNo || '';
+    const dateISO = r.date ? r.date.split('.').reverse().join('-') : '';
+    document.getElementById('fDate').value = dateISO;
+    document.getElementById('fAmount').value = r.amount || '';
+    document.getElementById('fCurrency').value = r.currency || 'EUR';
+    if (tc.descField && document.getElementById('fDesc')) document.getElementById('fDesc').value = r.description || '';
+    if (tc.termField && document.getElementById('fTerm')) {
+      document.getElementById('fTerm').value = r.term ? r.term.split('.').reverse().join('-') : '';
+    }
+    if (tc.totalField && document.getElementById('fTotal')) {
+      document.getElementById('fTotal').value = r.contractTotal || '';
+      document.getElementById('fRemaining').value = r.remaining || '';
+    }
+    document.getElementById('fNote').value = r.note || '';
+    updateWords();
+  }, 50);
 }
 
 function cancelForm() {
@@ -644,7 +640,6 @@ async function doSave() {
   if (!data) return;
   try {
     if (selectedId) {
-      // Редактиране на съществуваща
       data.id = selectedId;
       const existing = allReceipts.find(x=>x.id===selectedId);
       data.number = existing ? existing.number : data.number;
@@ -679,52 +674,297 @@ async function doSaveAndPDF(pdfType) {
 }
 
 // ── DIGITAL PDF ──
-function generateDigitalPDF(id) {
+async function generateDigitalPDF(id) {
   const r = allReceipts.find(x=>x.id===id);
   if (!r) return;
   const tc = TYPES[r.type];
-  const TC={'\u0410\u0412':'#1a7a52','\u0420\u041c':'#1a5fa8','\u0420\u0415':'#6b21a8','\u0414\u0420':'#c84b00'};
-  const TB={'\u0410\u0412':'#e6f7ef','\u0420\u041c':'#e8f1fb','\u0420\u0415':'#f3e8ff','\u0414\u0420':'#fff0e6'};
-  const tColor=TC[r.type]||'#1a7a52', tBkg=TB[r.type]||'#e6f7ef';
-  const amtBGN=r.currency==='EUR'?' / '+fmtNum(parseFloat(r.amount)*EUR_BGN)+' \u043b\u0432.':'';
-  const descB=(tc.descField&&r.description)?`<div style="background:#f0f4f8;border:1px solid #d5e0ea;border-left:3px solid #6b85a0;border-radius:6px;padding:10px 14px;margin-bottom:10px;"><div style="font-size:9px;font-weight:700;color:#6b85a0;text-transform:uppercase;margin-bottom:4px;">${tc.descLabel}</div><div style="font-size:12px;color:#141c2b;">${r.description}</div></div>`:'';
-  const remB=r.contractTotal?`<div style="background:#e6f7ef;border:1px solid #1a7a52;border-left:3px solid #1a7a52;border-radius:6px;padding:10px 14px;margin-bottom:10px;display:flex;gap:20px;"><div><div style="font-size:9px;font-weight:700;color:#6b85a0;text-transform:uppercase;margin-bottom:2px;">\u041e\u0411\u0429\u0410 \u0421\u0422\u041e\u0419\u041d\u041e\u0421\u0422 \u041f\u041e \u0414\u041e\u0413\u041e\u0412\u041e\u0420</div><div style="font-size:13px;color:#141c2b;font-weight:600;">${fmtNum(r.contractTotal)} EUR</div></div><div><div style="font-size:9px;font-weight:700;color:#6b85a0;text-transform:uppercase;margin-bottom:2px;">\u041e\u0421\u0422\u0410\u0422\u042a\u041a \u0417\u0410 \u0414\u041e\u041f\u041b\u0410\u0429\u0410\u041d\u0415</div><div style="font-size:15px;color:#1a7a52;font-weight:700;">${fmtNum(r.remaining)} EUR</div></div></div>`:'';
-  const termB=(tc.termField&&r.term)?`<div style="background:#f8fafc;border:1px solid #d5e0ea;border-radius:6px;padding:8px 14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;"><span style="font-size:9px;font-weight:700;color:#6b85a0;text-transform:uppercase;">\u041a\u0420\u0410\u0415\u041d \u0421\u0420\u041e\u041a</span><span style="font-size:12px;font-weight:700;color:#141c2b;">${r.term}</span></div>`:'';
-  const noteB=(r.note&&r.note.trim())?`<div style="background:#fffbf0;border:1px solid #c8891a;border-left:3px solid #c8891a;border-radius:6px;padding:10px 14px;margin-bottom:10px;"><div style="font-size:9px;font-weight:700;color:#6b85a0;text-transform:uppercase;margin-bottom:4px;">\u0417\u0410\u0411\u0415\u041b\u0415\u0416\u041a\u0410</div><div style="font-size:12px;color:#141c2b;">${r.note}</div></div>`:'';
-  const html=`<div style="font-family:Arial,sans-serif;background:#fff;width:794px;padding:0;"><div style="background:#141c2b;padding:18px 28px 14px;"><div style="display:flex;justify-content:space-between;align-items:flex-start;"><div><div style="font-size:26px;font-weight:900;color:#fff;">IVANOV <span style="color:#e9a825;">REMONTI</span></div><div style="font-size:9px;color:#6b85a0;margin-top:2px;">\u0421\u0422\u0420\u041e\u0418\u0422\u0415\u041b\u041d\u0418 \u0423\u0421\u041b\u0423\u0413\u0418 \u00b7 \u0421\u041e\u0424\u0418\u042f \u0418 \u0420\u0415\u0413\u0418\u041e\u041d</div></div><div style="text-align:right;font-size:10px;color:#6b85a0;line-height:1.7;"><div>0877 810 418</div><div>ivanovremontibg@gmail.com</div><div>ivanov-remonti.com</div></div></div></div><div style="background:${tBkg};border-left:4px solid ${tColor};padding:8px 28px;display:flex;justify-content:space-between;align-items:center;"><div style="font-size:13px;font-weight:700;color:${tColor};">${tc.officialTitle}</div><div style="font-size:11px;color:#6b85a0;">${r.number} \u00b7 ${r.date}</div></div><div style="padding:20px 28px;"><div style="background:#f8fafc;border:1px solid #d5e0ea;border-left:3px solid ${tColor};border-radius:6px;padding:12px 16px;margin-bottom:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px;"><div><div style="font-size:9px;font-weight:700;color:#6b85a0;text-transform:uppercase;margin-bottom:2px;">\u041a\u041b\u0418\u0415\u041d\u0422</div><div style="font-size:13px;font-weight:700;color:#141c2b;">${r.client||'\u2014'}</div><div style="font-size:9px;font-weight:700;color:#6b85a0;text-transform:uppercase;margin-top:6px;margin-bottom:2px;">\u0414\u041e\u0413\u041e\u0412\u041e\u0420 \u2116</div><div style="font-size:12px;color:#141c2b;">${r.contractNo||'\u2014'}</div></div><div><div style="font-size:9px;font-weight:700;color:#6b85a0;text-transform:uppercase;margin-bottom:2px;">\u041e\u0411\u0415\u041a\u0422 / \u0410\u0414\u0420\u0415\u0421</div><div style="font-size:12px;color:#141c2b;">${r.object||'\u2014'}</div></div></div>${descB}<div style="background:#fffbf0;border:1px solid #c8891a;border-left:3px solid #c8891a;border-radius:6px;padding:12px 16px;margin-bottom:10px;"><div style="font-size:9px;font-weight:700;color:#6b85a0;text-transform:uppercase;margin-bottom:4px;">${tc.sumLabel}</div><div style="font-size:22px;font-weight:700;color:#141c2b;">${fmtNum(r.amount)} ${r.currency}${amtBGN}</div><div style="font-size:10px;color:#6b85a0;font-style:italic;margin-top:2px;">\u0421 \u0434\u0443\u043c\u0438: ${r.amountWords}</div></div>${remB}${termB}${noteB}<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px;"><div style="background:#f8fafc;border:1px solid #d5e0ea;border-left:3px solid ${tColor};border-radius:6px;padding:12px 16px;min-height:80px;"><div style="font-size:9px;font-weight:700;color:#6b85a0;text-transform:uppercase;margin-bottom:16px;">${tc.sigLeft}</div><div style="border-bottom:1px solid #141c2b;margin-bottom:4px;height:24px;"></div><div style="display:flex;justify-content:space-between;font-size:9px;color:#6b85a0;"><span>\u041f\u043e\u0434\u043f\u0438\u0441</span><span>${r.date||''}</span></div></div><div style="background:#f8fafc;border:1px solid #d5e0ea;border-left:3px solid #141c2b;border-radius:6px;padding:12px 16px;min-height:80px;"><div style="font-size:9px;font-weight:700;color:#6b85a0;text-transform:uppercase;margin-bottom:4px;">${tc.sigRight}</div><div style="font-size:12px;font-weight:700;color:#141c2b;margin-bottom:8px;">\u0422\u0440\u0430\u044f\u043d \u0418\u0432\u0430\u043d\u043e\u0432 \u041f\u044a\u0440\u0432\u0430\u043d\u043e\u0432</div><div style="border-bottom:1px solid #141c2b;margin-bottom:4px;height:12px;"></div><div style="display:flex;justify-content:space-between;font-size:9px;color:#6b85a0;"><span>\u041f\u043e\u0434\u043f\u0438\u0441</span><span>${r.date||''}</span></div></div></div><div style="border-top:1px solid #c8891a;margin-top:20px;padding-top:8px;display:flex;justify-content:space-between;font-size:9px;color:#6b85a0;"><span>\u0413\u0435\u043d\u0435\u0440\u0438\u0440\u0430\u043d\u043e: ${today()}</span><span>ivanov-remonti.com</span></div></div></div>`;
-  const safe=(r.client||'klient').replace(/\s+/g,'_').replace(/[^\u0400-\u04FFa-zA-Z0-9_-]/g,'');
-  const el=document.createElement('div');
-  el.style.cssText='position:absolute;left:0;top:-99999px;width:794px;background:#fff;';
-  el.innerHTML=html;document.body.appendChild(el);
-  html2pdf().set({margin:0,filename:r.number+'_'+safe+'_digital.pdf',image:{type:'jpeg',quality:0.97},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false,width:794,windowWidth:794},jsPDF:{unit:'mm',format:'a4',orientation:'portrait',compress:true}}).from(el).save().then(()=>{document.body.removeChild(el);showToast('\ud83c\udfa8 \u0414\u0438\u0433\u0438\u0442\u0430\u043b\u0435\u043d PDF \u0438\u0437\u0442\u0435\u0433\u043b\u0435\u043d.');});
-}
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'mm', format:'a4'});
+  // Зареждаме Roboto за кирилица
+  try {
+    const lf=async(url,name,style)=>{const r=await fetch(url);const b=await r.arrayBuffer();const s=btoa(String.fromCharCode(...new Uint8Array(b)));doc.addFileToVFS(name,s);doc.addFont(name,'Roboto',style);};
+    await lf('https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Regular.ttf','RR.ttf','normal');
+    await lf('https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Bold.ttf','RB.ttf','bold');
+    await lf('https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Italic.ttf','RI.ttf','italic');
+    doc.setFont('Roboto','normal');
+  } catch(e) { console.warn('Font load failed', e); }
+  const W=210, M=14, cW=W-M*2, F='Roboto';
+  const DARK='#141c2b', GOLD='#e9a825', MUTED='#6b85a0', WHITE='#ffffff';
+  const LIGHT='#f8fafc', BORDER='#d5e0ea', GOLD_MID='#c8891a', GOLD_LITE='#fffbf0';
+  const TYPE_COLORS={АВ:'#1a7a52',РМ:'#1a5fa8',РЕ:'#6b21a8',ДР:'#c84b00'};
+  const TYPE_BKGS={АВ:'#e6f7ef',РМ:'#e8f1fb',РЕ:'#f3e8ff',ДР:'#fff0e6'};
+  const col=c=>doc.setTextColor(c);
+  const fill=c=>doc.setFillColor(c);
+  const drw=c=>doc.setDrawColor(c);
+  const lw=n=>doc.setLineWidth(n);
 
-function generateOfficialPDF(id) {
-  const r = allReceipts.find(x=>x.id===id);
-  if (!r) return;
-  const tc = TYPES[r.type];
-  const amtBGN=r.currency==='EUR'?' / '+fmtNum(parseFloat(r.amount)*EUR_BGN)+' \u043b\u0432.':'';
-  const remSec=r.contractTotal?`<hr style="border:none;border-top:1px solid #999;margin:10px 0;"><p style="font-size:11px;color:#444;margin-bottom:4px;">\u041e\u0431\u0449\u0430 \u0441\u0442\u043e\u0439\u043d\u043e\u0441\u0442 \u043f\u043e \u0434\u043e\u0433\u043e\u0432\u043e\u0440: <strong>${fmtNum(r.contractTotal)} EUR</strong></p><p style="font-size:13px;font-weight:700;color:#1a7a52;">\u041e\u0441\u0442\u0430\u0442\u044a\u043a \u0437\u0430 \u0434\u043e\u043f\u043b\u0430\u0449\u0430\u043d\u0435: ${fmtNum(r.remaining)} EUR</p>`:'';
-  let body='';
-  if(r.type==='\u0410\u0412'||r.type==='\u0420\u041c'){
-    const verb=r.type==='\u0410\u0412'?'\u043a\u0430\u0442\u043e \u0430\u0432\u0430\u043d\u0441 \u043f\u043e \u0434\u043e\u0433\u043e\u0432\u043e\u0440 \u0437\u0430 \u043e\u0431\u0435\u043a\u0442:':'\u0437\u0430 \u0437\u0430\u043a\u0443\u043f\u0443\u0432\u0430\u043d\u0435 \u043d\u0430 \u043c\u0430\u0442\u0435\u0440\u0438\u0430\u043b\u0438 \u043f\u043e \u043e\u0431\u0435\u043a\u0442:';
-    body=`<p style="font-size:14px;color:#1a1a1a;margin-bottom:10px;"><strong>\u0422\u0440\u0430\u044f\u043d \u0418\u0432\u0430\u043d\u043e\u0432 \u041f\u044a\u0440\u0432\u0430\u043d\u043e\u0432</strong> \u043f\u043e\u043b\u0443\u0447\u0438 \u043e\u0442 <strong>${r.client}</strong></p><p style="font-size:11px;color:#444;margin-bottom:6px;">\u0441\u0443\u043c\u0430\u0442\u0430 \u043e\u0442:</p><div style="font-size:26px;font-weight:700;color:#1a1a1a;margin-bottom:4px;">${fmtNum(r.amount)} ${r.currency}${amtBGN}</div><p style="font-size:10px;color:#777;font-style:italic;margin-bottom:14px;">(\u0441 \u0434\u0443\u043c\u0438: ${r.amountWords})</p><p style="font-size:13px;color:#1a1a1a;margin-bottom:4px;">${verb}</p><p style="font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:14px;">${r.object}</p>${r.type==='\u0410\u0412'?remSec:''}`;
-  } else if(r.type==='\u0420\u0415'){
-    body=`<p style="font-size:13px;color:#444;">\u041a\u043b\u0438\u0435\u043d\u0442: <strong>${r.client}</strong></p><p style="font-size:13px;color:#444;margin-bottom:14px;">\u041e\u0431\u0435\u043a\u0442: <strong>${r.object}</strong></p><p style="font-size:10px;font-weight:700;color:#444;text-transform:uppercase;margin-bottom:6px;">\u041f\u0420\u0418\u0415\u0422\u0410 \u0414\u0415\u0419\u041d\u041e\u0421\u0422:</p><p style="font-size:13px;color:#1a1a1a;margin-bottom:14px;">${r.description||''}</p><p style="font-size:10px;font-weight:700;color:#444;text-transform:uppercase;margin-bottom:6px;">\u0421\u0422\u041e\u0419\u041d\u041e\u0421\u0422:</p><div style="font-size:22px;font-weight:700;color:#1a1a1a;margin-bottom:4px;">${fmtNum(r.amount)} ${r.currency}${amtBGN}</div><p style="font-size:10px;color:#777;font-style:italic;margin-bottom:10px;">(\u0441 \u0434\u0443\u043c\u0438: ${r.amountWords})</p>${remSec}`;
-  } else if(r.type==='\u0414\u0420'){
-    body=`<p style="font-size:13px;color:#444;">\u041a\u043b\u0438\u0435\u043d\u0442: <strong>${r.client}</strong></p><p style="font-size:13px;color:#444;margin-bottom:14px;">\u041e\u0431\u0435\u043a\u0442: <strong>${r.object}</strong></p><p style="font-size:10px;font-weight:700;color:#444;text-transform:uppercase;margin-bottom:6px;">\u0414\u041e\u041f\u042a\u041b\u041d\u0418\u0422\u0415\u041b\u041d\u0410 \u0414\u0415\u0419\u041d\u041e\u0421\u0422:</p><p style="font-size:13px;color:#1a1a1a;margin-bottom:14px;">${r.description||''}</p><p style="font-size:10px;font-weight:700;color:#444;text-transform:uppercase;margin-bottom:6px;">\u0414\u041e\u0413\u041e\u0412\u041e\u0420\u0415\u041d\u0410 \u0426\u0415\u041d\u0410:</p><div style="font-size:22px;font-weight:700;color:#1a1a1a;margin-bottom:4px;">${fmtNum(r.amount)} ${r.currency}</div><p style="font-size:10px;color:#777;font-style:italic;margin-bottom:10px;">(\u0441 \u0434\u0443\u043c\u0438: ${r.amountWords})</p>${r.term?`<p style="font-size:13px;color:#1a1a1a;">\u0414\u0430 \u0441\u0435 \u0438\u0437\u043f\u044a\u043b\u043d\u0438 \u0434\u043e: <strong>${r.term}</strong></p>`:''}`;
+  // HEADER
+  fill(DARK); doc.rect(0,0,W,33,'F');
+  fill(GOLD_MID); doc.rect(0,32.5,W,0.5,'F');
+  doc.setFont(F,'bold'); doc.setFontSize(22); col(WHITE); doc.text('IVANOV',M,18);
+  const iW = doc.getTextWidth('IVANOV ');
+  col(GOLD); doc.text('REMONTI',M+iW,18);
+  doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED);
+  doc.text('СТРОИТЕЛНИ УСЛУГИ · СОФИЯ И РЕГИОН',M,24.5);
+  doc.setFontSize(7.5); col(MUTED);
+  doc.text('0877 810 418',W-M,13,{align:'right'});
+  doc.text('ivanovremontibg@gmail.com',W-M,19,{align:'right'});
+  doc.text('ivanov-remonti.com',W-M,25,{align:'right'});
+
+  // TYPE BAR
+  const tColor=TYPE_COLORS[r.type], tBkg=TYPE_BKGS[r.type];
+  fill(tBkg); doc.rect(M,36,cW,10,'F');
+  fill(tColor); doc.rect(M,36,3,10,'F');
+  doc.setFont(F,'bold'); doc.setFontSize(10); col(tColor);
+  doc.text(tc.officialTitle, M+7, 42.5);
+  doc.setFont(F,'normal'); doc.setFontSize(8); col(MUTED);
+  doc.text(r.number+'  ·  '+r.date, W-M, 42.5, {align:'right'});
+
+  let y = 52;
+
+  // INFO
+  fill(LIGHT); drw(BORDER); lw(0.3); doc.roundedRect(M,y,cW,24,2,2,'FD');
+  fill(tColor); doc.roundedRect(M,y,3,24,1,1,'F');
+  const LX=M+8, VX=M+42, C2=M+cW/2+6;
+  doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED);
+  doc.text('КЛИЕНТ',LX,y+8); doc.text('ДОГОВОР №',LX,y+16); doc.text('ОБЕКТ / АДРЕС',C2,y+8);
+  doc.setFont(F,'bold'); doc.setFontSize(9.5); col(DARK); doc.text(r.client||'—',VX,y+8);
+  doc.setFont(F,'normal'); doc.setFontSize(8.5); col(DARK);
+  doc.text(r.contractNo||'—',VX,y+16);
+  doc.text(doc.splitTextToSize(r.object||'—',cW/2-10),C2+22,y+8);
+  y+=30;
+
+  // DESCRIPTION
+  if (tc.descField && r.description) {
+    const dLines = doc.splitTextToSize(r.description, cW-16);
+    const dH = 12 + dLines.length*5;
+    fill('#f0f4f8'); drw(BORDER); lw(0.3); doc.roundedRect(M,y,cW,dH,2,2,'FD');
+    fill(MUTED); doc.roundedRect(M,y,3,dH,1,1,'F');
+    doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED);
+    doc.text(tc.descLabel.toUpperCase(),M+8,y+6);
+    doc.setFont(F,'normal'); doc.setFontSize(8.5); col(DARK);
+    doc.text(dLines,M+8,y+11);
+    y += dH+6;
   }
-  const noteB=(r.note&&r.note.trim())?`<p style="font-size:11px;color:#777;font-style:italic;margin-top:10px;">\u0417\u0430\u0431\u0435\u043b\u0435\u0436\u043a\u0430: ${r.note}</p>`:'';
-  const fnB=tc.footnotes.map(fn=>`<p style="font-size:9px;color:#999;font-style:italic;margin-bottom:2px;">* ${fn}</p>`).join('');
-  const html=`<div style="font-family:Arial,sans-serif;background:#fff;width:794px;min-height:1123px;padding:40px 56px;box-sizing:border-box;"><div style="display:flex;justify-content:space-between;margin-bottom:16px;"><div><div style="font-size:16px;font-weight:700;color:#1a1a1a;">IVANOV REMONTI</div><div style="font-size:10px;color:#777;margin-top:2px;">0877 810 418 \u00b7 ivanovremontibg@gmail.com \u00b7 ivanov-remonti.com</div></div></div><hr style="border:none;border-top:1px solid #999;margin-bottom:20px;"><div style="text-align:center;margin-bottom:20px;"><div style="font-size:20px;font-weight:700;color:#1a1a1a;letter-spacing:1px;">${tc.officialTitle}</div><hr style="border:none;border-top:2px solid #1a1a1a;width:200px;margin:6px auto 0;"></div><div style="text-align:center;margin-bottom:8px;font-size:12px;color:#444;">\u043a\u044a\u043c \u0414\u043e\u0433\u043e\u0432\u043e\u0440 \u2116 ${r.contractNo||'_________'} / ____________</div><div style="text-align:center;margin-bottom:20px;font-size:11px;color:#777;">\u0414\u0430\u0442\u0430: ${r.date} &nbsp;&nbsp;&nbsp; \u2116: ${r.number}</div><hr style="border:none;border-top:1px solid #ccc;margin-bottom:20px;">${body}${noteB}<div style="margin-top:10px;">${fnB}</div><hr style="border:none;border-top:1px solid #ccc;margin-top:30px;margin-bottom:20px;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:10px;"><div><p style="font-size:11px;font-weight:700;color:#1a1a1a;margin-bottom:40px;">${tc.sigLeft}:</p><div style="border-bottom:1px solid #1a1a1a;margin-bottom:4px;"></div><div style="display:flex;justify-content:space-between;font-size:10px;color:#777;"><span>\u041f\u043e\u0434\u043f\u0438\u0441</span><span>\u0414\u0430\u0442\u0430: ${r.date}</span></div></div><div><p style="font-size:11px;font-weight:700;color:#1a1a1a;margin-bottom:8px;">${tc.sigRight}:</p><p style="font-size:13px;font-weight:700;color:#1a1a1a;margin-bottom:16px;">\u0422\u0440\u0430\u044f\u043d \u0418\u0432\u0430\u043d\u043e\u0432 \u041f\u044a\u0440\u0432\u0430\u043d\u043e\u0432</p><div style="border-bottom:1px solid #1a1a1a;margin-bottom:4px;"></div><div style="display:flex;justify-content:space-between;font-size:10px;color:#777;"><span>\u041f\u043e\u0434\u043f\u0438\u0441</span><span>\u0414\u0430\u0442\u0430: ${r.date}</span></div></div></div><hr style="border:none;border-top:1px solid #ccc;margin-top:40px;margin-bottom:8px;"><div style="text-align:center;font-size:9px;color:#999;">IVANOV REMONTI \u00b7 0877 810 418 \u00b7 ivanovremontibg@gmail.com</div></div>`;
+
+  // AMOUNT
+  const amtBGN = r.currency==='EUR' ? ' / '+fmtNum(parseFloat(r.amount)*EUR_BGN)+' лв.' : '';
+  fill(GOLD_LITE); drw(GOLD_MID); lw(0.4); doc.roundedRect(M,y,cW,24,2,2,'FD');
+  fill(GOLD_MID); doc.roundedRect(M,y,3,24,1,1,'F');
+  doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED);
+  doc.text(tc.sumLabel.toUpperCase(),M+8,y+7);
+  doc.setFont(F,'bold'); doc.setFontSize(16); col(DARK);
+  doc.text(fmtNum(r.amount)+' '+r.currency+amtBGN,M+8,y+17);
+  doc.setFont(F,'italic'); doc.setFontSize(7.5); col(MUTED);
+  doc.text('С думи: '+r.amountWords,M+8,y+23);
+  y+=30;
+
+  // REMAINING
+  if (r.contractTotal) {
+    fill('#e6f7ef'); drw('#1a7a52'); lw(0.4); doc.roundedRect(M,y,cW,18,2,2,'FD');
+    fill('#1a7a52'); doc.roundedRect(M,y,3,18,1,1,'F');
+    doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED);
+    doc.text('ОБЩА СТОЙНОСТ ПО ДОГОВОР',M+8,y+6);
+    doc.setFont(F,'normal'); doc.setFontSize(8.5); col(DARK);
+    doc.text(fmtNum(r.contractTotal)+' EUR',M+8,y+13);
+    doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED);
+    doc.text('ОСТАТЪК ЗА ДОПЛАЩАНЕ',M+cW/2,y+6);
+    doc.setFont(F,'bold'); doc.setFontSize(10); col('#1a7a52');
+    doc.text(fmtNum(r.remaining)+' EUR',M+cW/2,y+13);
+    y+=24;
+  }
+
+  // TERM
+  if (tc.termField && r.term) {
+    fill(LIGHT); drw(BORDER); lw(0.3); doc.roundedRect(M,y,cW,10,2,2,'FD');
+    doc.setFont(F,'normal'); doc.setFontSize(7.5); col(MUTED); doc.text('КРАЕН СРОК',M+8,y+7);
+    doc.setFont(F,'bold'); col(DARK); doc.text(r.term,M+50,y+7);
+    y+=16;
+  }
+
+  // NOTE
+  if (r.note && r.note.trim()) {
+    const nLines = doc.splitTextToSize(r.note, cW-16);
+    const nH = 10+nLines.length*5+4;
+    fill(GOLD_LITE); drw(GOLD_MID); lw(0.3); doc.roundedRect(M,y,cW,nH,2,2,'FD');
+    fill(GOLD_MID); doc.roundedRect(M,y,3,nH,1,1,'F');
+    doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED); doc.text('ЗАБЕЛЕЖКА',M+8,y+6);
+    doc.setFont(F,'normal'); doc.setFontSize(8.5); col(DARK); doc.text(nLines,M+8,y+11);
+    y+=nH+6;
+  }
+
+  // SIGNATURES
+  const sigW=(cW-10)/2, sigH=32, sigY=y;
+  // LEFT
+  fill(LIGHT); drw(BORDER); lw(0.3); doc.roundedRect(M,sigY,sigW,sigH,2,2,'FD');
+  fill(tColor); doc.roundedRect(M,sigY,3,sigH,1,1,'F');
+  doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED); doc.text(tc.sigLeft,M+8,sigY+7);
+  drw(DARK); lw(0.4); doc.line(M+8,sigY+24,M+sigW-6,sigY+24);
+  doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED); doc.text('Подпис',M+8,sigY+29);
+  doc.setFont(F,'bold'); col(DARK); doc.text(r.date||'',M+sigW-6,sigY+29,{align:'right'});
+  // RIGHT
+  const s2X = M+sigW+10;
+  fill(LIGHT); drw(BORDER); lw(0.3); doc.roundedRect(s2X,sigY,sigW,sigH,2,2,'FD');
+  fill(DARK); doc.roundedRect(s2X,sigY,3,sigH,1,1,'F');
+  doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED); doc.text(tc.sigRight,s2X+8,sigY+7);
+  doc.setFont(F,'bold'); doc.setFontSize(9); col(DARK); doc.text('Траян Иванов Първанов',s2X+8,sigY+14);
+  drw(DARK); lw(0.4); doc.line(s2X+8,sigY+24,s2X+sigW-6,sigY+24);
+  doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED); doc.text('Подпис',s2X+8,sigY+29);
+  doc.setFont(F,'bold'); col(DARK); doc.text(r.date||'',s2X+sigW-6,sigY+29,{align:'right'});
+  y += sigH+10;
+
+  // FOOTER LINE
+  fill(GOLD_MID); doc.rect(M,y,cW,0.5,'F'); y+=5;
+  doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED);
+  doc.text('Генерирано: '+today(),M,y);
+  doc.text('Работим с договор и писмена гаранция · ivanov-remonti.com',W-M,y,{align:'right'});
+
   const safe=(r.client||'klient').replace(/\s+/g,'_').replace(/[^\u0400-\u04FFa-zA-Z0-9_-]/g,'');
-  const el=document.createElement('div');
-  el.style.cssText='position:absolute;left:0;top:-99999px;width:794px;background:#fff;';
-  el.innerHTML=html;document.body.appendChild(el);
-  html2pdf().set({margin:0,filename:r.number+'_'+safe+'_oficial.pdf',image:{type:'jpeg',quality:0.97},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false,width:794,windowWidth:794},jsPDF:{unit:'mm',format:'a4',orientation:'portrait',compress:true}}).from(el).save().then(()=>{document.body.removeChild(el);showToast('\ud83d\udcc4 \u041e\u0444\u0438\u0446\u0438\u0430\u043b\u0435\u043d PDF \u0438\u0437\u0442\u0435\u0433\u043b\u0435\u043d.');});
+  doc.save(r.number+'_'+safe+'_digital.pdf');
+  showToast('🎨 Дигитален PDF изтеглен.');
 }
 
+// ── OFFICIAL PDF ──
+async function generateOfficialPDF(id) {
+  const r = allReceipts.find(x=>x.id===id);
+  if (!r) return;
+  const tc = TYPES[r.type];
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'mm', format:'a4'});
+  // Зареждаме Roboto за кирилица
+  try {
+    const lf=async(url,name,style)=>{const r=await fetch(url);const b=await r.arrayBuffer();const s=btoa(String.fromCharCode(...new Uint8Array(b)));doc.addFileToVFS(name,s);doc.addFont(name,'Roboto',style);};
+    await lf('https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Regular.ttf','RR.ttf','normal');
+    await lf('https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Bold.ttf','RB.ttf','bold');
+    await lf('https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Italic.ttf','RI.ttf','italic');
+    doc.setFont('Roboto','normal');
+  } catch(e) { console.warn('Font load failed', e); }
+  const W=210, M=20, cW=W-M*2, F='Roboto';
+  const DARK='#1a1a1a', MID='#444', LIGHT='#777', BORDER='#999';
+  const col=c=>doc.setTextColor(c);
+  const fill=c=>doc.setFillColor(c);
+  const drw=c=>doc.setDrawColor(c);
+  const lw=n=>doc.setLineWidth(n);
 
+  // HEADER
+  doc.setFont(F,'bold'); doc.setFontSize(9); col(DARK);
+  doc.text('IVANOV REMONTI',M,16);
+  doc.setFont(F,'normal'); doc.setFontSize(7.5); col(LIGHT);
+  doc.text('0877 810 418  ·  ivanovremontibg@gmail.com  ·  ivanov-remonti.com',M,21);
+  drw(BORDER); lw(0.4); doc.line(M,24,W-M,24);
+
+  // TITLE
+  doc.setFont(F,'bold'); doc.setFontSize(14); col(DARK);
+  doc.text(tc.officialTitle,W/2,34,{align:'center'});
+  drw(DARK); lw(0.6); doc.line(W/2-35,36.5,W/2+35,36.5);
+
+  // META
+  doc.setFont(F,'normal'); doc.setFontSize(9); col(MID);
+  doc.text('към Договор № '+(r.contractNo||'_________')+'   /   ____________',W/2,44,{align:'center'});
+  doc.setFont(F,'normal'); doc.setFontSize(8.5); col(LIGHT);
+  doc.text('Дата:  '+r.date+'          №:  '+r.number,W/2,51,{align:'center'});
+  drw(BORDER); lw(0.3); doc.line(M,55,W-M,55);
+
+  let y=64;
+
+  if (r.type==='АВ' || r.type==='РМ') {
+    const verb = r.type==='АВ'
+      ? 'като аванс по договор за обект:'
+      : 'за закупуване на материали по обект:';
+    doc.setFont(F,'bold'); doc.setFontSize(10); col(DARK);
+    doc.text('Траян Иванов Първанов',M,y);
+    doc.setFont(F,'normal'); col(MID);
+    const afterName = M+doc.getTextWidth('Траян Иванов Първанов');
+    doc.text('  получи от  ',afterName,y);
+    doc.setFont(F,'bold'); col(DARK);
+    doc.text(r.client,afterName+doc.getTextWidth('  получи от  '),y);
+    y+=9;
+    doc.setFont(F,'normal'); doc.setFontSize(9); col(MID); doc.text('сумата от:',M,y); y+=9;
+    doc.setFont(F,'bold'); doc.setFontSize(18); col(DARK);
+    const amtBGN = r.currency==='EUR'?' / '+fmtNum(parseFloat(r.amount)*EUR_BGN)+' лв.':'';
+    doc.text(fmtNum(r.amount)+' '+r.currency+amtBGN,M,y); y+=8;
+    doc.setFont(F,'italic'); doc.setFontSize(8.5); col(MID);
+    doc.text('(с думи: '+r.amountWords+')',M,y); y+=10;
+    doc.setFont(F,'normal'); doc.setFontSize(10); col(DARK);
+    doc.text(verb,M,y); y+=7;
+    doc.setFont(F,'bold'); doc.text(r.object,M,y); y+=8;
+
+  } else if (r.type==='РЕ') {
+    doc.setFont(F,'normal'); doc.setFontSize(10); col(MID); doc.text('Клиент:',M,y);
+    doc.setFont(F,'bold'); col(DARK); doc.text(r.client,M+24,y); y+=8;
+    doc.setFont(F,'normal'); col(MID); doc.text('Обект:',M,y);
+    doc.setFont(F,'bold'); col(DARK); doc.text(r.object,M+24,y); y+=12;
+    doc.setFont(F,'bold'); doc.setFontSize(8); col(MID); doc.text('ПРИЕТА ДЕЙНОСТ:',M,y); y+=6;
+    doc.setFont(F,'normal'); doc.setFontSize(10); col(DARK);
+    const dL=doc.splitTextToSize(r.description||'',cW);
+    doc.text(dL,M,y); y+=dL.length*6+8;
+    doc.setFont(F,'bold'); doc.setFontSize(8); col(MID); doc.text('СТОЙНОСТ:',M,y); y+=6;
+    doc.setFont(F,'bold'); doc.setFontSize(16); col(DARK);
+    const amtBGN2=r.currency==='EUR'?' / '+fmtNum(parseFloat(r.amount)*EUR_BGN)+' лв.':'';
+    doc.text(fmtNum(r.amount)+' '+r.currency+amtBGN2,M,y); y+=8;
+    doc.setFont(F,'italic'); doc.setFontSize(8.5); col(MID);
+    doc.text('(с думи: '+r.amountWords+')',M,y); y+=8;
+
+  } else if (r.type==='ДР') {
+    doc.setFont(F,'normal'); doc.setFontSize(10); col(MID); doc.text('Клиент:',M,y);
+    doc.setFont(F,'bold'); col(DARK); doc.text(r.client,M+24,y); y+=8;
+    doc.setFont(F,'normal'); col(MID); doc.text('Обект:',M,y);
+    doc.setFont(F,'bold'); col(DARK); doc.text(r.object,M+24,y); y+=12;
+    doc.setFont(F,'bold'); doc.setFontSize(8); col(MID); doc.text('ДОПЪЛНИТЕЛНА ДЕЙНОСТ:',M,y); y+=6;
+    doc.setFont(F,'normal'); doc.setFontSize(10); col(DARK);
+    const dL2=doc.splitTextToSize(r.description||'',cW);
+    doc.text(dL2,M,y); y+=dL2.length*6+8;
+    doc.setFont(F,'bold'); doc.setFontSize(8); col(MID); doc.text('ДОГОВОРЕНА ЦЕНА:',M,y); y+=6;
+    doc.setFont(F,'bold'); doc.setFontSize(16); col(DARK);
+    doc.text(fmtNum(r.amount)+' '+r.currency,M,y); y+=8;
+    doc.setFont(F,'italic'); doc.setFontSize(8.5); col(MID);
+    doc.text('(с думи: '+r.amountWords+')',M,y); y+=10;
+    if (r.term) {
+      doc.setFont(F,'normal'); doc.setFontSize(10); col(DARK);
+      doc.text('Да се изпълни до:  '+r.term,M,y); y+=8;
+    }
+  }
+
+  // NOTE
+  if (r.note && r.note.trim()) {
+    y+=4;
+    doc.setFont(F,'italic'); doc.setFontSize(8.5); col(MID);
+    const nL=doc.splitTextToSize('Забележка: '+r.note,cW);
+    doc.text(nL,M,y); y+=nL.length*5+6;
+  }
+
+  // FOOTNOTES
+  y+=4;
+  tc.footnotes.forEach(fn=>{
+    doc.setFont(F,'italic'); doc.setFontSize(7.5); col(LIGHT);
+    doc.text('* '+fn,M,y); y+=5;
+  });
+
+  y+=10;
+  drw(BORDER); lw(0.3); doc.line(M,y,W-M,y); y+=12;
+
+  // SIGNATURES
+  const colW=(cW-10)/2;
+  doc.setFont(F,'bold'); doc.setFontSize(8); col(DARK);
+  doc.text(tc.sigLeft+':',M,y); doc.text(tc.sigRight+':',M+colW+10,y); y+=8;
+  doc.setFont(F,'normal'); doc.setFontSize(9); col(MID);
+  doc.text('.........................................',M,y);
+  doc.setFont(F,'bold'); col(DARK); doc.text('Траян Иванов Първанов',M+colW+10,y); y+=8;
+  doc.setFont(F,'normal'); doc.setFontSize(8); col(MID);
+  doc.text('Подпис: .................................',M,y);
+  doc.text('Подпис: .................................',M+colW+10,y); y+=7;
+  doc.text('Дата:    '+r.date,M,y);
+  doc.text('Дата:    '+r.date,M+colW+10,y);
+
+  // PAGE FOOTER
+  drw(BORDER); lw(0.3); doc.line(M,280,W-M,280);
+  doc.setFont(F,'normal'); doc.setFontSize(7); col(LIGHT);
+  doc.text('IVANOV REMONTI  ·  0877 810 418  ·  ivanovremontibg@gmail.com',W/2,285,{align:'center'});
+
+  const safe=(r.client||'klient').replace(/\s+/g,'_').replace(/[^\u0400-\u04FFa-zA-Z0-9_-]/g,'');
+  doc.save(r.number+'_'+safe+'_oficial.pdf');
+  showToast('📄 Официален PDF изтеглен.');
+}
 
 // ── INIT ──
 function init() {
