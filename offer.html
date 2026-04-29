@@ -135,6 +135,13 @@ table.stbl input:focus{border-color:var(--gold);}
 .qt-item input[type=checkbox]{margin-top:2px;width:auto;flex-shrink:0;accent-color:var(--gold);}
 .qt-item:hover{color:var(--text);}
 @media(max-width:700px){.form-grid,.form-grid.g3,.form-grid.g4{grid-template-columns:1fr 1fr;}.app-header{padding:0 14px;}.header-title{display:none;}.nav-btn{padding:8px 10px;font-size:12px;}.setting-service-row{grid-template-columns:1fr 1fr;}.settings-hdr{display:none;}.actions-row{flex-direction:column;}.offer-card{flex-wrap:wrap;}}
+@media(max-width:480px){
+  body { padding-bottom: 88px; }
+  .form-grid,.form-grid.g3,.form-grid.g4 { grid-template-columns: 1fr; }
+  .totals-box { min-width: 0; width: 100%; }
+  .header-nav { flex-wrap: wrap; gap: 2px; }
+  .nav-btn { padding: 6px 8px; font-size: 11px; }
+}
 </style>
 <!-- html2pdf.js за луксозен PDF (същия дизайн като принта) -->
 <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
