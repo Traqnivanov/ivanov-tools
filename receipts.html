@@ -615,13 +615,20 @@ async function doSaveAndPDF(pdfType) {
 }
 
 // ── DIGITAL PDF ──
-function generateDigitalPDF(id) {
+async function generateDigitalPDF(id) {
   const r = allReceipts.find(x=>x.id===id);
   if (!r) return;
   const tc = TYPES[r.type];
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({unit:'mm', format:'a4'});
-  const W=210, M=14, cW=W-M*2, F='helvetica';
+  // Зареждаме Roboto за кирилица
+  try {
+    const rb = await fetch('https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Regular.ttf');
+    const ab = await rb.arrayBuffer();
+    const b64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
+    doc.addFileToVFS('Roboto.ttf', b64); doc.addFont('Roboto.ttf','Roboto','normal'); doc.setFont('Roboto');
+  } catch(e) { console.warn('Font load failed', e); }
+  const W=210, M=14, cW=W-M*2, F='Roboto';
   const DARK='#141c2b', GOLD='#e9a825', MUTED='#6b85a0', WHITE='#ffffff';
   const LIGHT='#f8fafc', BORDER='#d5e0ea', GOLD_MID='#c8891a', GOLD_LITE='#fffbf0';
   const TYPE_COLORS={АВ:'#1a7a52',РМ:'#1a5fa8',РЕ:'#6b21a8',ДР:'#c84b00'};
@@ -743,13 +750,20 @@ function generateDigitalPDF(id) {
 }
 
 // ── OFFICIAL PDF ──
-function generateOfficialPDF(id) {
+async function generateOfficialPDF(id) {
   const r = allReceipts.find(x=>x.id===id);
   if (!r) return;
   const tc = TYPES[r.type];
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({unit:'mm', format:'a4'});
-  const W=210, M=20, cW=W-M*2, F='helvetica';
+  // Зареждаме Roboto за кирилица
+  try {
+    const rb = await fetch('https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Regular.ttf');
+    const ab = await rb.arrayBuffer();
+    const b64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
+    doc.addFileToVFS('Roboto.ttf', b64); doc.addFont('Roboto.ttf','Roboto','normal'); doc.setFont('Roboto');
+  } catch(e) { console.warn('Font load failed', e); }
+  const W=210, M=20, cW=W-M*2, F='Roboto';
   const DARK='#1a1a1a', MID='#444', LIGHT='#777', BORDER='#999';
   const col=c=>doc.setTextColor(c);
   const fill=c=>doc.setFillColor(c);
