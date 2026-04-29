@@ -680,13 +680,12 @@ async function generateDigitalPDF(id) {
   const tc = TYPES[r.type];
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({unit:'mm', format:'a4'});
-  // Зареждаме Roboto за кирилица
+  // Зареждаме NotoSans за кирилица (пълна поддръжка на български)
   try {
-    const lf=async(url,name,style)=>{const r=await fetch(url);const b=await r.arrayBuffer();const s=btoa(String.fromCharCode(...new Uint8Array(b)));doc.addFileToVFS(name,s);doc.addFont(name,'Roboto',style);};
-    await lf('https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Regular.ttf','RR.ttf','normal');
-    await lf('https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Bold.ttf','RB.ttf','bold');
-    await lf('https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Italic.ttf','RI.ttf','italic');
-    doc.setFont('Roboto','normal');
+    const rb=await fetch('https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Regular.ttf');
+    const ab=await rb.arrayBuffer();
+    const b64=btoa(String.fromCharCode(...new Uint8Array(ab)));
+    doc.addFileToVFS('Roboto.ttf',b64);doc.addFont('Roboto.ttf','Roboto','normal');doc.setFont('Roboto');
   } catch(e) { console.warn('Font load failed', e); }
   const W=210, M=14, cW=W-M*2, F='Roboto';
   const DARK='#141c2b', GOLD='#e9a825', MUTED='#6b85a0', WHITE='#ffffff';
@@ -701,7 +700,7 @@ async function generateDigitalPDF(id) {
   // HEADER
   fill(DARK); doc.rect(0,0,W,33,'F');
   fill(GOLD_MID); doc.rect(0,32.5,W,0.5,'F');
-  doc.setFont(F,'bold'); doc.setFontSize(22); col(WHITE); doc.text('IVANOV',M,18);
+  doc.setFont(F,'normal'); doc.setFontSize(22); col(WHITE); doc.text('IVANOV',M,18);
   const iW = doc.getTextWidth('IVANOV ');
   col(GOLD); doc.text('REMONTI',M+iW,18);
   doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED);
@@ -715,7 +714,7 @@ async function generateDigitalPDF(id) {
   const tColor=TYPE_COLORS[r.type], tBkg=TYPE_BKGS[r.type];
   fill(tBkg); doc.rect(M,36,cW,10,'F');
   fill(tColor); doc.rect(M,36,3,10,'F');
-  doc.setFont(F,'bold'); doc.setFontSize(10); col(tColor);
+  doc.setFont(F,'normal'); doc.setFontSize(10); col(tColor);
   doc.text(tc.officialTitle, M+7, 42.5);
   doc.setFont(F,'normal'); doc.setFontSize(8); col(MUTED);
   doc.text(r.number+'  ·  '+r.date, W-M, 42.5, {align:'right'});
@@ -728,7 +727,7 @@ async function generateDigitalPDF(id) {
   const LX=M+8, VX=M+42, C2=M+cW/2+6;
   doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED);
   doc.text('КЛИЕНТ',LX,y+8); doc.text('ДОГОВОР №',LX,y+16); doc.text('ОБЕКТ / АДРЕС',C2,y+8);
-  doc.setFont(F,'bold'); doc.setFontSize(9.5); col(DARK); doc.text(r.client||'—',VX,y+8);
+  doc.setFont(F,'normal'); doc.setFontSize(9.5); col(DARK); doc.text(r.client||'—',VX,y+8);
   doc.setFont(F,'normal'); doc.setFontSize(8.5); col(DARK);
   doc.text(r.contractNo||'—',VX,y+16);
   doc.text(doc.splitTextToSize(r.object||'—',cW/2-10),C2+22,y+8);
@@ -740,7 +739,7 @@ async function generateDigitalPDF(id) {
     const dH = 12 + dLines.length*5;
     fill('#f0f4f8'); drw(BORDER); lw(0.3); doc.roundedRect(M,y,cW,dH,2,2,'FD');
     fill(MUTED); doc.roundedRect(M,y,3,dH,1,1,'F');
-    doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED);
+    doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED);
     doc.text(tc.descLabel.toUpperCase(),M+8,y+6);
     doc.setFont(F,'normal'); doc.setFontSize(8.5); col(DARK);
     doc.text(dLines,M+8,y+11);
@@ -751,11 +750,11 @@ async function generateDigitalPDF(id) {
   const amtBGN = r.currency==='EUR' ? ' / '+fmtNum(parseFloat(r.amount)*EUR_BGN)+' лв.' : '';
   fill(GOLD_LITE); drw(GOLD_MID); lw(0.4); doc.roundedRect(M,y,cW,24,2,2,'FD');
   fill(GOLD_MID); doc.roundedRect(M,y,3,24,1,1,'F');
-  doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED);
+  doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED);
   doc.text(tc.sumLabel.toUpperCase(),M+8,y+7);
-  doc.setFont(F,'bold'); doc.setFontSize(16); col(DARK);
+  doc.setFont(F,'normal'); doc.setFontSize(16); col(DARK);
   doc.text(fmtNum(r.amount)+' '+r.currency+amtBGN,M+8,y+17);
-  doc.setFont(F,'italic'); doc.setFontSize(7.5); col(MUTED);
+  doc.setFont(F,'normal'); doc.setFontSize(7.5); col(MUTED);
   doc.text('С думи: '+r.amountWords,M+8,y+23);
   y+=30;
 
@@ -763,13 +762,13 @@ async function generateDigitalPDF(id) {
   if (r.contractTotal) {
     fill('#e6f7ef'); drw('#1a7a52'); lw(0.4); doc.roundedRect(M,y,cW,18,2,2,'FD');
     fill('#1a7a52'); doc.roundedRect(M,y,3,18,1,1,'F');
-    doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED);
+    doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED);
     doc.text('ОБЩА СТОЙНОСТ ПО ДОГОВОР',M+8,y+6);
     doc.setFont(F,'normal'); doc.setFontSize(8.5); col(DARK);
     doc.text(fmtNum(r.contractTotal)+' EUR',M+8,y+13);
-    doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED);
+    doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED);
     doc.text('ОСТАТЪК ЗА ДОПЛАЩАНЕ',M+cW/2,y+6);
-    doc.setFont(F,'bold'); doc.setFontSize(10); col('#1a7a52');
+    doc.setFont(F,'normal'); doc.setFontSize(10); col('#1a7a52');
     doc.text(fmtNum(r.remaining)+' EUR',M+cW/2,y+13);
     y+=24;
   }
@@ -778,7 +777,7 @@ async function generateDigitalPDF(id) {
   if (tc.termField && r.term) {
     fill(LIGHT); drw(BORDER); lw(0.3); doc.roundedRect(M,y,cW,10,2,2,'FD');
     doc.setFont(F,'normal'); doc.setFontSize(7.5); col(MUTED); doc.text('КРАЕН СРОК',M+8,y+7);
-    doc.setFont(F,'bold'); col(DARK); doc.text(r.term,M+50,y+7);
+    doc.setFont(F,'normal'); col(DARK); doc.text(r.term,M+50,y+7);
     y+=16;
   }
 
@@ -788,7 +787,7 @@ async function generateDigitalPDF(id) {
     const nH = 10+nLines.length*5+4;
     fill(GOLD_LITE); drw(GOLD_MID); lw(0.3); doc.roundedRect(M,y,cW,nH,2,2,'FD');
     fill(GOLD_MID); doc.roundedRect(M,y,3,nH,1,1,'F');
-    doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED); doc.text('ЗАБЕЛЕЖКА',M+8,y+6);
+    doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED); doc.text('ЗАБЕЛЕЖКА',M+8,y+6);
     doc.setFont(F,'normal'); doc.setFontSize(8.5); col(DARK); doc.text(nLines,M+8,y+11);
     y+=nH+6;
   }
@@ -798,19 +797,19 @@ async function generateDigitalPDF(id) {
   // LEFT
   fill(LIGHT); drw(BORDER); lw(0.3); doc.roundedRect(M,sigY,sigW,sigH,2,2,'FD');
   fill(tColor); doc.roundedRect(M,sigY,3,sigH,1,1,'F');
-  doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED); doc.text(tc.sigLeft,M+8,sigY+7);
+  doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED); doc.text(tc.sigLeft,M+8,sigY+7);
   drw(DARK); lw(0.4); doc.line(M+8,sigY+24,M+sigW-6,sigY+24);
   doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED); doc.text('Подпис',M+8,sigY+29);
-  doc.setFont(F,'bold'); col(DARK); doc.text(r.date||'',M+sigW-6,sigY+29,{align:'right'});
+  doc.setFont(F,'normal'); col(DARK); doc.text(r.date||'',M+sigW-6,sigY+29,{align:'right'});
   // RIGHT
   const s2X = M+sigW+10;
   fill(LIGHT); drw(BORDER); lw(0.3); doc.roundedRect(s2X,sigY,sigW,sigH,2,2,'FD');
   fill(DARK); doc.roundedRect(s2X,sigY,3,sigH,1,1,'F');
-  doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED); doc.text(tc.sigRight,s2X+8,sigY+7);
-  doc.setFont(F,'bold'); doc.setFontSize(9); col(DARK); doc.text('Траян Иванов Първанов',s2X+8,sigY+14);
+  doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED); doc.text(tc.sigRight,s2X+8,sigY+7);
+  doc.setFont(F,'normal'); doc.setFontSize(9); col(DARK); doc.text('Траян Иванов Първанов',s2X+8,sigY+14);
   drw(DARK); lw(0.4); doc.line(s2X+8,sigY+24,s2X+sigW-6,sigY+24);
   doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED); doc.text('Подпис',s2X+8,sigY+29);
-  doc.setFont(F,'bold'); col(DARK); doc.text(r.date||'',s2X+sigW-6,sigY+29,{align:'right'});
+  doc.setFont(F,'normal'); col(DARK); doc.text(r.date||'',s2X+sigW-6,sigY+29,{align:'right'});
   y += sigH+10;
 
   // FOOTER LINE
@@ -831,13 +830,12 @@ async function generateOfficialPDF(id) {
   const tc = TYPES[r.type];
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({unit:'mm', format:'a4'});
-  // Зареждаме Roboto за кирилица
+  // Зареждаме NotoSans за кирилица (пълна поддръжка на български)
   try {
-    const lf=async(url,name,style)=>{const r=await fetch(url);const b=await r.arrayBuffer();const s=btoa(String.fromCharCode(...new Uint8Array(b)));doc.addFileToVFS(name,s);doc.addFont(name,'Roboto',style);};
-    await lf('https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Regular.ttf','RR.ttf','normal');
-    await lf('https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Bold.ttf','RB.ttf','bold');
-    await lf('https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Italic.ttf','RI.ttf','italic');
-    doc.setFont('Roboto','normal');
+    const rb=await fetch('https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Regular.ttf');
+    const ab=await rb.arrayBuffer();
+    const b64=btoa(String.fromCharCode(...new Uint8Array(ab)));
+    doc.addFileToVFS('Roboto.ttf',b64);doc.addFont('Roboto.ttf','Roboto','normal');doc.setFont('Roboto');
   } catch(e) { console.warn('Font load failed', e); }
   const W=210, M=20, cW=W-M*2, F='Roboto';
   const DARK='#1a1a1a', MID='#444', LIGHT='#777', BORDER='#999';
@@ -847,14 +845,14 @@ async function generateOfficialPDF(id) {
   const lw=n=>doc.setLineWidth(n);
 
   // HEADER
-  doc.setFont(F,'bold'); doc.setFontSize(9); col(DARK);
+  doc.setFont(F,'normal'); doc.setFontSize(9); col(DARK);
   doc.text('IVANOV REMONTI',M,16);
   doc.setFont(F,'normal'); doc.setFontSize(7.5); col(LIGHT);
   doc.text('0877 810 418  ·  ivanovremontibg@gmail.com  ·  ivanov-remonti.com',M,21);
   drw(BORDER); lw(0.4); doc.line(M,24,W-M,24);
 
   // TITLE
-  doc.setFont(F,'bold'); doc.setFontSize(14); col(DARK);
+  doc.setFont(F,'normal'); doc.setFontSize(14); col(DARK);
   doc.text(tc.officialTitle,W/2,34,{align:'center'});
   drw(DARK); lw(0.6); doc.line(W/2-35,36.5,W/2+35,36.5);
 
@@ -871,53 +869,53 @@ async function generateOfficialPDF(id) {
     const verb = r.type==='АВ'
       ? 'като аванс по договор за обект:'
       : 'за закупуване на материали по обект:';
-    doc.setFont(F,'bold'); doc.setFontSize(10); col(DARK);
+    doc.setFont(F,'normal'); doc.setFontSize(10); col(DARK);
     doc.text('Траян Иванов Първанов',M,y);
     doc.setFont(F,'normal'); col(MID);
     const afterName = M+doc.getTextWidth('Траян Иванов Първанов');
     doc.text('  получи от  ',afterName,y);
-    doc.setFont(F,'bold'); col(DARK);
+    doc.setFont(F,'normal'); col(DARK);
     doc.text(r.client,afterName+doc.getTextWidth('  получи от  '),y);
     y+=9;
     doc.setFont(F,'normal'); doc.setFontSize(9); col(MID); doc.text('сумата от:',M,y); y+=9;
-    doc.setFont(F,'bold'); doc.setFontSize(18); col(DARK);
+    doc.setFont(F,'normal'); doc.setFontSize(18); col(DARK);
     const amtBGN = r.currency==='EUR'?' / '+fmtNum(parseFloat(r.amount)*EUR_BGN)+' лв.':'';
     doc.text(fmtNum(r.amount)+' '+r.currency+amtBGN,M,y); y+=8;
-    doc.setFont(F,'italic'); doc.setFontSize(8.5); col(MID);
+    doc.setFont(F,'normal'); doc.setFontSize(8.5); col(MID);
     doc.text('(с думи: '+r.amountWords+')',M,y); y+=10;
     doc.setFont(F,'normal'); doc.setFontSize(10); col(DARK);
     doc.text(verb,M,y); y+=7;
-    doc.setFont(F,'bold'); doc.text(r.object,M,y); y+=8;
+    doc.setFont(F,'normal'); doc.text(r.object,M,y); y+=8;
 
   } else if (r.type==='РЕ') {
     doc.setFont(F,'normal'); doc.setFontSize(10); col(MID); doc.text('Клиент:',M,y);
-    doc.setFont(F,'bold'); col(DARK); doc.text(r.client,M+24,y); y+=8;
+    doc.setFont(F,'normal'); col(DARK); doc.text(r.client,M+24,y); y+=8;
     doc.setFont(F,'normal'); col(MID); doc.text('Обект:',M,y);
-    doc.setFont(F,'bold'); col(DARK); doc.text(r.object,M+24,y); y+=12;
-    doc.setFont(F,'bold'); doc.setFontSize(8); col(MID); doc.text('ПРИЕТА ДЕЙНОСТ:',M,y); y+=6;
+    doc.setFont(F,'normal'); col(DARK); doc.text(r.object,M+24,y); y+=12;
+    doc.setFont(F,'normal'); doc.setFontSize(8); col(MID); doc.text('ПРИЕТА ДЕЙНОСТ:',M,y); y+=6;
     doc.setFont(F,'normal'); doc.setFontSize(10); col(DARK);
     const dL=doc.splitTextToSize(r.description||'',cW);
     doc.text(dL,M,y); y+=dL.length*6+8;
-    doc.setFont(F,'bold'); doc.setFontSize(8); col(MID); doc.text('СТОЙНОСТ:',M,y); y+=6;
-    doc.setFont(F,'bold'); doc.setFontSize(16); col(DARK);
+    doc.setFont(F,'normal'); doc.setFontSize(8); col(MID); doc.text('СТОЙНОСТ:',M,y); y+=6;
+    doc.setFont(F,'normal'); doc.setFontSize(16); col(DARK);
     const amtBGN2=r.currency==='EUR'?' / '+fmtNum(parseFloat(r.amount)*EUR_BGN)+' лв.':'';
     doc.text(fmtNum(r.amount)+' '+r.currency+amtBGN2,M,y); y+=8;
-    doc.setFont(F,'italic'); doc.setFontSize(8.5); col(MID);
+    doc.setFont(F,'normal'); doc.setFontSize(8.5); col(MID);
     doc.text('(с думи: '+r.amountWords+')',M,y); y+=8;
 
   } else if (r.type==='ДР') {
     doc.setFont(F,'normal'); doc.setFontSize(10); col(MID); doc.text('Клиент:',M,y);
-    doc.setFont(F,'bold'); col(DARK); doc.text(r.client,M+24,y); y+=8;
+    doc.setFont(F,'normal'); col(DARK); doc.text(r.client,M+24,y); y+=8;
     doc.setFont(F,'normal'); col(MID); doc.text('Обект:',M,y);
-    doc.setFont(F,'bold'); col(DARK); doc.text(r.object,M+24,y); y+=12;
-    doc.setFont(F,'bold'); doc.setFontSize(8); col(MID); doc.text('ДОПЪЛНИТЕЛНА ДЕЙНОСТ:',M,y); y+=6;
+    doc.setFont(F,'normal'); col(DARK); doc.text(r.object,M+24,y); y+=12;
+    doc.setFont(F,'normal'); doc.setFontSize(8); col(MID); doc.text('ДОПЪЛНИТЕЛНА ДЕЙНОСТ:',M,y); y+=6;
     doc.setFont(F,'normal'); doc.setFontSize(10); col(DARK);
     const dL2=doc.splitTextToSize(r.description||'',cW);
     doc.text(dL2,M,y); y+=dL2.length*6+8;
-    doc.setFont(F,'bold'); doc.setFontSize(8); col(MID); doc.text('ДОГОВОРЕНА ЦЕНА:',M,y); y+=6;
-    doc.setFont(F,'bold'); doc.setFontSize(16); col(DARK);
+    doc.setFont(F,'normal'); doc.setFontSize(8); col(MID); doc.text('ДОГОВОРЕНА ЦЕНА:',M,y); y+=6;
+    doc.setFont(F,'normal'); doc.setFontSize(16); col(DARK);
     doc.text(fmtNum(r.amount)+' '+r.currency,M,y); y+=8;
-    doc.setFont(F,'italic'); doc.setFontSize(8.5); col(MID);
+    doc.setFont(F,'normal'); doc.setFontSize(8.5); col(MID);
     doc.text('(с думи: '+r.amountWords+')',M,y); y+=10;
     if (r.term) {
       doc.setFont(F,'normal'); doc.setFontSize(10); col(DARK);
@@ -928,7 +926,7 @@ async function generateOfficialPDF(id) {
   // NOTE
   if (r.note && r.note.trim()) {
     y+=4;
-    doc.setFont(F,'italic'); doc.setFontSize(8.5); col(MID);
+    doc.setFont(F,'normal'); doc.setFontSize(8.5); col(MID);
     const nL=doc.splitTextToSize('Забележка: '+r.note,cW);
     doc.text(nL,M,y); y+=nL.length*5+6;
   }
@@ -936,7 +934,7 @@ async function generateOfficialPDF(id) {
   // FOOTNOTES
   y+=4;
   tc.footnotes.forEach(fn=>{
-    doc.setFont(F,'italic'); doc.setFontSize(7.5); col(LIGHT);
+    doc.setFont(F,'normal'); doc.setFontSize(7.5); col(LIGHT);
     doc.text('* '+fn,M,y); y+=5;
   });
 
@@ -945,11 +943,11 @@ async function generateOfficialPDF(id) {
 
   // SIGNATURES
   const colW=(cW-10)/2;
-  doc.setFont(F,'bold'); doc.setFontSize(8); col(DARK);
+  doc.setFont(F,'normal'); doc.setFontSize(8); col(DARK);
   doc.text(tc.sigLeft+':',M,y); doc.text(tc.sigRight+':',M+colW+10,y); y+=8;
   doc.setFont(F,'normal'); doc.setFontSize(9); col(MID);
   doc.text('.........................................',M,y);
-  doc.setFont(F,'bold'); col(DARK); doc.text('Траян Иванов Първанов',M+colW+10,y); y+=8;
+  doc.setFont(F,'normal'); col(DARK); doc.text('Траян Иванов Първанов',M+colW+10,y); y+=8;
   doc.setFont(F,'normal'); doc.setFontSize(8); col(MID);
   doc.text('Подпис: .................................',M,y);
   doc.text('Подпис: .................................',M+colW+10,y); y+=7;
