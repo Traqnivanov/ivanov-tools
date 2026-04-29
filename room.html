@@ -263,9 +263,17 @@ window.dispatchEvent(new Event('fbReady'));
         <div class="grand-val" id="dGrand" style="font-size:1.3rem;color:#fbbf24;">0.00 €</div>
         <div class="grand-sub" id="dGrandLv">0.00 лв</div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:10px;">
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
         <button class="btn-offer" onclick="sendToOffer()" style="flex:1;">📋 Прати в оферта</button>
-        <button class="btn-pdf" onclick="exportPDF()">📄 PDF</button>
+        <div style="display:flex;gap:6px;flex:1;">
+          <select id="pdfMode" style="flex:1;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:6px 8px;font-size:0.75rem;font-family:inherit;">
+            <option value="all">Труд + Материали с цени</option>
+            <option value="labor_only">Само труд</option>
+            <option value="mat_only">Само материали с цени</option>
+            <option value="mat_qty">Само материали без цени</option>
+          </select>
+          <button class="btn-pdf" onclick="exportPDF()">📄 PDF</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1162,6 +1170,7 @@ function sendToOffer(){
 async function exportPDF(){
   if(!window.jspdf){showToast('Библиотеката се зарежда...'); return;}
   showToast('Генерирам PDF...');
+  const mode = document.getElementById('pdfMode')?.value || 'all';
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF('p','mm','a4');
 
@@ -1213,7 +1222,7 @@ async function exportPDF(){
   });
 
   // Labor table
-  if(allRows.length){
+  if(allRows.length && mode !== 'mat_only' && mode !== 'mat_qty'){
     doc.setFont(F,'bold'); doc.setFontSize(9); doc.setTextColor(154,117,48);
     doc.text('ТРУД',14,y); y+=4;
     doc.autoTable({startY:y,head:[['Помещение','Услуга','Кол.','Мярка','Ед. цена','Общо']],body:allRows,
@@ -1304,34 +1313,59 @@ async function exportPDF(){
     matRowsData.push([m.name||'—',`${m.qty} ${m.unit}`,m.unitPrice.toFixed(2)+' €',tot.toFixed(2)+' € / '+(tot*EUR2LV).toFixed(2)+' лв']);
   });
 
-  if(matRowsData.length&&y<260){
+  if(matRowsData.length&&y<260&&mode!=='labor_only'){
+    const showPrices = mode !== 'mat_qty';
     doc.setFont(F,'bold'); doc.setFontSize(9); doc.setTextColor(22,163,74);
     doc.text('МАТЕРИАЛИ',14,y); y+=4;
-    doc.autoTable({startY:y,head:[['Материал','Количество','Ед. цена','Общо']],body:matRowsData,
-      styles:{fontSize:8,cellPadding:2,font:F},
-      headStyles:{fillColor:[26,24,16],textColor:[201,168,76],fontStyle:'bold'},
-      alternateRowStyles:{fillColor:[245,240,228]},
-      columnStyles:{
-        0:{cellWidth:80},
-        1:{cellWidth:50,halign:'center'},
-        2:{cellWidth:32,halign:'right'},
-        3:{cellWidth:32,halign:'right',fontStyle:'bold'}
-      },
-      margin:{left:8,right:8},tableWidth:194,
-      foot:[[{content:'Общо материали',colSpan:3,styles:{fontStyle:'bold',halign:'right'}},{content:totalMat.toFixed(2)+' € / '+(totalMat*EUR2LV).toFixed(2)+' лв',styles:{fontStyle:'bold',halign:'right'}}]],
-      showFoot:'lastPage'});
+    if(showPrices){
+      doc.autoTable({startY:y,head:[['Материал','Количество','Ед. цена','Общо']],body:matRowsData,
+        styles:{fontSize:8,cellPadding:2,font:F},
+        headStyles:{fillColor:[26,24,16],textColor:[201,168,76],fontStyle:'bold'},
+        alternateRowStyles:{fillColor:[245,240,228]},
+        columnStyles:{0:{cellWidth:80},1:{cellWidth:50,halign:'center'},2:{cellWidth:32,halign:'right'},3:{cellWidth:32,halign:'right',fontStyle:'bold'}},
+        margin:{left:8,right:8},tableWidth:194,
+        foot:[[{content:'Общо материали',colSpan:3,styles:{fontStyle:'bold',halign:'right'}},{content:totalMat.toFixed(2)+' € / '+(totalMat*EUR2LV).toFixed(2)+' лв',styles:{fontStyle:'bold',halign:'right'}}]],
+        showFoot:'lastPage'});
+    } else {
+      // само бройки без цени
+      const qtyOnly = matRowsData.map(r=>[r[0],r[1]]);
+      doc.autoTable({startY:y,head:[['Материал','Количество']],body:qtyOnly,
+        styles:{fontSize:8,cellPadding:2,font:F},
+        headStyles:{fillColor:[26,24,16],textColor:[201,168,76],fontStyle:'bold'},
+        alternateRowStyles:{fillColor:[245,240,228]},
+        columnStyles:{0:{cellWidth:130},1:{cellWidth:64,halign:'center'}},
+        margin:{left:8,right:8},tableWidth:194});
+    }
     y=doc.lastAutoTable.finalY+8;
   }
 
-  // Grand total
-  const grand=totalLabor+totalMat;
-  doc.setFillColor(26,24,16); doc.rect(8,y,194,16,'F');
-  doc.setFont(F,'bold'); doc.setFontSize(10); doc.setTextColor(201,168,76);
-  doc.text('ОБЩО ТРУД + МАТЕРИАЛИ:',12,y+6);
-  doc.setFontSize(12); doc.setTextColor(228,201,126);
-  doc.text(grand.toFixed(2)+' €',200,y+6,{align:'right'});
-  doc.setFont(F,'normal'); doc.setFontSize(9); doc.setTextColor(180,160,100);
-  doc.text((grand*EUR2LV).toFixed(2)+' лв',200,y+13,{align:'right'});
+  // Grand total — само ако има и труд и материали
+  if(mode === 'all'){
+    const grand=totalLabor+totalMat;
+    doc.setFillColor(26,24,16); doc.rect(8,y,194,16,'F');
+    doc.setFont(F,'bold'); doc.setFontSize(10); doc.setTextColor(201,168,76);
+    doc.text('ОБЩО ТРУД + МАТЕРИАЛИ:',12,y+6);
+    doc.setFontSize(12); doc.setTextColor(228,201,126);
+    doc.text(grand.toFixed(2)+' €',200,y+6,{align:'right'});
+    doc.setFont(F,'normal'); doc.setFontSize(9); doc.setTextColor(180,160,100);
+    doc.text((grand*EUR2LV).toFixed(2)+' лв',200,y+13,{align:'right'});
+  } else if(mode === 'labor_only'){
+    doc.setFillColor(26,24,16); doc.rect(8,y,194,16,'F');
+    doc.setFont(F,'bold'); doc.setFontSize(10); doc.setTextColor(201,168,76);
+    doc.text('ОБЩО ТРУД:',12,y+6);
+    doc.setFontSize(12); doc.setTextColor(228,201,126);
+    doc.text(totalLabor.toFixed(2)+' €',200,y+6,{align:'right'});
+    doc.setFont(F,'normal'); doc.setFontSize(9); doc.setTextColor(180,160,100);
+    doc.text((totalLabor*EUR2LV).toFixed(2)+' лв',200,y+13,{align:'right'});
+  } else if(mode === 'mat_only'){
+    doc.setFillColor(26,24,16); doc.rect(8,y,194,16,'F');
+    doc.setFont(F,'bold'); doc.setFontSize(10); doc.setTextColor(201,168,76);
+    doc.text('ОБЩО МАТЕРИАЛИ:',12,y+6);
+    doc.setFontSize(12); doc.setTextColor(228,201,126);
+    doc.text(totalMat.toFixed(2)+' €',200,y+6,{align:'right'});
+    doc.setFont(F,'normal'); doc.setFontSize(9); doc.setTextColor(180,160,100);
+    doc.text((totalMat*EUR2LV).toFixed(2)+' лв',200,y+13,{align:'right'});
+  }
 
   const fname=(document.getElementById('pName').value||'oferta').replace(/\s+/g,'_');
   doc.save(fname+'-pomeshteniq.pdf');
