@@ -113,6 +113,14 @@ body {
     padding: 24px; gap: 32px;
 }
 #mainApp.visible { display: flex; }
+@media (max-width: 768px) {
+    #mainApp.visible {
+        overflow-y: auto;
+        max-height: 100vh;
+        justify-content: flex-start;
+        padding-top: 32px;
+    }
+}
 .logo { text-align: center; }
 .logo-title {
     font-family: 'Cinzel', serif; font-size: 2rem; font-weight: 900;
