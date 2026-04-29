@@ -348,6 +348,8 @@ window.dispatchEvent(new Event('fbReady'));
   <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:flex-end;">
     <button class="btn btn-outline" onclick="clearOffer()">🗑 Изчисти</button>
     <button class="btn btn-outline" onclick="saveOffer()">💾 Запази</button>
+    <button class="btn btn-outline" onclick="goToContract()">📜 Договор</button>
+    <button class="btn btn-outline" onclick="goToAvans()">💰 Аванси</button>
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
       <button class="btn btn-outline" onclick="printOffer()">🖨 Печат</button>
       <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer;white-space:nowrap;">
@@ -1494,6 +1496,16 @@ document.addEventListener('click', function(e){
   }
 });
 
+function goToContract(){
+  const name=encodeURIComponent(document.getElementById('client-name').value.trim());
+  const obj=encodeURIComponent(document.getElementById('client-address').value.trim());
+  window.location.href=`contract.html?name=${name}&object=${obj}`;
+}
+function goToAvans(){
+  const name=encodeURIComponent(document.getElementById('client-name').value.trim());
+  const obj=encodeURIComponent(document.getElementById('client-address').value.trim());
+  window.location.href=`avansov-otchet.html?name=${name}&object=${obj}`;
+}
 function toggleQuickTexts(){
   const panel = document.getElementById('qt-panel');
   const arrow = document.getElementById('qt-arrow');
