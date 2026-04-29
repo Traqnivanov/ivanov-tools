@@ -291,6 +291,13 @@
         footer { text-align: center; font-size: 0.72rem; color: var(--muted); padding-top: 24px; }
 
         .loading-overlay { position: fixed; inset: 0; background: rgba(240,244,248,0.85); display: flex; align-items: center; justify-content: center; z-index: 500; font-size: 1rem; color: var(--muted); font-weight: 600; letter-spacing: 0.05em; }
+
+        @media(max-width:480px){
+          body { padding-bottom: 88px; }
+          .header { padding: 16px; }
+          .stats-row { grid-template-columns: 1fr; }
+          .card { overflow-x: auto; }
+        }
     </style>
 </head>
 <body>
