@@ -809,5 +809,29 @@ function showToast(msg, type='') {
   .print-preview { border-radius: 0; padding: 20px; }
 }
 </style>
+
+<!-- ── BOTTOM NAV ── -->
+<style>
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:1000;background:#1e293b;border-top:1px solid #334155;display:flex;padding:0;padding-bottom:env(safe-area-inset-bottom);}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px 8px;text-decoration:none;color:#64748b;font-size:0.62rem;font-weight:600;letter-spacing:0.03em;transition:all 0.15s;gap:3px;cursor:pointer;border:none;background:none;font-family:inherit;}
+.nav-item:hover,.nav-item.active{color:#d9a441;}
+.nav-item .nav-icon{font-size:1.3rem;line-height:1;}
+@media print{.bottom-nav{display:none!important;}}
+</style>
+<nav class="bottom-nav">
+  <a class="nav-item" href="calculator.html" id="nav-calc"><span class="nav-icon">📐</span>Калкулатор</a>
+  <a class="nav-item" href="room.html" id="nav-room"><span class="nav-icon">🏠</span>Стая</a>
+  <a class="nav-item" href="offer.html" id="nav-offer"><span class="nav-icon">📋</span>Оферта</a>
+  <a class="nav-item" href="avansov-otchet.html" id="nav-avans"><span class="nav-icon">💰</span>Аванси</a>
+  <a class="nav-item" href="index.html" id="nav-home"><span class="nav-icon">🏗️</span>Меню</a>
+</nav>
+<script>
+(function(){
+  const page=location.pathname.split('/').pop()||'index.html';
+  const map={'calculator.html':'nav-calc','room.html':'nav-room','offer.html':'nav-offer','avansov-otchet.html':'nav-avans','index.html':'nav-home'};
+  const activeId=map[page];
+  if(activeId){const el=document.getElementById(activeId);if(el)el.classList.add('active');}
+})();
+</script>
 </body>
 </html>
