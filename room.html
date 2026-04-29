@@ -376,6 +376,7 @@ let activeRoom=null, activeSurf=null;
 let extraMats=[];
 let extraMarkup=0;
 let extraLaborMarkup=0;
+let editableMats=[];
 
 function addPartition(){
   const id=rc++;
@@ -824,6 +825,17 @@ function updateExtraMat(id,field,val){
   if(totCell) totCell.textContent=(m.unitPrice*m.qty).toFixed(2)+'€';
   calcAll();
 }
+function editMat(idx,field,val){
+  if(!editableMats[idx]) return;
+  editableMats[idx]._edited=true;
+  if(field==='qty') editableMats[idx].qty=parseFloat(val)||0;
+  else editableMats[idx][field]=val;
+  editableMats[idx].total=editableMats[idx].unitPrice*(editableMats[idx].qty||0);
+  const cell=document.getElementById('emat-tot-'+idx);
+  if(cell) cell.textContent=editableMats[idx].total.toFixed(2)+'€';
+  saveState();
+}
+
 function renderExtraMats(){
   const tbody=document.getElementById('extraMatBody');
   const empty=document.getElementById('extraMatEmpty');
@@ -989,14 +1001,43 @@ function _calcAll(){
   if(pt_fina>0)         totalMat+=ptM('p_fina',    pt_fina);
   if(pt_fugi>0)         totalMat+=ptM('p_fugi',    pt_fugi);
 
-  const extraTotal=extraMats.reduce((s,m)=>s+(m.unitPrice*m.qty),0);
-  const markupAmt=(totalMat+extraTotal)*extraMarkup/100;
+  // ── Синхронизирай editableMats — пази ръчни промени ──
+  const autoKeys=matRows.map((_,i)=>i+'_'+matRows[i].name);
+  // Ако броят или редът се е променил — рестартирай (нова стая/услуга)
+  const prevKeys=editableMats.filter(r=>r._auto).map(r=>r._autoKey);
+  const keysChanged=JSON.stringify(autoKeys)!==JSON.stringify(prevKeys);
+  if(keysChanged){
+    // Замени само автоматичните, запази ръчно добавените
+    const manual=editableMats.filter(r=>!r._auto);
+    editableMats=[
+      ...matRows.map((r,i)=>({...r,_auto:true,_autoKey:autoKeys[i],_edited:false})),
+      ...manual
+    ];
+  } else {
+    // Обнови само qty/unitPrice на нередактираните
+    matRows.forEach((r,i)=>{
+      const em=editableMats.find(e=>e._autoKey===autoKeys[i]);
+      if(em&&!em._edited){ em.qty=r.qty; em.unitPrice=r.unitPrice; em.unit=r.unit; em.total=r.total; }
+    });
+  }
+  // Добави extraMats към editableMats ако не са там
+  extraMats.forEach(m=>{
+    if(!editableMats.find(e=>e._extraId===m.id)){
+      editableMats.push({name:m.name||'—',qty:m.qty,unit:m.unit,unitPrice:m.unitPrice,total:m.unitPrice*m.qty,_auto:false,_extraId:m.id});
+    }
+  });
+  // Изчисли totalMat от editableMats
+  const editTotal=editableMats.reduce((s,r)=>s+(r.unitPrice*(r.qty||0)),0);
+  totalMat=editTotal;
+
+  const extraTotal=0; // вече включено в totalMat чрез editableMats
+  const markupAmt=totalMat*extraMarkup/100;
   const laborMarkupAmt=totalLabor*extraLaborMarkup/100;
-  const grand=totalLabor+laborMarkupAmt+totalMat+extraTotal+markupAmt;
+  const grand=totalLabor+laborMarkupAmt+totalMat+markupAmt;
 
   // Update footer
   document.getElementById('fLabor').textContent=(totalLabor+laborMarkupAmt).toFixed(2)+' €';
-  document.getElementById('fMat').textContent=(totalMat+extraTotal+markupAmt).toFixed(2)+' €';
+  document.getElementById('fMat').textContent=(totalMat+markupAmt).toFixed(2)+' €';
   document.getElementById('fGrand').textContent=grand.toFixed(2)+' €';
   document.getElementById('fLv').textContent=(grand*EUR2LV).toFixed(2)+' лв';
   if(grand>0) document.getElementById('fLvChip').style.display='flex';
@@ -1019,36 +1060,35 @@ function _calcAll(){
         <div class="spec-total">Общо стая <span>${rt.toFixed(2)}€</span></div>
       </div>`;
     });
-    if(matRows.length>0) html+=`<div style="margin-top:8px;padding-top:8px;border-top:1px solid #334155;">
-      <div class="spec-title" style="margin-bottom:6px;">Материали</div>
+    const inp2='background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:4px;padding:2px 5px;font-size:0.72rem;box-sizing:border-box;width:100%;';
+    if(editableMats.length>0) html+=`<div style="margin-top:8px;padding-top:8px;border-top:1px solid #334155;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <div class="spec-title">Материали</div>
+        <div style="font-size:0.65rem;color:#475569;font-style:italic;">редактируеми</div>
+      </div>
       <table style="width:100%;border-collapse:collapse;font-size:0.72rem;">
         <thead><tr>
           <th style="text-align:left;color:#64748b;padding:3px 4px;border-bottom:1px solid #334155;">Материал</th>
-          <th style="text-align:right;color:#64748b;padding:3px 4px;border-bottom:1px solid #334155;">Кол.</th>
+          <th style="text-align:center;color:#64748b;padding:3px 4px;border-bottom:1px solid #334155;width:52px;">Бр</th>
           <th style="text-align:right;color:#64748b;padding:3px 4px;border-bottom:1px solid #334155;">Сума</th>
         </tr></thead>
         <tbody>
-          ${matRows.map(r=>`<tr>
-            <td style="padding:3px 4px;color:#94a3b8;">${r.name}</td>
-            <td style="padding:3px 4px;text-align:right;color:#64748b;white-space:nowrap;">${r.qty} ${r.unit}</td>
-            <td style="padding:3px 4px;text-align:right;color:#d9a441;font-weight:600;white-space:nowrap;">${r.total.toFixed(2)}€</td>
-          </tr>`).join('')}
-          ${extraMats.filter(m=>m.name||m.unitPrice>0).map(m=>`<tr>
-            <td style="padding:3px 4px;color:#94a3b8;">${m.name||'—'}</td>
-            <td style="padding:3px 4px;text-align:right;color:#64748b;white-space:nowrap;">1 ${m.unit}</td>
-            <td style="padding:3px 4px;text-align:right;color:#d9a441;font-weight:600;white-space:nowrap;">${(m.unitPrice*m.qty).toFixed(2)}€</td>
+          ${editableMats.map((r,i)=>`<tr>
+            <td style="padding:2px 3px;"><input value="${r.name}" oninput="editMat(${i},'name',this.value)" style="${inp2}"></td>
+            <td style="padding:2px 3px;width:52px;"><input type="number" value="${r.qty}" min="0" step="1" oninput="editMat(${i},'qty',this.value)" style="${inp2}text-align:center;"></td>
+            <td style="padding:2px 4px;text-align:right;color:#d9a441;font-weight:600;white-space:nowrap;" id="emat-tot-${i}">${(r.unitPrice*(r.qty||0)).toFixed(2)}€</td>
           </tr>`).join('')}
         </tbody>
         <tfoot><tr>
           <td colspan="2" style="padding:4px;border-top:1px solid #334155;color:#94a3b8;font-weight:700;">Общо материали</td>
-          <td style="padding:4px;border-top:1px solid #334155;text-align:right;color:#60a5fa;font-weight:700;">${(totalMat+extraTotal+markupAmt).toFixed(2)}€</td>
+          <td style="padding:4px;border-top:1px solid #334155;text-align:right;color:#60a5fa;font-weight:700;">${(totalMat+markupAmt).toFixed(2)}€</td>
         </tr></tfoot>
       </table>
     </div>`;
     specContent.innerHTML=html;
     document.getElementById('grandBox').style.display='block';
     document.getElementById('dGrandLabor').textContent=(totalLabor+laborMarkupAmt).toFixed(2)+' €';
-    document.getElementById('dGrandMat').textContent=(totalMat+extraTotal+markupAmt).toFixed(2)+' €';
+    document.getElementById('dGrandMat').textContent=(totalMat+markupAmt).toFixed(2)+' €';
     document.getElementById('dGrand').textContent=grand.toFixed(2)+' €';
     document.getElementById('dGrandLv').textContent=(grand*EUR2LV).toFixed(2)+' лв';
   }
@@ -1392,7 +1432,7 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
 // ── LOCAL STORAGE ──
 function saveState(){
   const state={
-    rooms,rc,extraMats,extraMarkup,extraLaborMarkup,
+    rooms,rc,extraMats,extraMarkup,extraLaborMarkup,editableMats,
     pName:document.getElementById('pName').value,
     pDate:document.getElementById('pDate').value,
     pLen:document.getElementById('pLen').value,
@@ -1407,6 +1447,7 @@ function loadState(){
     const s=JSON.parse(raw);
     rooms=(s.rooms||[]).map(r=>({...r, H: r.H==2.7 ? 0 : r.H})); rc=s.rc||0;
     extraMats=s.extraMats||[]; extraMarkup=s.extraMarkup||0; extraLaborMarkup=s.extraLaborMarkup||0;
+    editableMats=s.editableMats||[];
     if(s.pName) document.getElementById('pName').value=s.pName;
     if(s.pDate) document.getElementById('pDate').value=s.pDate;
     if(s.pLen)  document.getElementById('pLen').value=s.pLen;
