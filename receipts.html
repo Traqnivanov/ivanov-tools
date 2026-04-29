@@ -612,13 +612,12 @@ function collectFormData() {
   const amtStr = document.getElementById('fAmount').value;
   if (!client) { showToast('⚠ Въведи клиент!'); return null; }
   if (!object) { showToast('⚠ Въведи обект!'); return null; }
-  if (!amtStr || parseFloat(amtStr) <= 0) { showToast('⚠ Въведи сума!'); return null; }
   const tc = TYPES[currentType];
   if (tc.descField) {
     const desc = (document.getElementById('fDesc').value||'').trim();
     if (!desc) { showToast('⚠ Въведи описание!'); return null; }
   }
-  const amount = parseFloat(amtStr);
+  const amount = parseFloat(amtStr) || 0;
   const currency = document.getElementById('fCurrency').value;
   const data = {
     type: currentType,
@@ -627,7 +626,7 @@ function collectFormData() {
     contractNo: (document.getElementById('fContract').value||'').trim(),
     date: fromInputDate(document.getElementById('fDate').value),
     amount, currency,
-    amountWords: amountInWords(amount, currency),
+    amountWords: amount > 0 ? amountInWords(amount, currency) : '',
     note: (document.getElementById('fNote').value||'').trim()
   };
   if (tc.descField) data.description = (document.getElementById('fDesc').value||'').trim();
@@ -752,15 +751,23 @@ async function generateDigitalPDF(id) {
   }
 
   // AMOUNT
-  const amtBGN = r.currency==='EUR' ? ' / '+fmtNum(parseFloat(r.amount)*EUR_BGN)+' лв.' : '';
+  const amtBGN = (r.amount>0 && r.currency==='EUR') ? ' / '+fmtNum(parseFloat(r.amount)*EUR_BGN)+' лв.' : '';
   fill(GOLD_LITE); drw(GOLD_MID); lw(0.4); doc.roundedRect(M,y,cW,24,2,2,'FD');
   fill(GOLD_MID); doc.roundedRect(M,y,3,24,1,1,'F');
   doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED);
   doc.text(tc.sumLabel.toUpperCase(),M+8,y+7);
   doc.setFont(F,'bold'); doc.setFontSize(16); col(DARK);
-  doc.text(fmtNum(r.amount)+' '+r.currency+amtBGN,M+8,y+17);
-  doc.setFont(F,'italic'); doc.setFontSize(7.5); col(MUTED);
-  doc.text('С думи: '+r.amountWords,M+8,y+23);
+  if(r.amount>0){
+    doc.text(fmtNum(r.amount)+' '+r.currency+amtBGN,M+8,y+17);
+    doc.setFont(F,'italic'); doc.setFontSize(7.5); col(MUTED);
+    doc.text('С думи: '+r.amountWords,M+8,y+23);
+  } else {
+    // Празно поле за ръчно попълване
+    lw(0.5); col(GOLD_MID);
+    doc.line(M+8,y+18,M+cW-8,y+18);
+    doc.setFont(F,'italic'); doc.setFontSize(7); col(MUTED);
+    doc.text('(попълва се на ръка)',M+8,y+23);
+  }
   y+=30;
 
   // REMAINING
@@ -820,7 +827,6 @@ async function generateDigitalPDF(id) {
   // FOOTER LINE
   fill(GOLD_MID); doc.rect(M,y,cW,0.5,'F'); y+=5;
   doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED);
-  doc.text('Генерирано: '+today(),M,y);
   doc.text('Работим с договор и писмена гаранция · ivanov-remonti.com',W-M,y,{align:'right'});
 
   const safe=(r.client||'klient').replace(/\s+/g,'_').replace(/[^\u0400-\u04FFa-zA-Z0-9_-]/g,'');
@@ -884,11 +890,17 @@ async function generateOfficialPDF(id) {
     doc.text(r.client,afterName+doc.getTextWidth('  получи от  '),y);
     y+=9;
     doc.setFont(F,'normal'); doc.setFontSize(9); col(MID); doc.text('сумата от:',M,y); y+=9;
-    doc.setFont(F,'bold'); doc.setFontSize(18); col(DARK);
-    const amtBGN = r.currency==='EUR'?' / '+fmtNum(parseFloat(r.amount)*EUR_BGN)+' лв.':'';
-    doc.text(fmtNum(r.amount)+' '+r.currency+amtBGN,M,y); y+=8;
-    doc.setFont(F,'italic'); doc.setFontSize(8.5); col(MID);
-    doc.text('(с думи: '+r.amountWords+')',M,y); y+=10;
+    const amtBGN = (r.amount>0 && r.currency==='EUR')?' / '+fmtNum(parseFloat(r.amount)*EUR_BGN)+' лв.':'';
+    if(r.amount>0){
+      doc.setFont(F,'bold'); doc.setFontSize(18); col(DARK);
+      doc.text(fmtNum(r.amount)+' '+r.currency+amtBGN,M,y); y+=8;
+      doc.setFont(F,'italic'); doc.setFontSize(8.5); col(MID);
+      doc.text('(с думи: '+r.amountWords+')',M,y); y+=10;
+    } else {
+      lw(0.6); col(DARK); doc.line(M,y+2,M+cW,y+2); y+=8;
+      doc.setFont(F,'italic'); doc.setFontSize(8); col(MID);
+      doc.text('(попълва се на ръка)',M,y); y+=10;
+    }
     doc.setFont(F,'normal'); doc.setFontSize(10); col(DARK);
     doc.text(verb,M,y); y+=7;
     doc.setFont(F,'bold'); doc.text(r.object,M,y); y+=8;
