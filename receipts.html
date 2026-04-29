@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IVANOV REMONTI – Бележки и разписки</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  const firebaseConfig = {
+    apiKey: "AIzaSyDpgJazYtTHvU-fWuWlAQnbYTLOGcfnkhA",
+    authDomain: "ivanov-tools.firebaseapp.com",
+    projectId: "ivanov-tools",
+    storageBucket: "ivanov-tools.firebasestorage.app",
+    messagingSenderId: "212062400948",
+    appId: "1:212062400948:web:e52380c5096e8dba68c2e1"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  window._db = db;
+  window._fsLib = { collection, doc, setDoc, getDocs, deleteDoc };
+  window._firebaseReady = true;
+  window.dispatchEvent(new Event('firebaseReady'));
+</script>
+<style>
+:root {
+  --gold:#e9a825;--gold-dim:#c8891a;--gold-lite:#fffbf0;
+  --dark:#141c2b;--dark2:#1e2a3e;--dark3:#263045;
+  --mid:#3d5166;--muted:#6b85a0;--bg:#f0f4f8;--bg2:#e6ecf3;
+  --white:#fff;--border:#d5e0ea;
+  --green:#1a7a52;--green-bg:#e6f7ef;
+  --blue:#1a5fa8;--blue-bg:#e8f1fb;
+  --purple:#6b21a8;--purple-bg:#f3e8ff;
+  --orange:#c84b00;--orange-bg:#fff0e6;
+  --radius:18px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--dark);min-height:100vh;padding:24px 16px 80px;}
+.app{max-width:1100px;margin:0 auto;}
+
+/* HEADER */
+.header{background:linear-gradient(135deg,#0d1117 0%,#1a1f2e 50%,#0d1117 100%);border-radius:24px;padding:22px 32px;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;box-shadow:0 8px 40px rgba(0,0,0,.45),inset 0 1px 0 rgba(233,168,37,.15);border:1px solid rgba(233,168,37,.12);flex-wrap:wrap;gap:12px;}
+.logo{font-family:'Cinzel',serif;font-size:1.75rem;font-weight:900;color:#fff;letter-spacing:.08em;text-shadow:0 2px 12px rgba(233,168,37,.3);}
+.logo span{color:var(--gold);}
+.logo-sub{font-size:.65rem;color:rgba(233,168,37,.7);letter-spacing:.22em;text-transform:uppercase;border-top:1px solid rgba(233,168,37,.25);padding-top:4px;margin-top:2px;}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.phone-badge{background:rgba(233,168,37,.15);border:1px solid rgba(233,168,37,.3);color:var(--gold);padding:8px 18px;border-radius:40px;font-weight:600;font-size:.88rem;}
+.header-btn{background:rgba(233,168,37,.2);border:1px solid rgba(233,168,37,.4);color:var(--gold);padding:8px 18px;border-radius:40px;cursor:pointer;font-size:.85rem;font-weight:700;transition:all .2s;font-family:'DM Sans',sans-serif;}
+.header-btn:hover{background:rgba(233,168,37,.35);}
+.sync-status{font-size:.72rem;color:rgba(255,255,255,.4);padding:6px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.08);}
+.sync-status.synced{color:#4ade80;border-color:rgba(74,222,128,.3);}
+.sync-status.syncing{color:var(--gold);border-color:rgba(233,168,37,.3);}
+
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:300px 1fr;gap:16px;align-items:start;}
+@media(max-width:800px){.layout{grid-template-columns:1fr;}}
+
+/* PANELS */
+.panel{background:var(--white);border-radius:var(--radius);border:1.5px solid var(--border);overflow:hidden;}
+.panel-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.panel-title{font-weight:700;font-size:.82rem;color:var(--mid);text-transform:uppercase;letter-spacing:.07em;}
+.btn-new{background:var(--dark2);color:var(--white);border:none;border-radius:30px;padding:7px 14px;font-size:.78rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .2s;}
+.btn-new:hover{background:var(--dark3);}
+
+/* TYPE TABS */
+.type-tabs{display:flex;border-bottom:1px solid var(--border);}
+.type-tab{flex:1;padding:8px 4px;text-align:center;font-size:.68rem;font-weight:700;color:var(--muted);cursor:pointer;border:none;background:none;font-family:'DM Sans',sans-serif;border-bottom:2px solid transparent;transition:all .15s;}
+.type-tab.active{color:var(--dark);border-bottom-color:var(--gold);}
+
+/* RECEIPT LIST */
+.receipt-list{max-height:540px;overflow-y:auto;}
+.receipt-item{padding:11px 18px;border-bottom:1px solid #f0f4f8;cursor:pointer;transition:background .15s;display:flex;gap:10px;align-items:center;}
+.receipt-item:hover{background:#f8fafc;}
+.receipt-item.active{background:#fffbf0;border-left:3px solid var(--gold);}
+.type-badge{font-size:.62rem;font-weight:800;padding:3px 7px;border-radius:6px;flex-shrink:0;letter-spacing:.04em;}
+.b-АВ{background:var(--green-bg);color:var(--green);}
+.b-РМ{background:var(--blue-bg);color:var(--blue);}
+.b-РЕ{background:var(--purple-bg);color:var(--purple);}
+.b-ДР{background:var(--orange-bg);color:var(--orange);}
+.ri-info{flex:1;min-width:0;}
+.ri-name{font-weight:600;font-size:.86rem;color:var(--dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ri-meta{font-size:.72rem;color:var(--muted);margin-top:2px;}
+.ri-amount{font-weight:700;font-size:.82rem;color:var(--dark);flex-shrink:0;}
+.empty-list{padding:32px 18px;text-align:center;color:var(--muted);font-size:.84rem;}
+
+/* FORM PANEL */
+.form-panel{background:var(--white);border-radius:var(--radius);border:1.5px solid var(--border);padding:24px;}
+.form-section-title{font-size:.72rem;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;margin-top:18px;}
+.form-section-title:first-child{margin-top:0;}
+
+/* TYPE SELECTOR */
+.type-selector{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;}
+.type-btn{border:1.5px solid var(--border);background:var(--white);border-radius:10px;padding:10px 12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;text-align:left;}
+.type-btn:hover{border-color:var(--gold);background:var(--gold-lite);}
+.tb-code{font-size:.62rem;font-weight:800;letter-spacing:.07em;margin-bottom:2px;}
+.tb-label{font-size:.78rem;font-weight:600;color:var(--dark);}
+.type-btn.sel-АВ{border-color:var(--green);background:var(--green-bg);}
+.type-btn.sel-АВ .tb-code{color:var(--green);}
+.type-btn.sel-РМ{border-color:var(--blue);background:var(--blue-bg);}
+.type-btn.sel-РМ .tb-code{color:var(--blue);}
+.type-btn.sel-РЕ{border-color:var(--purple);background:var(--purple-bg);}
+.type-btn.sel-РЕ .tb-code{color:var(--purple);}
+.type-btn.sel-ДР{border-color:var(--orange);background:var(--orange-bg);}
+.type-btn.sel-ДР .tb-code{color:var(--orange);}
+.tb-code-АВ{color:var(--green);}
+.tb-code-РМ{color:var(--blue);}
+.tb-code-РЕ{color:var(--purple);}
+.tb-code-ДР{color:var(--orange);}
+
+/* FORM FIELDS */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px;}
+.fg{display:flex;flex-direction:column;gap:5px;}
+.fg.full{grid-column:1/-1;}
+label{font-size:.76rem;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.05em;}
+input,textarea,select{border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;font-size:.9rem;font-family:'DM Sans',sans-serif;color:var(--dark);background:var(--white);outline:none;transition:border .15s;width:100%;}
+input:focus,textarea:focus,select:focus{border-color:var(--gold);}
+textarea{resize:vertical;min-height:68px;}
+.amount-row{display:grid;grid-template-columns:1fr 80px;gap:8px;}
+.words-box{background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:.8rem;color:var(--mid);font-style:italic;margin-top:4px;min-height:32px;}
+.opt-badge{font-size:.62rem;font-weight:600;color:var(--muted);background:var(--bg2);border-radius:4px;padding:2px 6px;margin-left:6px;vertical-align:middle;text-transform:none;letter-spacing:0;}
+
+/* BUTTONS */
+.action-row{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;}
+.btn-save{background:linear-gradient(135deg,var(--dark2),var(--dark3));color:var(--white);border:none;border-radius:12px;padding:12px 22px;font-weight:700;font-size:.88rem;cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity .2s;}
+.btn-save:hover{opacity:.85;}
+.btn-pdf-d{background:linear-gradient(135deg,#0d1117,#1e2a3e);color:var(--gold);border:1px solid rgba(233,168,37,.4);border-radius:12px;padding:12px 18px;font-weight:700;font-size:.85rem;cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity .2s;}
+.btn-pdf-d:hover{opacity:.8;}
+.btn-pdf-o{background:var(--white);color:var(--dark);border:1.5px solid var(--border);border-radius:12px;padding:12px 18px;font-weight:700;font-size:.85rem;cursor:pointer;font-family:'DM Sans',sans-serif;transition:border-color .2s;}
+.btn-pdf-o:hover{border-color:var(--mid);}
+.btn-del{background:#fdecea;color:#c0392b;border:1px solid #f5c6c6;border-radius:12px;padding:12px 16px;font-weight:600;font-size:.85rem;cursor:pointer;font-family:'DM Sans',sans-serif;margin-left:auto;}
+.btn-del:hover{background:#f5c6c6;}
+
+/* VIEW */
+.view-header{display:flex;align-items:center;gap:12px;margin-bottom:18px;}
+.view-number{font-size:1.1rem;font-weight:700;color:var(--dark);}
+.view-date{font-size:.82rem;color:var(--muted);}
+.view-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;margin-bottom:14px;}
+.vg-label{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px;}
+.vg-value{font-size:.92rem;color:var(--dark);font-weight:500;}
+.view-amount-box{background:linear-gradient(135deg,#fffbf0,#fff8e1);border:1px solid rgba(233,168,37,.3);border-radius:12px;padding:14px 18px;margin-bottom:14px;}
+.view-amount-val{font-size:1.7rem;font-weight:700;color:var(--dark);}
+.view-amount-words{font-size:.8rem;color:var(--muted);font-style:italic;margin-top:4px;}
+.view-desc-box{background:#f8fafc;border-left:3px solid var(--mid);border-radius:0 10px 10px 0;padding:10px 14px;margin-bottom:14px;}
+.view-note-box{background:var(--gold-lite);border-left:3px solid var(--gold);border-radius:0 10px 10px 0;padding:10px 14px;margin-bottom:14px;font-size:.86rem;color:var(--dark);}
+.divider{height:1px;background:var(--border);margin:16px 0;}
+
+/* EMPTY */
+.empty-state{padding:60px 24px;text-align:center;}
+.es-icon{font-size:3rem;margin-bottom:14px;}
+.es-text{color:var(--muted);font-size:.9rem;line-height:1.7;}
+
+/* TOAST */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--dark2);color:var(--white);padding:10px 22px;border-radius:30px;font-size:.85rem;font-weight:600;opacity:0;transition:all .3s;pointer-events:none;z-index:9999;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:1000;background:#1e293b;border-top:1px solid #334155;display:flex;padding-bottom:env(safe-area-inset-bottom);}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px 8px;text-decoration:none;color:#64748b;font-size:.58rem;font-weight:600;letter-spacing:.03em;transition:all .15s;gap:3px;border:none;background:none;font-family:inherit;cursor:pointer;}
+.nav-item:hover,.nav-item.active{color:#d9a441;}
+.nav-icon{font-size:1.25rem;line-height:1;}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="header">
+  <div>
+    <div class="logo">IVANOV <span>REMONTI</span></div>
+    <div class="logo-sub">Бележки и разписки</div>
+  </div>
+  <div class="header-right">
+    <span class="phone-badge">0877 810 418</span>
+    <button class="header-btn" onclick="showForm()">+ Нова бележка</button>
+    <span class="sync-status" id="syncStatus">–</span>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- LEFT: HISTORY -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">История</span>
+      <button class="btn-new" onclick="showForm()">+ Нова</button>
+    </div>
+    <div class="type-tabs">
+      <button class="type-tab active" onclick="filterType('all',this)">Всички</button>
+      <button class="type-tab" onclick="filterType('АВ',this)">АВ</button>
+      <button class="type-tab" onclick="filterType('РМ',this)">РМ</button>
+      <button class="type-tab" onclick="filterType('РЕ',this)">РЕ</button>
+      <button class="type-tab" onclick="filterType('ДР',this)">ДР</button>
+    </div>
+    <div class="receipt-list" id="receiptList"><div class="empty-list">Зареждане...</div></div>
+  </div>
+
+  <!-- RIGHT: FORM / VIEW -->
+  <div class="panel form-panel" id="rightPanel">
+    <div class="empty-state">
+      <div class="es-icon">📝</div>
+      <div class="es-text">Изберете бележка от историята<br>или създайте нова.</div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<nav class="bottom-nav">
+  <a class="nav-item" href="calculator.html"><span class="nav-icon">📐</span>Калкулатор</a>
+  <a class="nav-item" href="room.html"><span class="nav-icon">🏠</span>Стая</a>
+  <a class="nav-item" href="offer.html"><span class="nav-icon">📋</span>Оферта</a>
+  <a class="nav-item" href="avansov-otchet.html"><span class="nav-icon">💰</span>Аванси</a>
+  <a class="nav-item active" href="receipts.html"><span class="nav-icon">📝</span>Бележки</a>
+  <a class="nav-item" href="index.html"><span class="nav-icon">🏗️</span>Меню</a>
+</nav>
+
+<script>
+// ── TYPE CONFIG ──
+const TYPES = {
+  'АВ': {
+    label: 'Авансова бележка',
+    descField: false, termField: false,
+    sumLabel: 'Получена сума',
+    notePlaceholder: 'напр. Остатъкът се изплаща поетапно...',
+    officialTitle: 'АВАНСОВА БЕЛЕЖКА',
+    sigLeft: 'ПРЕДАЛ (Възложител)', sigRight: 'ПОЛУЧИЛ (Изпълнител)',
+    footnotes: ['Тази бележка е неразделна част от горепосочения договор.']
+  },
+  'РМ': {
+    label: 'Разписка за материали',
+    descField: false, termField: false,
+    sumLabel: 'Получена сума за материали',
+    notePlaceholder: 'напр. Касовите бележки са приложени...',
+    officialTitle: 'РАЗПИСКА ЗА СРЕДСТВА ЗА МАТЕРИАЛИ',
+    sigLeft: 'ПРЕДАЛ (Възложител)', sigRight: 'ПОЛУЧИЛ (Изпълнител)',
+    footnotes: [
+      'Тази разписка е неразделна част от горепосочения договор.',
+      'Касовите бележки за изразходваните средства се прилагат към настоящата разписка.'
+    ]
+  },
+  'РЕ': {
+    label: 'Разписка за завършен етап',
+    descField: true, termField: false,
+    descLabel: 'Описание на приетата дейност',
+    descPlaceholder: 'напр. шпакловка на хол завършена, монтаж ГК таван...',
+    sumLabel: 'Стойност на приетия етап',
+    notePlaceholder: 'напр. Работата е приета без забележки...',
+    officialTitle: 'РАЗПИСКА ЗА ЗАВЪРШЕН ЕТАП',
+    sigLeft: 'ПРИЕЛ (Възложител)', sigRight: 'ИЗПЪЛНИЛ (Изпълнител)',
+    footnotes: ['Тази разписка е неразделна част от горепосочения договор.']
+  },
+  'ДР': {
+    label: 'Допълнителна работа',
+    descField: true, termField: true,
+    descLabel: 'Описание на допълнителната дейност',
+    descPlaceholder: 'напр. боядисване на входна врата, монтаж щори...',
+    sumLabel: 'Договорена цена',
+    notePlaceholder: 'напр. При забавяне срокът на договора се удължава...',
+    officialTitle: 'БЕЛЕЖКА ЗА ДОПЪЛНИТЕЛНА РАБОТА',
+    sigLeft: 'ВЪЗЛОЖИЛ (Клиент)', sigRight: 'ИЗПЪЛНИЛ (Изпълнител)',
+    footnotes: ['Тази бележка е неразделна част от горепосочения договор.']
+  }
+};
+
+const EUR_BGN = 1.95583;
+
+// ── NUMBER TO WORDS (BG) ──
+function numToWordsBG(n) {
+  if (n === 0) return 'нула';
+  const ones = ['','едно','две','три','четири','пет','шест','седем','осем','девет',
+    'десет','единадесет','дванадесет','тринадесет','четиринадесет','петнадесет',
+    'шестнадесет','седемнадесет','осемнадесет','деветнадесет'];
+  const tens = ['','','двадесет','тридесет','четиридесет','петдесет','шестдесет','седемдесет','осемдесет','деветдесет'];
+  const hundreds = ['','сто','двеста','триста','четиристотин','петстотин','шестстотин','седемстотин','осемстотин','деветстотин'];
+  let r = '';
+  if (n >= 1000) {
+    const th = Math.floor(n / 1000);
+    if (th === 1) r += 'хиляда ';
+    else if (th === 2) r += 'две хиляди ';
+    else if (th < 20) r += ones[th] + ' хиляди ';
+    else { const t=Math.floor(th/10),o=th%10; r += tens[t]+(o?' и '+ones[o]:'')+' хиляди '; }
+    n %= 1000;
+  }
+  if (n >= 100) { r += hundreds[Math.floor(n/100)]+' '; n%=100; if(n>0) r+='и '; }
+  if (n >= 20) { r += tens[Math.floor(n/10)]; n%=10; if(n>0) r+=' и '+ones[n]; r+=' '; }
+  else if (n > 0) r += ones[n]+' ';
+  return r.trim();
+}
+
+function amountInWords(amount, currency) {
+  const int = Math.floor(amount);
+  const dec = Math.round((amount - int) * 100);
+  let w = numToWordsBG(int);
+  if (currency === 'EUR') { w += ' евро'; if(dec>0) w += ' и '+numToWordsBG(dec)+' цента'; }
+  else { w += ' лева'; if(dec>0) w += ' и '+numToWordsBG(dec)+' стотинки'; }
+  return w.charAt(0).toUpperCase() + w.slice(1);
+}
+
+function fmtNum(n) { return parseFloat(n).toFixed(2).replace('.', ','); }
+function today() {
+  const d = new Date();
+  return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear();
+}
+function fromInputDate(d) {
+  if (!d) return '';
+  const p = d.split('-');
+  return p[2]+'.'+p[1]+'.'+p[0];
+}
+
+// ── STATE ──
+let allReceipts = [];
+let filterCurrent = 'all';
+let selectedId = null;
+let currentType = 'АВ';
+
+// ── FIREBASE ──
+async function loadReceipts() {
+  setSyncStatus('syncing');
+  try {
+    const { collection, getDocs } = window._fsLib;
+    const snap = await getDocs(collection(window._db, 'receipts'));
+    allReceipts = [];
+    snap.forEach(d => allReceipts.push({id: d.id, ...d.data()}));
+    allReceipts.sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+    setSyncStatus('synced');
+    renderList();
+  } catch(e) {
+    setSyncStatus('error');
+    console.error(e);
+  }
+}
+
+async function saveReceipt(data) {
+  const { collection, doc, setDoc } = window._fsLib;
+  const id = data.id || 'REC_'+Date.now();
+  data.id = id;
+  data.createdAt = new Date().toISOString();
+  await setDoc(doc(collection(window._db,'receipts'), id), data);
+  return id;
+}
+
+async function deleteReceipt(id) {
+  const { collection, doc, deleteDoc } = window._fsLib;
+  await deleteDoc(doc(collection(window._db,'receipts'), id));
+}
+
+function nextNumber(type) {
+  const nums = allReceipts.filter(r => r.type===type).map(r => {
+    const m = (r.number||'').match(/\d+$/);
+    return m ? parseInt(m[0]) : 0;
+  });
+  const max = nums.length ? Math.max(...nums) : 0;
+  return type+'-'+String(max+1).padStart(3,'0');
+}
+
+function setSyncStatus(s) {
+  const el = document.getElementById('syncStatus');
+  el.className = 'sync-status '+(s==='synced'?'synced':s==='syncing'?'syncing':'');
+  el.textContent = s==='synced'?'✓ Синхронизирано':s==='syncing'?'⟳ Зарежда...':'⚠ Грешка';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+// ── FILTER ──
+function filterType(type, btn) {
+  filterCurrent = type;
+  document.querySelectorAll('.type-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderList();
+}
+
+// ── RENDER LIST ──
+function renderList() {
+  const list = document.getElementById('receiptList');
+  const items = filterCurrent==='all' ? allReceipts : allReceipts.filter(r=>r.type===filterCurrent);
+  if (!items.length) {
+    list.innerHTML = '<div class="empty-list">Няма бележки'+(filterCurrent!=='all'?' от тип '+filterCurrent:'')+'.</div>';
+    return;
+  }
+  list.innerHTML = items.map(r=>`
+    <div class="receipt-item${r.id===selectedId?' active':''}" onclick="selectReceipt('${r.id}')">
+      <span class="type-badge b-${r.type}">${r.number||r.type}</span>
+      <div class="ri-info">
+        <div class="ri-name">${r.client||'—'}</div>
+        <div class="ri-meta">${r.date||''}</div>
+      </div>
+      <div class="ri-amount">${fmtNum(r.amount)} ${r.currency}</div>
+    </div>`).join('');
+}
+
+// ── SELECT ──
+function selectReceipt(id) {
+  selectedId = id;
+  renderList();
+  const r = allReceipts.find(x=>x.id===id);
+  if (r) renderView(r);
+}
+
+// ── VIEW ──
+function renderView(r) {
+  const tc = TYPES[r.type];
+  const words = r.amountWords || amountInWords(parseFloat(r.amount), r.currency);
+  const bgnStr = r.currency==='EUR'
+    ? `<span style="font-size:.85rem;color:var(--muted);margin-left:8px;">≈ ${fmtNum(parseFloat(r.amount)*EUR_BGN)} лв.</span>`
+    : '';
+
+  let extra = '';
+  if (tc.descField && r.description) {
+    extra += `<div class="view-desc-box"><div class="vg-label">${tc.descLabel}</div><div style="font-size:.9rem;margin-top:4px;">${r.description}</div></div>`;
+  }
+  if (tc.termField && r.term) {
+    extra += `<div style="margin-bottom:12px;"><div class="vg-label">Краен срок</div><div class="vg-value">${r.term}</div></div>`;
+  }
+  if (r.note) {
+    extra += `<div class="view-note-box"><span style="font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:3px;">Забележка</span>${r.note}</div>`;
+  }
+
+  document.getElementById('rightPanel').innerHTML = `
+    <div class="view-header">
+      <span class="type-badge b-${r.type}" style="font-size:.75rem;padding:5px 10px;">${r.number||r.type}</span>
+      <div>
+        <div class="view-number">${tc.label}</div>
+        <div class="view-date">${r.date||''}&nbsp;·&nbsp;Договор №: ${r.contractNo||'—'}</div>
+      </div>
+    </div>
+    <div class="view-grid">
+      <div><div class="vg-label">Клиент</div><div class="vg-value">${r.client}</div></div>
+      <div><div class="vg-label">Обект / Адрес</div><div class="vg-value">${r.object}</div></div>
+    </div>
+    <div class="view-amount-box">
+      <div class="vg-label">${tc.sumLabel}</div>
+      <div class="view-amount-val">${fmtNum(r.amount)} ${r.currency}${bgnStr}</div>
+      <div class="view-amount-words">${words}</div>
+    </div>
+    ${extra}
+    <div class="divider"></div>
+    <div class="action-row">
+      <button class="btn-pdf-d" onclick="generateDigitalPDF('${r.id}')">🎨 Дигитален PDF</button>
+      <button class="btn-pdf-o" onclick="generateOfficialPDF('${r.id}')">📄 Официален PDF</button>
+      <button class="btn-del" onclick="doDelete('${r.id}')">🗑 Изтрий</button>
+    </div>`;
+}
+
+// ── DELETE ──
+async function doDelete(id) {
+  if (!confirm('Изтриване на тази бележка?')) return;
+  await deleteReceipt(id);
+  allReceipts = allReceipts.filter(x=>x.id!==id);
+  selectedId = null;
+  renderList();
+  document.getElementById('rightPanel').innerHTML = `<div class="empty-state"><div class="es-icon">📝</div><div class="es-text">Изберете бележка или създайте нова.</div></div>`;
+  showToast('Бележката е изтрита.');
+}
+
+// ── FORM ──
+function showForm(type) {
+  selectedId = null;
+  currentType = type || 'АВ';
+  renderList();
+  renderForm();
+}
+
+function renderForm() {
+  const tc = TYPES[currentType];
+  const nextNum = nextNumber(currentType);
+
+  const typeButtons = Object.keys(TYPES).map(t=>`
+    <button class="type-btn${currentType===t?' sel-'+t:''}" onclick="switchType('${t}')">
+      <div class="tb-code tb-code-${t}">${t}</div>
+      <div class="tb-label">${TYPES[t].label}</div>
+    </button>`).join('');
+
+  const descField = tc.descField ? `
+    <div class="fg full">
+      <label>${tc.descLabel}</label>
+      <textarea id="fDesc" placeholder="${tc.descPlaceholder}"></textarea>
+    </div>` : '';
+
+  const termField = tc.termField ? `
+    <div class="fg">
+      <label>Краен срок</label>
+      <input type="date" id="fTerm">
+    </div>` : '<div class="fg"></div>';
+
+  document.getElementById('rightPanel').innerHTML = `
+    <div class="form-section-title">Тип бележка</div>
+    <div class="type-selector">${typeButtons}</div>
+
+    <div class="form-section-title" style="margin-top:20px;">Данни &nbsp;<span style="color:var(--gold);font-style:italic;font-size:.85rem;font-weight:400;text-transform:none;letter-spacing:0;">${nextNum}</span></div>
+    <div class="form-grid">
+      <div class="fg">
+        <label>Клиент (три имена)</label>
+        <input type="text" id="fClient" placeholder="Иван Петров Георгиев">
+      </div>
+      <div class="fg">
+        <label>Договор №</label>
+        <input type="text" id="fContract" placeholder="001 / 2026">
+      </div>
+      <div class="fg full">
+        <label>Обект / Адрес</label>
+        <input type="text" id="fObject" placeholder="бул. Витоша 48, ап. 7, София">
+      </div>
+      <div class="fg">
+        <label>Дата</label>
+        <input type="date" id="fDate" value="${new Date().toISOString().slice(0,10)}">
+      </div>
+      ${tc.descField ? '<div class="fg"></div>' : '<div class="fg"></div>'}
+      ${descField}
+      ${termField}
+      <div class="fg full">
+        <label>${tc.sumLabel}</label>
+        <div class="amount-row">
+          <input type="number" id="fAmount" placeholder="0.00" min="0" step="0.01" oninput="updateWords()">
+          <select id="fCurrency" onchange="updateWords()">
+            <option value="EUR">EUR</option>
+            <option value="BGN">лв.</option>
+          </select>
+        </div>
+        <div class="words-box" id="wordsBox">–</div>
+      </div>
+      <div class="fg full">
+        <label>Забележка <span class="opt-badge">незадължително</span></label>
+        <textarea id="fNote" placeholder="${tc.notePlaceholder}" style="min-height:52px;"></textarea>
+      </div>
+    </div>
+
+    <div class="action-row">
+      <button class="btn-save" onclick="doSave()">💾 Запази</button>
+      <button class="btn-pdf-d" onclick="doSaveAndPDF('digital')">🎨 Дигитален PDF</button>
+      <button class="btn-pdf-o" onclick="doSaveAndPDF('official')">📄 Официален PDF</button>
+    </div>`;
+}
+
+function switchType(t) { currentType = t; renderForm(); }
+
+function updateWords() {
+  const a = parseFloat(document.getElementById('fAmount').value);
+  const cur = document.getElementById('fCurrency').value;
+  const box = document.getElementById('wordsBox');
+  if (!a || isNaN(a)) { box.textContent = '–'; return; }
+  let txt = amountInWords(a, cur);
+  if (cur === 'EUR') txt += '  (≈ '+fmtNum(a*EUR_BGN)+' лв.)';
+  box.textContent = txt;
+}
+
+function collectFormData() {
+  const client = (document.getElementById('fClient').value||'').trim();
+  const object = (document.getElementById('fObject').value||'').trim();
+  const amtStr = document.getElementById('fAmount').value;
+  if (!client) { showToast('⚠ Въведи клиент!'); return null; }
+  if (!object) { showToast('⚠ Въведи обект!'); return null; }
+  if (!amtStr || parseFloat(amtStr) <= 0) { showToast('⚠ Въведи сума!'); return null; }
+  const tc = TYPES[currentType];
+  if (tc.descField) {
+    const desc = (document.getElementById('fDesc').value||'').trim();
+    if (!desc) { showToast('⚠ Въведи описание!'); return null; }
+  }
+  const amount = parseFloat(amtStr);
+  const currency = document.getElementById('fCurrency').value;
+  const data = {
+    type: currentType,
+    number: nextNumber(currentType),
+    client, object,
+    contractNo: (document.getElementById('fContract').value||'').trim(),
+    date: fromInputDate(document.getElementById('fDate').value),
+    amount, currency,
+    amountWords: amountInWords(amount, currency),
+    note: (document.getElementById('fNote').value||'').trim()
+  };
+  if (tc.descField) data.description = (document.getElementById('fDesc').value||'').trim();
+  if (tc.termField) data.term = fromInputDate(document.getElementById('fTerm').value);
+  return data;
+}
+
+async function doSave() {
+  const data = collectFormData();
+  if (!data) return;
+  try {
+    const id = await saveReceipt(data);
+    data.id = id;
+    allReceipts.unshift(data);
+    selectedId = id;
+    renderList();
+    renderView(data);
+    showToast('✓ Запазено — '+data.number);
+  } catch(e) { showToast('Грешка при запис!'); console.error(e); }
+}
+
+async function doSaveAndPDF(pdfType) {
+  const data = collectFormData();
+  if (!data) return;
+  try {
+    const id = await saveReceipt(data);
+    data.id = id;
+    allReceipts.unshift(data);
+    selectedId = id;
+    renderList();
+    renderView(data);
+    if (pdfType === 'digital') generateDigitalPDF(id);
+    else generateOfficialPDF(id);
+  } catch(e) { showToast('Грешка!'); console.error(e); }
+}
+
+// ── DIGITAL PDF ──
+function generateDigitalPDF(id) {
+  const r = allReceipts.find(x=>x.id===id);
+  if (!r) return;
+  const tc = TYPES[r.type];
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'mm', format:'a4'});
+  const W=210, M=14, cW=W-M*2, F='helvetica';
+  const DARK='#141c2b', GOLD='#e9a825', MUTED='#6b85a0', WHITE='#ffffff';
+  const LIGHT='#f8fafc', BORDER='#d5e0ea', GOLD_MID='#c8891a', GOLD_LITE='#fffbf0';
+  const TYPE_COLORS={АВ:'#1a7a52',РМ:'#1a5fa8',РЕ:'#6b21a8',ДР:'#c84b00'};
+  const TYPE_BKGS={АВ:'#e6f7ef',РМ:'#e8f1fb',РЕ:'#f3e8ff',ДР:'#fff0e6'};
+  const col=c=>doc.setTextColor(c);
+  const fill=c=>doc.setFillColor(c);
+  const drw=c=>doc.setDrawColor(c);
+  const lw=n=>doc.setLineWidth(n);
+
+  // HEADER
+  fill(DARK); doc.rect(0,0,W,33,'F');
+  fill(GOLD_MID); doc.rect(0,32.5,W,0.5,'F');
+  doc.setFont(F,'bold'); doc.setFontSize(22); col(WHITE); doc.text('IVANOV',M,18);
+  const iW = doc.getTextWidth('IVANOV ');
+  col(GOLD); doc.text('REMONTI',M+iW,18);
+  doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED);
+  doc.text('СТРОИТЕЛНИ УСЛУГИ · СОФИЯ И РЕГИОН',M,24.5);
+  doc.setFontSize(7.5); col(MUTED);
+  doc.text('0877 810 418',W-M,13,{align:'right'});
+  doc.text('ivanovremontibg@gmail.com',W-M,19,{align:'right'});
+  doc.text('ivanov-remonti.com',W-M,25,{align:'right'});
+
+  // TYPE BAR
+  const tColor=TYPE_COLORS[r.type], tBkg=TYPE_BKGS[r.type];
+  fill(tBkg); doc.rect(M,36,cW,10,'F');
+  fill(tColor); doc.rect(M,36,3,10,'F');
+  doc.setFont(F,'bold'); doc.setFontSize(10); col(tColor);
+  doc.text(tc.officialTitle, M+7, 42.5);
+  doc.setFont(F,'normal'); doc.setFontSize(8); col(MUTED);
+  doc.text(r.number+'  ·  '+r.date, W-M, 42.5, {align:'right'});
+
+  let y = 52;
+
+  // INFO
+  fill(LIGHT); drw(BORDER); lw(0.3); doc.roundedRect(M,y,cW,24,2,2,'FD');
+  fill(tColor); doc.roundedRect(M,y,3,24,1,1,'F');
+  const LX=M+8, VX=M+42, C2=M+cW/2+6;
+  doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED);
+  doc.text('КЛИЕНТ',LX,y+8); doc.text('ДОГОВОР №',LX,y+16); doc.text('ОБЕКТ / АДРЕС',C2,y+8);
+  doc.setFont(F,'bold'); doc.setFontSize(9.5); col(DARK); doc.text(r.client||'—',VX,y+8);
+  doc.setFont(F,'normal'); doc.setFontSize(8.5); col(DARK);
+  doc.text(r.contractNo||'—',VX,y+16);
+  doc.text(doc.splitTextToSize(r.object||'—',cW/2-10),C2+22,y+8);
+  y+=30;
+
+  // DESCRIPTION
+  if (tc.descField && r.description) {
+    const dLines = doc.splitTextToSize(r.description, cW-16);
+    const dH = 12 + dLines.length*5;
+    fill('#f0f4f8'); drw(BORDER); lw(0.3); doc.roundedRect(M,y,cW,dH,2,2,'FD');
+    fill(MUTED); doc.roundedRect(M,y,3,dH,1,1,'F');
+    doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED);
+    doc.text(tc.descLabel.toUpperCase(),M+8,y+6);
+    doc.setFont(F,'normal'); doc.setFontSize(8.5); col(DARK);
+    doc.text(dLines,M+8,y+11);
+    y += dH+6;
+  }
+
+  // AMOUNT
+  const amtBGN = r.currency==='EUR' ? ' / '+fmtNum(parseFloat(r.amount)*EUR_BGN)+' лв.' : '';
+  fill(GOLD_LITE); drw(GOLD_MID); lw(0.4); doc.roundedRect(M,y,cW,24,2,2,'FD');
+  fill(GOLD_MID); doc.roundedRect(M,y,3,24,1,1,'F');
+  doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED);
+  doc.text(tc.sumLabel.toUpperCase(),M+8,y+7);
+  doc.setFont(F,'bold'); doc.setFontSize(16); col(DARK);
+  doc.text(fmtNum(r.amount)+' '+r.currency+amtBGN,M+8,y+17);
+  doc.setFont(F,'italic'); doc.setFontSize(7.5); col(MUTED);
+  doc.text('С думи: '+r.amountWords,M+8,y+23);
+  y+=30;
+
+  // TERM
+  if (tc.termField && r.term) {
+    fill(LIGHT); drw(BORDER); lw(0.3); doc.roundedRect(M,y,cW,10,2,2,'FD');
+    doc.setFont(F,'normal'); doc.setFontSize(7.5); col(MUTED); doc.text('КРАЕН СРОК',M+8,y+7);
+    doc.setFont(F,'bold'); col(DARK); doc.text(r.term,M+50,y+7);
+    y+=16;
+  }
+
+  // NOTE
+  if (r.note && r.note.trim()) {
+    const nLines = doc.splitTextToSize(r.note, cW-16);
+    const nH = 10+nLines.length*5+4;
+    fill(GOLD_LITE); drw(GOLD_MID); lw(0.3); doc.roundedRect(M,y,cW,nH,2,2,'FD');
+    fill(GOLD_MID); doc.roundedRect(M,y,3,nH,1,1,'F');
+    doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED); doc.text('ЗАБЕЛЕЖКА',M+8,y+6);
+    doc.setFont(F,'normal'); doc.setFontSize(8.5); col(DARK); doc.text(nLines,M+8,y+11);
+    y+=nH+6;
+  }
+
+  // SIGNATURES
+  const sigW=(cW-10)/2, sigH=32, sigY=y;
+  // LEFT
+  fill(LIGHT); drw(BORDER); lw(0.3); doc.roundedRect(M,sigY,sigW,sigH,2,2,'FD');
+  fill(tColor); doc.roundedRect(M,sigY,3,sigH,1,1,'F');
+  doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED); doc.text(tc.sigLeft,M+8,sigY+7);
+  drw(DARK); lw(0.4); doc.line(M+8,sigY+24,M+sigW-6,sigY+24);
+  doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED); doc.text('Подпис',M+8,sigY+29);
+  doc.setFont(F,'bold'); col(DARK); doc.text(r.date||'',M+sigW-6,sigY+29,{align:'right'});
+  // RIGHT
+  const s2X = M+sigW+10;
+  fill(LIGHT); drw(BORDER); lw(0.3); doc.roundedRect(s2X,sigY,sigW,sigH,2,2,'FD');
+  fill(DARK); doc.roundedRect(s2X,sigY,3,sigH,1,1,'F');
+  doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED); doc.text(tc.sigRight,s2X+8,sigY+7);
+  doc.setFont(F,'bold'); doc.setFontSize(9); col(DARK); doc.text('Траян Иванов Първанов',s2X+8,sigY+14);
+  drw(DARK); lw(0.4); doc.line(s2X+8,sigY+24,s2X+sigW-6,sigY+24);
+  doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED); doc.text('Подпис',s2X+8,sigY+29);
+  doc.setFont(F,'bold'); col(DARK); doc.text(r.date||'',s2X+sigW-6,sigY+29,{align:'right'});
+  y += sigH+10;
+
+  // FOOTER LINE
+  fill(GOLD_MID); doc.rect(M,y,cW,0.5,'F'); y+=5;
+  doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED);
+  doc.text('Генерирано: '+today(),M,y);
+  doc.text('Работим с договор и писмена гаранция · ivanov-remonti.com',W-M,y,{align:'right'});
+
+  const safe=(r.client||'klient').replace(/\s+/g,'_').replace(/[^\u0400-\u04FFa-zA-Z0-9_-]/g,'');
+  doc.save(r.number+'_'+safe+'_digital.pdf');
+  showToast('🎨 Дигитален PDF изтеглен.');
+}
+
+// ── OFFICIAL PDF ──
+function generateOfficialPDF(id) {
+  const r = allReceipts.find(x=>x.id===id);
+  if (!r) return;
+  const tc = TYPES[r.type];
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'mm', format:'a4'});
+  const W=210, M=20, cW=W-M*2, F='helvetica';
+  const DARK='#1a1a1a', MID='#444', LIGHT='#777', BORDER='#999';
+  const col=c=>doc.setTextColor(c);
+  const fill=c=>doc.setFillColor(c);
+  const drw=c=>doc.setDrawColor(c);
+  const lw=n=>doc.setLineWidth(n);
+
+  // HEADER
+  doc.setFont(F,'bold'); doc.setFontSize(9); col(DARK);
+  doc.text('IVANOV REMONTI',M,16);
+  doc.setFont(F,'normal'); doc.setFontSize(7.5); col(LIGHT);
+  doc.text('0877 810 418  ·  ivanovremontibg@gmail.com  ·  ivanov-remonti.com',M,21);
+  drw(BORDER); lw(0.4); doc.line(M,24,W-M,24);
+
+  // TITLE
+  doc.setFont(F,'bold'); doc.setFontSize(14); col(DARK);
+  doc.text(tc.officialTitle,W/2,34,{align:'center'});
+  drw(DARK); lw(0.6); doc.line(W/2-35,36.5,W/2+35,36.5);
+
+  // META
+  doc.setFont(F,'normal'); doc.setFontSize(9); col(MID);
+  doc.text('към Договор № '+(r.contractNo||'_________')+'   /   ____________',W/2,44,{align:'center'});
+  doc.setFont(F,'normal'); doc.setFontSize(8.5); col(LIGHT);
+  doc.text('Дата:  '+r.date+'          №:  '+r.number,W/2,51,{align:'center'});
+  drw(BORDER); lw(0.3); doc.line(M,55,W-M,55);
+
+  let y=64;
+
+  if (r.type==='АВ' || r.type==='РМ') {
+    const verb = r.type==='АВ'
+      ? 'като аванс по договор за обект:'
+      : 'за закупуване на материали по обект:';
+    doc.setFont(F,'bold'); doc.setFontSize(10); col(DARK);
+    doc.text('Траян Иванов Първанов',M,y);
+    doc.setFont(F,'normal'); col(MID);
+    const afterName = M+doc.getTextWidth('Траян Иванов Първанов');
+    doc.text('  получи от  ',afterName,y);
+    doc.setFont(F,'bold'); col(DARK);
+    doc.text(r.client,afterName+doc.getTextWidth('  получи от  '),y);
+    y+=9;
+    doc.setFont(F,'normal'); doc.setFontSize(9); col(MID); doc.text('сумата от:',M,y); y+=9;
+    doc.setFont(F,'bold'); doc.setFontSize(18); col(DARK);
+    const amtBGN = r.currency==='EUR'?' / '+fmtNum(parseFloat(r.amount)*EUR_BGN)+' лв.':'';
+    doc.text(fmtNum(r.amount)+' '+r.currency+amtBGN,M,y); y+=8;
+    doc.setFont(F,'italic'); doc.setFontSize(8.5); col(MID);
+    doc.text('(с думи: '+r.amountWords+')',M,y); y+=10;
+    doc.setFont(F,'normal'); doc.setFontSize(10); col(DARK);
+    doc.text(verb,M,y); y+=7;
+    doc.setFont(F,'bold'); doc.text(r.object,M,y); y+=8;
+
+  } else if (r.type==='РЕ') {
+    doc.setFont(F,'normal'); doc.setFontSize(10); col(MID); doc.text('Клиент:',M,y);
+    doc.setFont(F,'bold'); col(DARK); doc.text(r.client,M+24,y); y+=8;
+    doc.setFont(F,'normal'); col(MID); doc.text('Обект:',M,y);
+    doc.setFont(F,'bold'); col(DARK); doc.text(r.object,M+24,y); y+=12;
+    doc.setFont(F,'bold'); doc.setFontSize(8); col(MID); doc.text('ПРИЕТА ДЕЙНОСТ:',M,y); y+=6;
+    doc.setFont(F,'normal'); doc.setFontSize(10); col(DARK);
+    const dL=doc.splitTextToSize(r.description||'',cW);
+    doc.text(dL,M,y); y+=dL.length*6+8;
+    doc.setFont(F,'bold'); doc.setFontSize(8); col(MID); doc.text('СТОЙНОСТ:',M,y); y+=6;
+    doc.setFont(F,'bold'); doc.setFontSize(16); col(DARK);
+    const amtBGN2=r.currency==='EUR'?' / '+fmtNum(parseFloat(r.amount)*EUR_BGN)+' лв.':'';
+    doc.text(fmtNum(r.amount)+' '+r.currency+amtBGN2,M,y); y+=8;
+    doc.setFont(F,'italic'); doc.setFontSize(8.5); col(MID);
+    doc.text('(с думи: '+r.amountWords+')',M,y); y+=8;
+
+  } else if (r.type==='ДР') {
+    doc.setFont(F,'normal'); doc.setFontSize(10); col(MID); doc.text('Клиент:',M,y);
+    doc.setFont(F,'bold'); col(DARK); doc.text(r.client,M+24,y); y+=8;
+    doc.setFont(F,'normal'); col(MID); doc.text('Обект:',M,y);
+    doc.setFont(F,'bold'); col(DARK); doc.text(r.object,M+24,y); y+=12;
+    doc.setFont(F,'bold'); doc.setFontSize(8); col(MID); doc.text('ДОПЪЛНИТЕЛНА ДЕЙНОСТ:',M,y); y+=6;
+    doc.setFont(F,'normal'); doc.setFontSize(10); col(DARK);
+    const dL2=doc.splitTextToSize(r.description||'',cW);
+    doc.text(dL2,M,y); y+=dL2.length*6+8;
+    doc.setFont(F,'bold'); doc.setFontSize(8); col(MID); doc.text('ДОГОВОРЕНА ЦЕНА:',M,y); y+=6;
+    doc.setFont(F,'bold'); doc.setFontSize(16); col(DARK);
+    doc.text(fmtNum(r.amount)+' '+r.currency,M,y); y+=8;
+    doc.setFont(F,'italic'); doc.setFontSize(8.5); col(MID);
+    doc.text('(с думи: '+r.amountWords+')',M,y); y+=10;
+    if (r.term) {
+      doc.setFont(F,'normal'); doc.setFontSize(10); col(DARK);
+      doc.text('Да се изпълни до:  '+r.term,M,y); y+=8;
+    }
+  }
+
+  // NOTE
+  if (r.note && r.note.trim()) {
+    y+=4;
+    doc.setFont(F,'italic'); doc.setFontSize(8.5); col(MID);
+    const nL=doc.splitTextToSize('Забележка: '+r.note,cW);
+    doc.text(nL,M,y); y+=nL.length*5+6;
+  }
+
+  // FOOTNOTES
+  y+=4;
+  tc.footnotes.forEach(fn=>{
+    doc.setFont(F,'italic'); doc.setFontSize(7.5); col(LIGHT);
+    doc.text('* '+fn,M,y); y+=5;
+  });
+
+  y+=10;
+  drw(BORDER); lw(0.3); doc.line(M,y,W-M,y); y+=12;
+
+  // SIGNATURES
+  const colW=(cW-10)/2;
+  doc.setFont(F,'bold'); doc.setFontSize(8); col(DARK);
+  doc.text(tc.sigLeft+':',M,y); doc.text(tc.sigRight+':',M+colW+10,y); y+=8;
+  doc.setFont(F,'normal'); doc.setFontSize(9); col(MID);
+  doc.text('.........................................',M,y);
+  doc.setFont(F,'bold'); col(DARK); doc.text('Траян Иванов Първанов',M+colW+10,y); y+=8;
+  doc.setFont(F,'normal'); doc.setFontSize(8); col(MID);
+  doc.text('Подпис: .................................',M,y);
+  doc.text('Подпис: .................................',M+colW+10,y); y+=7;
+  doc.text('Дата:    '+r.date,M,y);
+  doc.text('Дата:    '+r.date,M+colW+10,y);
+
+  // PAGE FOOTER
+  drw(BORDER); lw(0.3); doc.line(M,280,W-M,280);
+  doc.setFont(F,'normal'); doc.setFontSize(7); col(LIGHT);
+  doc.text('IVANOV REMONTI  ·  0877 810 418  ·  ivanovremontibg@gmail.com',W/2,285,{align:'center'});
+
+  const safe=(r.client||'klient').replace(/\s+/g,'_').replace(/[^\u0400-\u04FFa-zA-Z0-9_-]/g,'');
+  doc.save(r.number+'_'+safe+'_oficial.pdf');
+  showToast('📄 Официален PDF изтеглен.');
+}
+
+// ── INIT ──
+function init() {
+  if (window._firebaseReady) loadReceipts();
+  else window.addEventListener('firebaseReady', loadReceipts);
+}
+init();
+
+window.filterType=filterType;
+window.selectReceipt=selectReceipt;
+window.showForm=showForm;
+window.switchType=switchType;
+window.updateWords=updateWords;
+window.doSave=doSave;
+window.doSaveAndPDF=doSaveAndPDF;
+window.generateDigitalPDF=generateDigitalPDF;
+window.generateOfficialPDF=generateOfficialPDF;
+window.doDelete=doDelete;
+</script>
+</body>
+</html>
