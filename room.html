@@ -772,15 +772,33 @@ function loadFromFile(e){
 }
 
 function newProject(){
-  if(!confirm('Изчистваш всичко и започваш нов обект?')) return;
+  const name = document.getElementById('pName').value || '';
+  const msg = name ? `Текущ обект: "${name}"` : 'Текущият обект не е запазен.';
+  document.getElementById('newProjectMsg').textContent = msg;
+  document.getElementById('newProjectOverlay').style.display='flex';
+}
+
+function _doClear(){
   localStorage.removeItem('ir_room_state');
-  rooms=[]; rc=0; extraMats=[]; extraMarkup=0; extraLaborMarkup=0;
+  localStorage.removeItem('ir_room_last_id');
+  rooms=[]; rc=0; extraMats=[]; extraMarkup=0; extraLaborMarkup=0; editableMats=[];
   document.getElementById('pName').value='';
   document.getElementById('pDate').valueAsDate=new Date();
   document.getElementById('pLen').value='3';
+  document.getElementById('newProjectOverlay').style.display='none';
   renderAll();
   renderExtraMats();
   addRoom();
+}
+
+async function newProjectSaveAndClear(){
+  if(!window._fbReady){ showToast('Няма връзка с облака — обектът не е запазен!'); return; }
+  await fbSaveProject();
+  _doClear();
+}
+
+function newProjectClearOnly(){
+  _doClear();
 }
 
 function toggleLaborMarkup(pct){
@@ -866,9 +884,8 @@ function renderExtraMats(){
 function togglePkgMenu(){
   const menu=document.getElementById('pkgMenu');
   if(menu.style.display==='none'){
-    const PROF_4M={prof_ud:'UD × 4м',prof_cd:'CD × 4м',prof_uw:'UW × 4м',prof_cw:'CW × 4м'};
     menu.innerHTML=Object.entries(PKG).map(([k,v])=>{
-      const name=PROF_4M[k]||(v.src+(v.sz?' '+v.sz:''));
+      const name=v.src;
       return `<div onclick="addExtraMatFromPKG('${k}')" style="padding:8px 12px;font-size:0.78rem;color:#e2e8f0;cursor:pointer;border-bottom:1px solid #0f172a;display:flex;justify-content:space-between;gap:8px;" onmouseover="this.style.background='#0f172a'" onmouseout="this.style.background=''">
         <span>${name}</span>
         <span style="color:#d9a441;font-weight:600;white-space:nowrap;">${(v.price*MARKUP).toFixed(2)}€</span>
@@ -882,8 +899,7 @@ function togglePkgMenu(){
 
 function addExtraMatFromPKG(key){
   const cfg=PKG[key];
-  const PROF_4M={prof_ud:'UD × 4м',prof_cd:'CD × 4м',prof_uw:'UW × 4м',prof_cw:'CW × 4м'};
-  const name=PROF_4M[key]||(cfg.src+(cfg.sz?' '+cfg.sz:''));
+  const name=cfg.src;
   const price=Math.round(cfg.price*MARKUP*100)/100;
   const unit=cfg.pp+(cfg.sz?' '+cfg.sz:'');
   extraMats.push({id:Date.now(),name,unit,unitPrice:price,qty:1});
@@ -1066,12 +1082,17 @@ function _calcAll(){
       if(em&&!em._edited){ em.qty=r.qty; em.unitPrice=r.unitPrice; em.unit=r.unit; em.total=r.total; }
     });
   }
-  // Добави extraMats към editableMats ако не са там
+  // Синхронизирай extraMats с editableMats (добави нови, обнови съществуващи)
   extraMats.forEach(m=>{
-    if(!editableMats.find(e=>e._extraId===m.id)){
+    const em=editableMats.find(e=>e._extraId===m.id);
+    if(!em){
       editableMats.push({name:m.name||'—',qty:m.qty,unit:m.unit,unitPrice:m.unitPrice,total:m.unitPrice*m.qty,_auto:false,_extraId:m.id});
+    } else {
+      em.name=m.name||'—'; em.qty=m.qty; em.unit=m.unit; em.unitPrice=m.unitPrice; em.total=m.unitPrice*m.qty;
     }
   });
+  // Премахни от editableMats ако са изтрити от extraMats
+  editableMats=editableMats.filter(e=>e._auto||extraMats.find(m=>m.id===e._extraId));
   // Изчисли totalMat от editableMats
   const editTotal=editableMats.reduce((s,r)=>s+(r.unitPrice*(r.qty||0)),0);
   totalMat=editTotal;
@@ -1312,137 +1333,67 @@ async function exportPDF(){
 
   // Collect all rows
   const allRows=[], matRowsArr=[];
-  let totalLabor=0, totalMat=0;
+  let totalLaborBase=0, totalMat=0;
   rooms.forEach(room=>{
     const {L,W,H,surfs,name}=room;
     if(L<=0||W<=0||H<=0) return;
     Object.entries(surfs).forEach(([key,s])=>{
       const area=surfArea(room,key);
-      if(s.gk&&SVC[s.gk]){const t=area*SVC[s.gk].eur;totalLabor+=t;allRows.push([name||'Помещение',SURF_LABELS[key]+' — '+SVC[s.gk].name,area.toFixed(1),'м²',SVC[s.gk].eur.toFixed(2)+' €',t.toFixed(2)+' € / '+(t*EUR2LV).toFixed(2)+' лв']);}
-      s.pt.forEach(v=>{if(SVC[v]){const t=area*SVC[v].eur;totalLabor+=t;allRows.push([name||'Помещение',SURF_LABELS[key]+' — '+SVC[v].name,area.toFixed(1),'м²',SVC[v].eur.toFixed(2)+' €',t.toFixed(2)+' € / '+(t*EUR2LV).toFixed(2)+' лв']);}});
+      if(s.gk&&SVC[s.gk]){const t=area*SVC[s.gk].eur;totalLaborBase+=t;allRows.push([name||'Помещение',SURF_LABELS[key]+' — '+SVC[s.gk].name,area.toFixed(1),'м²',SVC[s.gk].eur.toFixed(2)+' €',t.toFixed(2)+' € / '+(t*EUR2LV).toFixed(2)+' лв']);}
+      s.pt.forEach(v=>{if(SVC[v]){const t=area*SVC[v].eur;totalLaborBase+=t;allRows.push([name||'Помещение',SURF_LABELS[key]+' — '+SVC[v].name,area.toFixed(1),'м²',SVC[v].eur.toFixed(2)+' €',t.toFixed(2)+' € / '+(t*EUR2LV).toFixed(2)+' лв']);}});
     });
   });
+  const laborMarkupAmt=Math.round(totalLaborBase*extraLaborMarkup/100*100)/100;
+  const totalLabor=totalLaborBase+laborMarkupAmt;
 
   // Labor table
   if(allRows.length && mode !== 'mat_only' && mode !== 'mat_qty'){
     doc.setFont(F,'bold'); doc.setFontSize(9); doc.setTextColor(154,117,48);
     doc.text('ТРУД',14,y); y+=4;
+    const laborFoot=[[{content:'Общо труд',colSpan:5,styles:{fontStyle:'bold',halign:'right'}},{content:totalLaborBase.toFixed(2)+' € / '+(totalLaborBase*EUR2LV).toFixed(2)+' лв',styles:{fontStyle:'bold',halign:'right'}}]];
+    if(extraLaborMarkup>0){laborFoot.push([{content:'Надценка труд +'+extraLaborMarkup+'%',colSpan:5,styles:{halign:'right',textColor:[201,168,76]}},{content:'+'+laborMarkupAmt.toFixed(2)+' €',styles:{halign:'right',textColor:[201,168,76]}}]);laborFoot.push([{content:'ОБЩО ТРУД С НАДЦЕНКА',colSpan:5,styles:{fontStyle:'bold',halign:'right',textColor:[201,168,76]}},{content:totalLabor.toFixed(2)+' € / '+(totalLabor*EUR2LV).toFixed(2)+' лв',styles:{fontStyle:'bold',halign:'right',textColor:[201,168,76]}}]);}
     doc.autoTable({startY:y,head:[['Помещение','Услуга','Кол.','Мярка','Ед. цена','Общо']],body:allRows,
       styles:{fontSize:8,cellPadding:2,font:F},
       headStyles:{fillColor:[26,24,16],textColor:[201,168,76],fontStyle:'bold'},
       alternateRowStyles:{fillColor:[245,240,228]},
       columnStyles:{2:{halign:'center'},3:{halign:'center'},4:{halign:'right'},5:{halign:'right',fontStyle:'bold'}},
       margin:{left:8,right:8},tableWidth:194,
-      foot:[[{content:'Общо труд',colSpan:5,styles:{fontStyle:'bold',halign:'right'}},{content:totalLabor.toFixed(2)+' € / '+(totalLabor*EUR2LV).toFixed(2)+' лв',styles:{fontStyle:'bold',halign:'right'}}]],
-      showFoot:'lastPage'});
+      foot:laborFoot,showFoot:'lastPage'});
     y=doc.lastAutoTable.finalY+8;
   }
 
-  // Materials table — точна логика от calculator.html
+  // Materials — четем от editableMats, сливаме редове с еднакво име и цена
   const matRowsData=[];
-  const pdfPLen=parseFloat(document.getElementById('pLen').value)||3;
-  let pdfBoardArea=0,pdfUd=0,pdfCd=0,pdfUw=0,pdfCw=0,pdfHangers=0,pdfScrews=0,pdfDowel=0,pdfGlue=0,pdfFoam=0;
-
-  rooms.forEach(room=>{
-    const {L,W,H,surfs,type}=room;
-    if(type==='part'){
-      if(L<=0||H<=0) return;
-      const a=L*H;
-      pdfUw+=Math.ceil((2*L/pdfPLen)*1.1);
-      const regP=Math.floor(L/0.6)-1,remP=L-regP*0.6,colsP=remP>=0.7?regP+1:regP;
-      pdfCw+=Math.ceil((colsP*H/pdfPLen)*1.1);
-      pdfBoardArea+=a*2; pdfScrews+=(a*2)*15; pdfDowel+=Math.ceil((2*L/0.7)*1.1);
-    } else {
-      if(L<=0||W<=0||H<=0) return;
-      if(surfs.ceil&&surfs.ceil.gk){
-        const a=L*W,p=2*(L+W);
-        pdfUd+=Math.ceil((p/pdfPLen)*1.1);
-        const shortC=Math.min(L,W),longC=Math.max(L,W);
-        const regC=Math.floor(shortC/0.6)-1,remC=shortC-regC*0.6,colsC=remC>=0.7?regC+1:regC;
-        pdfCd+=Math.ceil((colsC*longC/pdfPLen)*1.1);
-        pdfBoardArea+=a; pdfHangers+=a*2.8; pdfScrews+=a*15;
-        pdfDowel+=p/0.7; pdfDowel+=(a*2.8)*2;
-      }
-      ['N','S','W','E'].forEach(wk=>{
-        const s=surfs[wk]; if(!s||!s.gk) return;
-        const wl=(wk==='N'||wk==='S')?L:W, a=wl*H;
-        if(s.gk==='wall'){
-          pdfUd+=Math.ceil(((2*wl+2*H)/pdfPLen)*1.1);
-          const regW=Math.floor(wl/0.6)-1,remW=wl-regW*0.6,colsW=remW>=0.7?regW+1:regW;
-          pdfCd+=Math.ceil((colsW*H/pdfPLen)*1.1);
-          pdfBoardArea+=a; pdfHangers+=a*1.5; pdfScrews+=a*15;
-          pdfDowel+=Math.ceil(((2*wl+2*H)/0.7)*1.1);
-          pdfDowel+=(a*1.5)*2; // 2 дюбела на окачвач
-        } else if(s.gk==='glue'){
-          pdfBoardArea+=a; pdfGlue+=a*4; pdfFoam+=a/10;
-        }
-      });
-    }
-  });
-
-  const pdfButtons=pdfHangers*2;
-  const pdfJoint=pdfBoardArea*0.4,pdfFinish=pdfBoardArea*1.2,pdfTape=pdfBoardArea*1.5;
-  const pdfBoards=pdfBoardArea>0?Math.ceil((pdfBoardArea*1.1)/2.4):0;
-
-  // Натрупваме суровите данни като обекти преди форматиране
-  const rawMats=[];
-  const addM=(key,qty)=>{
-    const cfg=PKG[key];if(!(qty>0)) return;
-    const pc=cfg.ps>0?Math.ceil(qty/cfg.ps):Math.ceil(qty);
-    const up=Math.round(cfg.price*MARKUP*100)/100;
-    const unit=(pc===1?cfg.pu:cfg.pp)+(cfg.sz?' '+cfg.sz:'');
-    rawMats.push({name:cfg.src,qty:pc,unit,unitPrice:up,total:Math.round(up*pc*100)/100});
-  };
-
-  PKG.prof_ud.src=`UD × ${pdfPLen}м`; PKG.prof_cd.src=`CD × ${pdfPLen}м`;
-  PKG.prof_uw.src=`UW × ${pdfPLen}м`; PKG.prof_cw.src=`CW × ${pdfPLen}м`;
-  addM('board_std',pdfBoards);
-  addM('prof_ud',Math.ceil(pdfUd)); addM('prof_cd',Math.ceil(pdfCd));
-  addM('prof_uw',Math.ceil(pdfUw)); addM('prof_cw',Math.ceil(pdfCw));
-  addM('hangers',Math.ceil(pdfHangers)); addM('buttons',Math.ceil(pdfButtons));
-  addM('screws',Math.ceil(pdfScrews)); addM('dowels',Math.ceil(pdfDowel));
-  addM('tape',Math.ceil(pdfTape));
-  addM('gk_glue',Math.ceil(pdfGlue)); addM('gk_foam',Math.ceil(pdfFoam));
-
-  const ptTotals={osnovna:0,gipsova:0,gipsova_mesh:0,fina:0,fugi:0};
-  rooms.forEach(room=>{const {L,W,H,surfs,type}=room;const invalid=type==='part'?(L<=0||H<=0):(L<=0||W<=0||H<=0);if(invalid) return;Object.entries(surfs).forEach(([key,s])=>{const area=type==='part'?surfArea(room,key)*2:surfArea(room,key);s.pt.forEach(v=>{if(ptTotals.hasOwnProperty(v)) ptTotals[v]+=area;});});});
-  const ptMap={osnovna:{key:'p_osnovna',norm:9},gipsova:{key:'p_gipsova',norm:1},gipsova_mesh:{key:'p_gipsova',norm:1},fina:{key:'p_fina',norm:0.8},fugi:{key:'p_fugi',norm:0.4}};
-  if(ptTotals.gipsova_mesh>0){const cfg=PKG.p_mreja;const pc=Math.ceil(ptTotals.gipsova_mesh/cfg.ps);const up=Math.round(cfg.price*MARKUP*100)/100;const unit=(pc===1?cfg.pu:cfg.pp)+' '+cfg.sz;rawMats.push({name:cfg.src,qty:pc,unit,unitPrice:up,total:Math.round(up*pc*100)/100});}
-  Object.entries(ptTotals).forEach(([svc,m2])=>{if(m2<=0) return;const pm=ptMap[svc];const cfg=PKG[pm.key];const kg=m2*pm.norm;const pc=Math.ceil(kg/cfg.ps);const up=Math.round(cfg.price*MARKUP*100)/100;const unit=(pc===1?cfg.pu:cfg.pp)+' '+cfg.sz;rawMats.push({name:cfg.src,qty:pc,unit,unitPrice:up,total:Math.round(up*pc*100)/100});});
-
-  // Добавяме extraMats
-  extraMats.filter(m=>m.name||m.unitPrice>0).forEach(m=>{
-    rawMats.push({name:m.name||'—',qty:m.qty,unit:m.unit,unitPrice:m.unitPrice,total:Math.round(m.unitPrice*m.qty*100)/100});
-  });
-
-  // Сумираме редове с еднакво name И еднаква unitPrice
   const merged=[];
-  rawMats.forEach(r=>{
-    const ex=merged.find(x=>x.name===r.name&&Math.abs(x.unitPrice-r.unitPrice)<0.001);
-    if(ex){ ex.qty+=r.qty; ex.total=Math.round((ex.total+r.total)*100)/100; }
-    else merged.push({...r});
+  editableMats.forEach(r=>{
+    const ex=merged.find(x=>x.name===(r.name||'—')&&Math.abs(x.unitPrice-r.unitPrice)<0.001);
+    if(ex){ ex.qty+=r.qty||0; ex.total=Math.round((ex.total+r.unitPrice*(r.qty||0))*100)/100; }
+    else merged.push({name:r.name||'—',qty:r.qty||0,unit:r.unit||'',unitPrice:r.unitPrice,total:Math.round(r.unitPrice*(r.qty||0)*100)/100});
   });
-
-  // Форматираме за PDF таблицата
-  totalMat=0;
+  const matMarkupAmt_base = merged.reduce((s,r)=>s+r.total,0);
+  const matMarkupExtra = Math.round(matMarkupAmt_base*extraMarkup/100*100)/100;
   merged.forEach(r=>{
     totalMat+=r.total;
-    matRowsData.push([r.name,`${r.qty} ${r.unit}`,r.unitPrice.toFixed(2)+' €',r.total.toFixed(2)+' € / '+(r.total*EUR2LV).toFixed(2)+' лв']);
+    matRowsData.push([r.name,r.qty+' '+r.unit,r.unitPrice.toFixed(2)+' €',r.total.toFixed(2)+' € / '+(r.total*EUR2LV).toFixed(2)+' лв']);
   });
+  if(extraMarkup>0) totalMat+=matMarkupExtra;
+
 
   if(matRowsData.length&&y<260&&mode!=='labor_only'){
     const showPrices = mode !== 'mat_qty';
     doc.setFont(F,'bold'); doc.setFontSize(9); doc.setTextColor(22,163,74);
     doc.text('МАТЕРИАЛИ',14,y); y+=4;
     if(showPrices){
+      const matBase=totalMat - (extraMarkup>0?matMarkupExtra:0);
+      const matFoot=[[{content:'Общо материали',colSpan:3,styles:{fontStyle:'bold',halign:'right'}},{content:matBase.toFixed(2)+' € / '+(matBase*EUR2LV).toFixed(2)+' лв',styles:{fontStyle:'bold',halign:'right'}}]];
+      if(extraMarkup>0){matFoot.push([{content:'Надценка материали +'+extraMarkup+'%',colSpan:3,styles:{halign:'right',textColor:[201,168,76]}},{content:'+'+matMarkupExtra.toFixed(2)+' €',styles:{halign:'right',textColor:[201,168,76]}}]);matFoot.push([{content:'ОБЩО МАТЕРИАЛИ С НАДЦЕНКА',colSpan:3,styles:{fontStyle:'bold',halign:'right',textColor:[201,168,76]}},{content:totalMat.toFixed(2)+' € / '+(totalMat*EUR2LV).toFixed(2)+' лв',styles:{fontStyle:'bold',halign:'right',textColor:[201,168,76]}}]);}
       doc.autoTable({startY:y,head:[['Материал','Количество','Ед. цена','Общо']],body:matRowsData,
         styles:{fontSize:8,cellPadding:2,font:F},
         headStyles:{fillColor:[26,24,16],textColor:[201,168,76],fontStyle:'bold'},
         alternateRowStyles:{fillColor:[245,240,228]},
         columnStyles:{0:{cellWidth:80},1:{cellWidth:50,halign:'center'},2:{cellWidth:32,halign:'right'},3:{cellWidth:32,halign:'right',fontStyle:'bold'}},
         margin:{left:8,right:8},tableWidth:194,
-        foot:[[{content:'Общо материали',colSpan:3,styles:{fontStyle:'bold',halign:'right'}},{content:totalMat.toFixed(2)+' € / '+(totalMat*EUR2LV).toFixed(2)+' лв',styles:{fontStyle:'bold',halign:'right'}}]],
-        showFoot:'lastPage'});
+        foot:matFoot,showFoot:'lastPage'});
     } else {
       // само бройки без цени
       const qtyOnly = matRowsData.map(r=>[r[0],r[1]]);
@@ -1456,7 +1407,7 @@ async function exportPDF(){
     y=doc.lastAutoTable.finalY+8;
   }
 
-  // Grand total — само ако има и труд и материали
+  // Grand total — с надценки
   if(mode === 'all'){
     const grand=totalLabor+totalMat;
     doc.setFillColor(26,24,16); doc.rect(8,y,194,16,'F');
@@ -1614,6 +1565,27 @@ body { padding-bottom: 120px; }
   </div>
 </div>
 
+<!-- ── НОВ ОБЕКТ OVERLAY ── -->
+<div id="newProjectOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:1100;align-items:center;justify-content:center;">
+  <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:24px;width:90%;max-width:380px;">
+    <div style="font-size:1rem;font-weight:700;color:#e2e8f0;margin-bottom:6px;">🗑 Нов обект</div>
+    <div style="font-size:0.8rem;color:#94a3b8;margin-bottom:20px;" id="newProjectMsg">Какво искаш да направиш с текущия обект?</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button onclick="newProjectSaveAndClear()" style="background:linear-gradient(135deg,#16a34a,#15803d);border:none;color:#fff;border-radius:10px;padding:12px 16px;font-size:0.85rem;cursor:pointer;font-weight:700;text-align:left;">
+        ☁️ Запази в облака и изчисти
+        <div style="font-size:0.72rem;font-weight:400;opacity:0.8;margin-top:2px;">Обектът се запазва, после се изчиства</div>
+      </button>
+      <button onclick="newProjectClearOnly()" style="background:#1e293b;border:1px solid #ef4444;color:#ef4444;border-radius:10px;padding:12px 16px;font-size:0.85rem;cursor:pointer;font-weight:700;text-align:left;">
+        🗑 Изчисти без запазване
+        <div style="font-size:0.72rem;font-weight:400;opacity:0.7;margin-top:2px;">Текущият обект се губи завинаги</div>
+      </button>
+      <button onclick="document.getElementById('newProjectOverlay').style.display='none'" style="background:none;border:1px solid #334155;color:#64748b;border-radius:10px;padding:10px 16px;font-size:0.82rem;cursor:pointer;">
+        Отказ
+      </button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── FIREBASE ФУНКЦИИ ──
 
@@ -1691,7 +1663,7 @@ async function fbLoadProject(id){
     if(!snap.exists()){ showToast('Проектът не е намерен!'); return; }
     const s = snap.data();
     rooms=(s.rooms||[]).map(r=>({...r,H:r.H==2.7?0:r.H})); rc=s.rc||0;
-    extraMats = s.extraMats||[]; extraMarkup = s.extraMarkup||0; extraLaborMarkup = s.extraLaborMarkup||0;
+    extraMats = s.extraMats||[]; extraMarkup = s.extraMarkup||0; extraLaborMarkup = s.extraLaborMarkup||0; editableMats = s.editableMats||[];
     if(s.pName) document.getElementById('pName').value = s.pName;
     if(s.pDate) document.getElementById('pDate').value = s.pDate;
     if(s.pLen)  document.getElementById('pLen').value  = s.pLen;
