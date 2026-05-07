@@ -1,0 +1,1735 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Калкулатор · Ivanov Remonti</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400&display=swap');
+
+*{box-sizing:border-box;margin:0;padding:0;}
+
+:root{
+  --bg:#0a0f1a;
+  --paper:#111827;
+  --grid-line:rgba(59,130,246,0.07);
+  --blue-dim:rgba(59,130,246,0.15);
+  --accent:#fbbf24;
+  --accent2:#fde68a;
+  --white:#ffffff;
+  --dim:#94a3b8;
+  --muted:#334155;
+  --green:#34d399;
+  --red:#f87171;
+  --border:rgba(251,191,36,0.3);
+  --tech:'Share Tech Mono',monospace;
+  --head:'Barlow Condensed',sans-serif;
+  --body:'Barlow',sans-serif;
+}
+
+body{
+  font-family:var(--body);
+  background:var(--bg);
+  color:var(--white);
+  min-height:100vh;
+}
+
+.page{max-width:520px;margin:0 auto;padding:16px 12px 60px;}
+
+/* ── HEADER ── */
+.hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid #334155;
+  padding-bottom:10px;margin-bottom:14px;
+}
+.hdr-left{display:flex;align-items:baseline;gap:8px;}
+.hdr-title{
+  font-family:var(--head);font-weight:700;font-size:1.1rem;
+  letter-spacing:3px;color:#fbbf24;text-transform:uppercase;
+}
+.hdr-sub{font-family:var(--tech);font-size:0.72rem;color:var(--dim);letter-spacing:1px;}
+.hdr-brand{font-family:var(--tech);font-size:0.72rem;color:#64748b;text-align:right;line-height:1.5;}
+
+/* ── INPUTS ── */
+.inputs{
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;
+  margin-bottom:12px;
+}
+.inp-block{
+  background:#0d1424;border:1px solid #334155;border-radius:4px;
+  padding:8px 6px 6px;position:relative;transition:border-color 0.2s;
+}
+.inp-block.active{border-color:var(--accent);}
+.inp-block::before{
+  content:attr(data-label);
+  font-family:var(--tech);font-size:0.72rem;color:var(--dim);
+  letter-spacing:2px;text-transform:uppercase;
+  position:absolute;top:6px;left:8px;
+}
+input[type=number]{
+  background:transparent;border:none;outline:none;
+  font-family:var(--tech);font-size:2.4rem;font-weight:400;
+  color:#ffffff;width:100%;text-align:center;
+  padding-top:14px;
+  -moz-appearance:textfield;
+}
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
+.inp-unit{font-family:var(--tech);font-size:0.7rem;color:var(--dim);text-align:center;letter-spacing:2px;margin-top:2px;}
+
+/* ── SVG DIAGRAM ── */
+.diagram-wrap{
+  background:#0d1424;border:1px solid #334155;border-radius:4px;
+  padding:10px;margin-bottom:12px;position:relative;overflow:hidden;
+}
+
+#diag{width:100%;display:block;}
+
+/* ── RESULTS ── */
+.results{display:flex;flex-direction:column;gap:8px;}
+
+.card-total{
+  background:#1c1f2e;border:1px solid #fbbf24;border-radius:4px;
+  padding:14px 16px;display:flex;justify-content:space-between;align-items:center;
+  position:relative;overflow:hidden;
+}
+.card-total::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(232,184,75,0.06),transparent 60%);
+}
+.ct-label{font-family:var(--head);font-weight:600;font-size:0.85rem;letter-spacing:3px;color:#fbbf24;text-transform:uppercase;}
+.ct-sub{font-family:var(--tech);font-size:0.72rem;color:var(--dim);margin-top:3px;}
+.ct-val{font-family:var(--tech);font-size:2.2rem;color:#fde68a;line-height:1;text-align:right;}
+.ct-unit{font-size:0.8rem;color:var(--accent);opacity:0.7;margin-left:3px;}
+
+.card-peri{
+  background:#0d1424;border:1px solid #334155;border-radius:4px;
+  padding:10px 16px;display:flex;justify-content:space-between;align-items:center;
+}
+.cp-label{font-family:var(--head);font-weight:600;font-size:0.8rem;letter-spacing:2px;color:#94a3b8;text-transform:uppercase;}
+.cp-sub{font-family:var(--tech);font-size:0.52rem;color:var(--muted);margin-top:2px;}
+.cp-val{font-family:var(--tech);font-size:1.4rem;color:#ffffff;line-height:1;}
+.cp-unit{font-size:0.65rem;color:var(--dim);margin-left:2px;}
+
+.walls-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.wall-card{background:#111827;border:1px solid #334155;border-radius:4px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;}
+.wall-card.long{border-color:rgba(232,184,75,0.3);}
+.wc-num{font-family:var(--tech);font-size:0.68rem;color:#94a3b8;letter-spacing:2px;}
+.wc-val{font-family:var(--tech);font-size:1.4rem;color:#ffffff;line-height:1;}
+.wc-unit{font-size:0.6rem;color:var(--dim);margin-left:2px;}
+.wc-dim{font-family:var(--tech);font-size:0.52rem;color:#64748b;margin-top:2px;}
+
+.bottom-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.mini-card{background:#111827;border:1px solid #334155;border-radius:4px;padding:10px 12px;}
+.mc-label{font-family:var(--tech);font-size:0.68rem;color:#94a3b8;letter-spacing:2px;text-transform:uppercase;}
+.mc-val{font-family:var(--tech);font-size:1.3rem;color:#ffffff;margin-top:4px;}
+.mc-unit{font-size:0.6rem;color:var(--dim);margin-left:2px;}
+
+.empty{text-align:center;padding:30px 16px;font-family:var(--tech);font-size:0.8rem;color:var(--muted);letter-spacing:2px;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.anim{animation:fadeUp 0.2s ease both;}
+
+/* ── SECTION PANELS (openings / niches) ── */
+.section-panel{background:#111827;border:1px solid #334155;border-radius:4px;margin-bottom:12px;overflow:hidden;}
+.section-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;cursor:pointer;user-select:none;background:#0d1424;}
+.section-hdr.open{border-bottom:1px solid var(--border);}
+.sec-title{font-family:var(--tech);font-size:0.78rem;letter-spacing:2px;color:#fbbf24;display:flex;align-items:center;gap:8px;}
+.sec-badge{background:var(--accent);color:#000;border-radius:3px;font-size:0.62rem;padding:1px 5px;font-weight:bold;}
+.sec-arrow{font-size:0.6rem;color:#64748b;transition:transform 0.2s;}
+.sec-arrow.open{transform:rotate(180deg);}
+.section-body{display:none;padding:10px 12px;flex-direction:column;gap:8px;}
+.section-body.open{display:flex;}
+
+.items-list{display:flex;flex-direction:column;gap:6px;}
+.item-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px;align-items:end;background:#0d1424;border:1px solid #334155;border-radius:3px;padding:8px;}
+.niche-row{grid-template-columns:auto 1fr 1fr 1fr auto;}
+.ir-label{font-family:var(--tech);font-size:0.68rem;color:#94a3b8;letter-spacing:1px;margin-bottom:3px;}
+.ir-input{background:transparent;border:none;border-bottom:1px solid #334155;outline:none;font-family:var(--tech);font-size:1rem;color:#ffffff;width:100%;text-align:center;padding:2px 0;-moz-appearance:textfield;transition:border-color 0.2s;}
+.ir-input::-webkit-outer-spin-button,.ir-input::-webkit-inner-spin-button{-webkit-appearance:none;}
+.ir-input:focus{border-bottom-color:var(--accent);}
+.ir-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:2px 4px;line-height:1;transition:color 0.2s;}
+.ir-del:hover{color:var(--red);}
+.btn-add{background:none;border:1px dashed var(--muted);border-radius:3px;color:var(--dim);font-family:var(--tech);font-size:0.72rem;letter-spacing:2px;padding:8px;cursor:pointer;width:100%;text-align:center;transition:border-color 0.2s,color 0.2s;}
+.btn-add:hover{border-color:var(--accent);color:var(--accent);}
+.type-btn{background:var(--muted);border:none;border-radius:3px;font-family:var(--tech);font-size:0.7rem;color:var(--dim);padding:4px 6px;cursor:pointer;white-space:nowrap;}
+.type-btn.minus{background:rgba(248,113,113,0.15);color:var(--red);border:1px solid rgba(248,113,113,0.3);}
+.type-btn.plus{background:rgba(52,211,153,0.15);color:var(--green);border:1px solid rgba(52,211,153,0.3);}
+.deduct-sum{font-family:var(--tech);font-size:0.72rem;color:var(--dim);text-align:right;padding-top:6px;border-top:1px solid var(--muted);}
+.deduct-val{color:var(--red);}
+.add-val{color:var(--green);}
+
+/* ══════════════════════════════════════
+   MATERIALS PANEL
+══════════════════════════════════════ */
+.mat-toggle-btn{
+  width:100%;margin-top:16px;
+  background:#0d1424;
+  border:1px solid rgba(251,191,36,0.35);
+  border-radius:4px;
+  padding:12px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+  cursor:pointer;user-select:none;
+  transition:border-color 0.2s,background 0.2s;
+}
+.mat-toggle-btn:hover{border-color:var(--accent);background:#111827;}
+.mat-toggle-btn.open{
+  border-color:var(--accent);
+  border-bottom-left-radius:0;border-bottom-right-radius:0;
+  border-bottom-color:transparent;
+}
+.mtb-left{display:flex;align-items:center;gap:10px;}
+.mtb-icon{font-size:1.1rem;}
+.mtb-title{font-family:var(--tech);font-size:0.65rem;letter-spacing:2px;color:var(--accent);}
+.mtb-sub{font-family:var(--tech);font-size:0.65rem;color:var(--dim);letter-spacing:1px;margin-top:2px;}
+.mtb-arrow{font-size:0.6rem;color:#64748b;transition:transform 0.25s;}
+.mtb-arrow.open{transform:rotate(180deg);}
+
+.mat-panel{
+  display:none;
+  background:#0d1424;
+  border:1px solid var(--accent);
+  border-top:none;
+  border-bottom-left-radius:4px;border-bottom-right-radius:4px;
+  padding:14px 14px 16px;
+  flex-direction:column;gap:12px;
+}
+.mat-panel.open{display:flex;}
+
+/* select inside mat panel */
+.mp-field{display:flex;flex-direction:column;gap:5px;}
+.mp-label{font-family:var(--tech);font-size:0.7rem;letter-spacing:2px;color:var(--dim);text-transform:uppercase;}
+
+.mp-select{
+  background:#111827;border:1px solid #334155;border-radius:3px;
+  color:#fff;font-family:var(--tech);font-size:0.85rem;
+  padding:9px 10px;width:100%;outline:none;
+  appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%2394a3b8' d='M5 7L1 3h8z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;
+  cursor:pointer;transition:border-color 0.2s;
+}
+.mp-select:focus{border-color:var(--accent);}
+.mp-select option{background:#111827;}
+
+.mp-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+
+.mp-inp-block{
+  background:#111827;border:1px solid #334155;border-radius:3px;
+  padding:8px 10px 6px;position:relative;
+  transition:border-color 0.2s;
+}
+.mp-inp-block:focus-within{border-color:var(--accent);}
+.mp-inp-lbl{font-family:var(--tech);font-size:0.5rem;color:var(--dim);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:2px;}
+.mp-inp{
+  background:transparent;border:none;outline:none;
+  font-family:var(--tech);font-size:1.4rem;color:#fff;
+  width:100%;-moz-appearance:textfield;
+}
+.mp-inp::-webkit-outer-spin-button,.mp-inp::-webkit-inner-spin-button{-webkit-appearance:none;}
+.mp-unit{font-family:var(--tech);font-size:0.48rem;color:var(--dim);letter-spacing:1px;margin-top:2px;}
+
+/* material result rows */
+.mat-results{display:flex;flex-direction:column;gap:6px;}
+
+.mat-res-row{
+  display:flex;justify-content:space-between;align-items:center;
+  background:#111827;border:1px solid #1e2d47;border-radius:3px;
+  padding:10px 12px;
+}
+.mrr-left{display:flex;align-items:center;gap:10px;}
+.mrr-icon{
+  width:30px;height:30px;background:rgba(251,191,36,0.1);
+  border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0;
+}
+.mrr-name{font-family:var(--tech);font-size:0.62rem;color:#fff;letter-spacing:1px;}
+.mrr-sub{font-family:var(--tech);font-size:0.68rem;color:#64748b;margin-top:2px;}
+.mrr-val{font-family:var(--tech);font-size:1.5rem;color:var(--accent);text-align:right;line-height:1;}
+.mrr-unit{font-family:var(--tech);font-size:0.5rem;color:var(--dim);text-align:right;margin-top:2px;}
+
+.mat-note{
+  padding:9px 12px;
+  background:rgba(251,191,36,0.05);
+  border-left:2px solid rgba(251,191,36,0.4);
+  border-radius:0 3px 3px 0;
+  font-family:var(--tech);font-size:0.52rem;color:#64748b;line-height:1.7;letter-spacing:0.5px;
+}
+.mat-note strong{color:var(--accent2);}
+
+.mat-empty{
+  text-align:center;padding:20px;
+  font-family:var(--tech);font-size:0.6rem;color:var(--muted);letter-spacing:2px;
+}
+
+/* from-main badge */
+.from-main{
+  display:flex;align-items:center;gap:6px;
+  font-family:var(--tech);font-size:0.5rem;color:#334155;letter-spacing:1px;
+  padding:5px 0;
+}
+.from-main span{color:#4ade80;font-size:0.55rem;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="hdr">
+    <div class="hdr-left">
+      <div class="hdr-title">М² Калкулатор</div>
+    </div>
+    <div class="hdr-brand">IVANOV REMONTI<br><span style="color:var(--muted)">v3.0</span></div>
+  </div>
+
+  <!-- INPUTS -->
+  <div class="inputs">
+    <div class="inp-block" data-label="ДЪЛЖИНА" id="bL">
+      <input type="number" id="iL" min="0" step="0.01" placeholder="0" oninput="go()" onfocus="act('bL')" onblur="deact('bL')">
+      <div class="inp-unit">МЕТРА</div>
+    </div>
+    <div class="inp-block" data-label="ШИРИНА" id="bW">
+      <input type="number" id="iW" min="0" step="0.01" placeholder="0" oninput="go()" onfocus="act('bW')" onblur="deact('bW')">
+      <div class="inp-unit">МЕТРА</div>
+    </div>
+    <div class="inp-block" data-label="ВИСОЧИНА" id="bH">
+      <input type="number" id="iH" min="0" step="0.01" placeholder="0" oninput="go()" onfocus="act('bH')" onblur="deact('bH')">
+      <div class="inp-unit">МЕТРА</div>
+    </div>
+  </div>
+
+  <!-- DIAGRAM -->
+  <div class="diagram-wrap" style="padding:8px;display:flex;gap:10px;align-items:center;justify-content:center;">
+    <svg id="diag" viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:260px;overflow:hidden;display:block;"></svg>
+    <div id="diag-legend" style="display:flex;flex-direction:column;gap:6px;width:72px;flex-shrink:0;"></div>
+  </div>
+
+  <!-- OPENINGS -->
+  <div class="section-panel">
+    <div class="section-hdr" onclick="toggleSection('openings')">
+      <div class="sec-title">🪟 Прозорци &amp; врати <span class="sec-badge" id="openings-badge" style="display:none">0</span></div>
+      <span class="sec-arrow" id="openings-arrow">▼</span>
+    </div>
+    <div class="section-body" id="openings-body">
+      <div class="items-list" id="openings-list"></div>
+      <button class="btn-add" onclick="addOpening()">+ ДОБАВИ ОТВОР</button>
+      <div class="deduct-sum" id="openings-sum" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- NICHES -->
+  <div class="section-panel">
+    <div class="section-hdr" onclick="toggleSection('niches')">
+      <div class="sec-title">📐 Ниши &amp; издатини <span class="sec-badge" id="niches-badge" style="display:none">0</span></div>
+      <span class="sec-arrow" id="niches-arrow">▼</span>
+    </div>
+    <div class="section-body" id="niches-body">
+      <div class="items-list" id="niches-list"></div>
+      <button class="btn-add" onclick="addNiche()">+ ДОБАВИ НИША / ИЗДАТИНА</button>
+      <div class="deduct-sum" id="niches-sum" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results" id="results">
+    <div class="empty">[ ВЪВЕДИ РАЗМЕРИТЕ ]</div>
+  </div>
+
+  <!-- ══ MATERIALS TOGGLE BUTTON ══ -->
+  <button class="mat-toggle-btn" id="matToggleBtn" onclick="toggleMaterials()">
+    <div class="mtb-left">
+      <div class="mtb-icon">🏗️</div>
+      <div>
+        <div class="mtb-title">ЗАМАЗКИ · БОЯ · ШПАКЛОВКА · ПЛОЧКИ</div>
+        <div class="mtb-sub">ИЗЧИСЛЯВА ОТ ВЪВЕДЕНИТЕ РАЗМЕРИ</div>
+      </div>
+    </div>
+    <span class="mtb-arrow" id="matArrow">▼</span>
+  </button>
+
+  <!-- ══ MATERIALS PANEL ══ -->
+  <div id="matPanel" style="display:flex;flex-direction:column;gap:10px;">
+
+    <div class="from-main" id="fromMainInfo">
+      <span>●</span> РАЗМЕРИ: <span id="fromMainVal">—</span>
+    </div>
+
+    <!-- КАРТИ -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+
+      <div onclick="selectMat('boya')" id="card-boya" style="cursor:pointer;background:#0d1424;border:1px solid #1e3a5f;border-radius:6px;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:border-color 0.2s;">
+        <div style="font-size:1.4rem;">🎨</div>
+        <div style="font-family:var(--tech);font-size:0.65rem;color:#60a5fa;letter-spacing:1px;text-align:center;">БОЯ</div>
+        <div style="font-family:var(--tech);font-size:0.52rem;color:#475569;text-align:center;">Spirit Mat</div>
+      </div>
+
+      <div onclick="selectMat('shp')" id="card-shp" style="cursor:pointer;background:#0d1424;border:1px solid #1e3a5f;border-radius:6px;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:border-color 0.2s;">
+        <div style="font-size:1.4rem;">🪣</div>
+        <div style="font-family:var(--tech);font-size:0.65rem;color:#60a5fa;letter-spacing:1px;text-align:center;">ШПАКЛОВКА</div>
+        <div style="font-family:var(--tech);font-size:0.52rem;color:#475569;text-align:center;">Knauf Super Finish</div>
+      </div>
+
+      <div onclick="selectMat('lep')" id="card-lep" style="cursor:pointer;background:#0d1424;border:1px solid #1e3a5f;border-radius:6px;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:border-color 0.2s;">
+        <div style="font-size:1.4rem;">🔲</div>
+        <div style="font-family:var(--tech);font-size:0.65rem;color:#60a5fa;letter-spacing:1px;text-align:center;">ЛЕПИЛО</div>
+        <div style="font-family:var(--tech);font-size:0.52rem;color:#475569;text-align:center;">Ceresit CM11 Plus</div>
+      </div>
+
+      <div onclick="selectMat('beton')" id="card-beton" style="cursor:pointer;background:#0d1424;border:1px solid #334155;border-radius:6px;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:border-color 0.2s;">
+        <div style="font-size:1.4rem;">🏗️</div>
+        <div style="font-family:var(--tech);font-size:0.65rem;color:var(--accent);letter-spacing:1px;text-align:center;">ЗАМАЗКИ</div>
+        <div style="font-family:var(--tech);font-size:0.52rem;color:#475569;text-align:center;">Замазка</div>
+      </div>
+
+      <div onclick="openGipsModal()" id="card-gips" style="cursor:pointer;background:#0d1424;border:1px solid #334155;border-radius:6px;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:border-color 0.2s;grid-column:1/-1;">
+        <div style="font-size:1.4rem;">📐</div>
+        <div style="font-family:var(--tech);font-size:0.65rem;color:#a78bfa;letter-spacing:1px;text-align:center;">ГИПСОКАРТОН</div>
+        <div style="font-family:var(--tech);font-size:0.52rem;color:#475569;text-align:center;">Схема · Листи · Фуги · Фира → цял екран</div>
+      </div>
+
+    </div>
+
+    <!-- РЕЗУЛТАТИ -->
+    <div id="matResultsPanel" style="display:none;background:#0a0f1a;border:1px solid #1e3a5f;border-radius:6px;padding:14px;"></div>
+
+  </div>
+
+<!-- GIPS MODAL -->
+<div id="gipsModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#080d18;z-index:1000;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+
+  <!-- STICKY HEADER -->
+  <div style="position:sticky;top:0;background:#080d18;z-index:10;border-bottom:1px solid #1e3a5f;padding:12px 16px 8px;">
+    <!-- Заглавие + затвори -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="font-family:'Share Tech Mono',monospace;font-size:0.85rem;color:#a78bfa;letter-spacing:2px;font-weight:bold;">📐 ГИПСОКАРТОН</div>
+      <button onclick="closeGipsModal()" style="background:#1e2d47;border:1px solid #334155;color:#e2e8f0;font-size:1.2rem;padding:4px 14px;border-radius:4px;cursor:pointer;">✕</button>
+    </div>
+    <!-- ОБЩО лента -->
+    <div style="background:#0d1424;border:1px solid #1e3a5f;border-radius:6px;padding:8px 10px;">
+      <div style="font-family:'Share Tech Mono',monospace;font-size:0.55rem;color:#64748b;letter-spacing:1px;margin-bottom:6px;">ОБЩО</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;" id="gipsTotalBar">
+        <div style="text-align:center;"><div style="font-family:'Share Tech Mono',monospace;font-size:0.45rem;color:#64748b;">ГК 1200/2000/12.5мм</div><div style="font-family:'Share Tech Mono',monospace;font-size:1rem;font-weight:bold;color:#fbbf24;" id="totalSheets">--</div><div style="font-family:'Share Tech Mono',monospace;font-size:0.5rem;color:#475569;" id="totalSheetsRes"></div></div>
+        <div style="text-align:center;"><div style="font-family:'Share Tech Mono',monospace;font-size:0.5rem;color:#64748b;">CD</div><div style="font-family:'Share Tech Mono',monospace;font-size:1rem;font-weight:bold;color:#a78bfa;" id="totalCD">--</div><div style="font-family:'Share Tech Mono',monospace;font-size:0.5rem;color:#475569;" id="totalCDsize"></div></div>
+        <div style="text-align:center;"><div style="font-family:'Share Tech Mono',monospace;font-size:0.5rem;color:#64748b;">UD</div><div style="font-family:'Share Tech Mono',monospace;font-size:1rem;font-weight:bold;color:#60a5fa;" id="totalUD">--</div><div style="font-family:'Share Tech Mono',monospace;font-size:0.5rem;color:#475569;" id="totalUDsize"></div></div>
+        <div style="text-align:center;"><div style="font-family:'Share Tech Mono',monospace;font-size:0.5rem;color:#64748b;">ПОРЪЧАЙ</div><div style="font-family:'Share Tech Mono',monospace;font-size:1rem;font-weight:bold;color:#4ade80;" id="totalOrder">--</div><div style="font-family:'Share Tech Mono',monospace;font-size:0.45rem;color:#475569;line-height:1.3;" id="totalFor"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCROLL CONTENT -->
+  <div style="padding:16px;" id="gipsScrollContent">
+
+    <!-- ТАВАН СЕКЦИЯ -->
+    <div style="background:#0d1424;border:1px solid #2d1b69;border-radius:8px;padding:12px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:0.75rem;color:#a78bfa;letter-spacing:2px;">ТАВАН</div>
+        <button id="btnCeiling" onclick="toggleCeiling()" style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;padding:5px 12px;border-radius:4px;cursor:pointer;background:#0d1424;border:1px solid #334155;color:#475569;letter-spacing:1px;">+ ВКЛЮЧИ</button>
+      </div>
+      <div id="ceilingContent"></div>
+    </div>
+
+    <!-- СТЕНИ СЕКЦИЯ -->
+    <div style="background:#0d1424;border:1px solid #1e3a5f;border-radius:8px;padding:12px;margin-bottom:14px;">
+      <div style="font-family:'Share Tech Mono',monospace;font-size:0.75rem;color:#60a5fa;letter-spacing:2px;margin-bottom:10px;">СТЕНИ — ПРЕДСТЕННА ОБШИВКА</div>
+      <div id="wallButtons" style="display:flex;gap:6px;margin-bottom:12px;"></div>
+      <div id="wallsContent"></div>
+    </div>
+
+    <!-- PDF БУТОН -->
+    <button onclick="exportGipsPDF()" style="width:100%;padding:12px;font-family:'Share Tech Mono',monospace;font-size:0.7rem;letter-spacing:2px;border-radius:6px;cursor:pointer;background:#1e2d47;border:1px solid #334155;color:#94a3b8;margin-bottom:16px;">📄 ЕКСПОРТ — МАТЕРИАЛЕН СПИСЪК</button>
+
+  </div>
+</div>
+
+</div><!-- /page -->
+
+<script>
+// ══════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════
+function act(id){ document.getElementById(id).classList.add('active'); }
+function deact(id){ document.getElementById(id).classList.remove('active'); }
+function fmt(n){ return n.toFixed(2).replace('.',','); }
+
+// ══════════════════════════════════════
+// SVG DIAGRAM
+// ══════════════════════════════════════
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs, txt){
+  const e = document.createElementNS(NS, tag);
+  for(const [k,v] of Object.entries(attrs)) e.setAttribute(k,v);
+  if(txt !== undefined) e.textContent = txt;
+  return e;
+}
+
+function drawDiagram(L, W, H){
+  const svg = document.getElementById('diag');
+  svg.innerHTML = '';
+  const hasData = L>0 && W>0 && H>0;
+  const dL=hasData?L:4.2, dW=hasData?W:3.0, dH=hasData?H:2.7;
+
+  const VW=260, VH=260;
+  svg.setAttribute('viewBox','0 0 260 260');
+  const NS='http://www.w3.org/2000/svg';
+  const MONO="'Share Tech Mono',monospace";
+  function mk(tag,attrs,txt){
+    const e=document.createElementNS(NS,tag);
+    for(const [k,v] of Object.entries(attrs)) e.setAttribute(k,v);
+    if(txt!==undefined) e.textContent=txt;
+    svg.appendChild(e); return e;
+  }
+
+  // Fixed margins — enough space for labels + dim lines
+  const ML=58, MR=58, MT=50, MB=48;
+  const rW = VW-ML-MR;  // fixed 144px
+  const rH = VH-MT-MB;  // fixed 162px
+  const rx = ML, ry = MT;
+
+  // grid
+  for(let x=0;x<=VW;x+=14) mk('line',{x1:x,y1:0,x2:x,y2:VH,stroke:'rgba(59,130,246,0.04)','stroke-width':'0.5'});
+  for(let y=0;y<=VH;y+=14) mk('line',{x1:0,y1:y,x2:VW,y2:y,stroke:'rgba(59,130,246,0.04)','stroke-width':'0.5'});
+
+  const op=hasData?'1':'0.3';
+  mk('rect',{x:rx,y:ry,width:rW,height:rH,fill:'rgba(96,165,250,0.07)',rx:'3',opacity:op});
+  mk('rect',{x:rx,y:ry,width:rW,height:rH,fill:'none',stroke:'#60a5fa','stroke-width':'2',rx:'3',opacity:op});
+
+  if(hasData){
+    // corner + midpoint dots
+    for(const [cx,cy] of [[rx,ry],[rx+rW,ry],[rx,ry+rH],[rx+rW,ry+rH]])
+      mk('circle',{cx,cy,r:'4',fill:'#0a0f1a',stroke:'#60a5fa','stroke-width':'1.8'});
+    for(const [cx,cy] of [[rx+rW/2,ry],[rx+rW/2,ry+rH],[rx,ry+rH/2],[rx+rW,ry+rH/2]])
+      mk('circle',{cx,cy,r:'2.8',fill:'#0a0f1a',stroke:'#93c5fd','stroke-width':'1.3'});
+
+    // ── DIM LINE TOP (дължина) — самото горе ──
+    const dimY = 8;
+    mk('line',{x1:rx,y1:dimY,x2:rx+rW,y2:dimY,stroke:'#475569','stroke-width':'0.9'});
+    mk('line',{x1:rx,y1:dimY-3,x2:rx,y2:dimY+3,stroke:'#475569','stroke-width':'0.9'});
+    mk('line',{x1:rx+rW,y1:dimY-3,x2:rx+rW,y2:dimY+3,stroke:'#475569','stroke-width':'0.9'});
+    mk('line',{x1:rx,y1:ry,x2:rx,y2:dimY,stroke:'#334155','stroke-width':'0.5','stroke-dasharray':'2 3'});
+    mk('line',{x1:rx+rW,y1:ry,x2:rx+rW,y2:dimY,stroke:'#334155','stroke-width':'0.5','stroke-dasharray':'2 3'});
+    mk('rect',{x:VW/2-20,y:dimY-6,width:40,height:12,fill:'#0a0f1a',rx:'2'});
+    mk('text',{x:VW/2,y:dimY,fill:'#e2e8f0','font-family':MONO,'font-size':'9','font-weight':'bold','text-anchor':'middle','dominant-baseline':'middle'},fmt(dL)+' м');
+
+    // ── С1 горе — между dim линията и правоъгълника ──
+    mk('text',{x:VW/2,y:ry-22,fill:'#94a3b8','font-family':MONO,'font-size':'8','font-weight':'bold','text-anchor':'middle','dominant-baseline':'middle'},'С1');
+    mk('text',{x:VW/2,y:ry-10,fill:'#fbbf24','font-family':MONO,'font-size':'11','font-weight':'bold','text-anchor':'middle','dominant-baseline':'middle'},fmt(dL*dH)+' м²');
+
+    // ── С2 долу ──
+    mk('text',{x:VW/2,y:ry+rH+11,fill:'#94a3b8','font-family':MONO,'font-size':'8','font-weight':'bold','text-anchor':'middle','dominant-baseline':'middle'},'С2');
+    mk('text',{x:VW/2,y:ry+rH+23,fill:'#fbbf24','font-family':MONO,'font-size':'11','font-weight':'bold','text-anchor':'middle','dominant-baseline':'middle'},fmt(dL*dH)+' м²');
+
+    // ── DIM LINE LEFT (ширина) ──
+    const dimX = 8;
+    mk('line',{x1:dimX,y1:ry,x2:dimX,y2:ry+rH,stroke:'#475569','stroke-width':'0.9'});
+    mk('line',{x1:dimX-3,y1:ry,x2:dimX+3,y2:ry,stroke:'#475569','stroke-width':'0.9'});
+    mk('line',{x1:dimX-3,y1:ry+rH,x2:dimX+3,y2:ry+rH,stroke:'#475569','stroke-width':'0.9'});
+    mk('line',{x1:rx,y1:ry,x2:dimX,y2:ry,stroke:'#334155','stroke-width':'0.5','stroke-dasharray':'2 3'});
+    mk('line',{x1:rx,y1:ry+rH,x2:dimX,y2:ry+rH,stroke:'#334155','stroke-width':'0.5','stroke-dasharray':'2 3'});
+    mk('rect',{x:dimX-5,y:VH/2-20,width:10,height:40,fill:'#0a0f1a',rx:'2',transform:`rotate(-90,${dimX},${VH/2})`});
+    mk('text',{x:dimX,y:VH/2,fill:'#e2e8f0','font-family':MONO,'font-size':'9','font-weight':'bold','text-anchor':'middle','dominant-baseline':'middle',transform:`rotate(-90,${dimX},${VH/2})`},fmt(dW)+' м');
+
+    // ── С3 ляво — между dim линията и правоъгълника ──
+    mk('text',{x:rx-10,y:VH/2,fill:'#94a3b8','font-family':MONO,'font-size':'8','font-weight':'bold','text-anchor':'middle','dominant-baseline':'middle',transform:`rotate(-90,${rx-10},${VH/2})`},'С3');
+    mk('text',{x:rx-22,y:VH/2,fill:'#fbbf24','font-family':MONO,'font-size':'11','font-weight':'bold','text-anchor':'middle','dominant-baseline':'middle',transform:`rotate(-90,${rx-22},${VH/2})`},fmt(dW*dH)+' м²');
+
+    // ── С4 дясно ──
+    mk('text',{x:rx+rW+10,y:VH/2,fill:'#94a3b8','font-family':MONO,'font-size':'8','font-weight':'bold','text-anchor':'middle','dominant-baseline':'middle',transform:`rotate(90,${rx+rW+10},${VH/2})`},'С4');
+    mk('text',{x:rx+rW+22,y:VH/2,fill:'#fbbf24','font-family':MONO,'font-size':'11','font-weight':'bold','text-anchor':'middle','dominant-baseline':'middle',transform:`rotate(90,${rx+rW+22},${VH/2})`},fmt(dW*dH)+' м²');
+
+  } else {
+    mk('text',{x:VW/2,y:VH/2,fill:'#334155','font-family':MONO,'font-size':'9','text-anchor':'middle','dominant-baseline':'middle','letter-spacing':'2'},'ВЪВЕДИ РАЗМЕРИТЕ');
+  }
+}
+drawDiagram(0,0,0);
+
+
+
+
+
+
+
+
+
+// ══════════════════════════════════════
+// SECTION TOGGLES (openings / niches)
+// ══════════════════════════════════════
+function toggleSection(id){
+  const body=document.getElementById(id+'-body');
+  const arrow=document.getElementById(id+'-arrow');
+  const hdr=body.previousElementSibling;
+  const isOpen=body.classList.contains('open');
+  body.classList.toggle('open',!isOpen);
+  arrow.classList.toggle('open',!isOpen);
+  hdr.classList.toggle('open',!isOpen);
+}
+
+// ══════════════════════════════════════
+// OPENINGS
+// ══════════════════════════════════════
+let openings=[],oId=0;
+function openingsTotal(){ return openings.reduce((s,o)=>s+o.w*o.h*(o.qty||1),0); }
+function addOpening(){ openings.push({id:oId++,w:0,h:0,qty:1}); renderOpenings(); go(); }
+function removeOpening(id){ openings=openings.filter(o=>o.id!==id); renderOpenings(); go(); }
+function renderOpenings(){
+  const list=document.getElementById('openings-list');
+  const badge=document.getElementById('openings-badge');
+  badge.style.display=openings.length?'inline':'none';
+  badge.textContent=openings.length;
+  list.innerHTML='';
+  openings.forEach(o=>{
+    const row=document.createElement('div');
+    row.className='item-row';
+    row.innerHTML=`
+      <div><div class="ir-label">ШИРИНА м</div>
+        <input class="ir-input" type="number" min="0" step="0.01" value="${o.w||''}" placeholder="0"
+          oninput="openings.find(x=>x.id===${o.id}).w=parseFloat(this.value)||0;updateOpenSum();go()"></div>
+      <div><div class="ir-label">ВИСОЧИНА м</div>
+        <input class="ir-input" type="number" min="0" step="0.01" value="${o.h||''}" placeholder="0"
+          oninput="openings.find(x=>x.id===${o.id}).h=parseFloat(this.value)||0;updateOpenSum();go()"></div>
+      <div><div class="ir-label">БРОЙ</div>
+        <input class="ir-input" type="number" min="1" step="1" value="${o.qty}"
+          oninput="openings.find(x=>x.id===${o.id}).qty=parseInt(this.value)||1;updateOpenSum();go()"></div>
+      <button class="ir-del" onclick="removeOpening(${o.id})">✕</button>`;
+    list.appendChild(row);
+  });
+  updateOpenSum();
+}
+function updateOpenSum(){
+  const el=document.getElementById('openings-sum');
+  const tot=openingsTotal();
+  if(tot>0){el.style.display='block';el.innerHTML='Общо изваждане: <span class="deduct-val">−'+fmt(tot)+' м²</span>';}
+  else el.style.display='none';
+}
+
+// ══════════════════════════════════════
+// NICHES
+// ══════════════════════════════════════
+let niches=[],nId=0;
+function nichesAdjust(){ return niches.reduce((s,n)=>{ const a=2*(n.L+n.W)*n.H; return s+(n.type==='minus'?-a:a); },0); }
+function addNiche(){ niches.push({id:nId++,L:0,W:0,H:0,type:'minus'}); renderNiches(); go(); }
+function removeNiche(id){ niches=niches.filter(n=>n.id!==id); renderNiches(); go(); }
+function toggleNicheType(id){ const n=niches.find(x=>x.id===id); n.type=n.type==='minus'?'plus':'minus'; renderNiches(); go(); }
+function renderNiches(){
+  const list=document.getElementById('niches-list');
+  const badge=document.getElementById('niches-badge');
+  badge.style.display=niches.length?'inline':'none';
+  badge.textContent=niches.length;
+  list.innerHTML='';
+  niches.forEach(n=>{
+    const row=document.createElement('div');
+    row.className='item-row niche-row';
+    row.innerHTML=`
+      <button class="type-btn ${n.type}" onclick="toggleNicheType(${n.id})">${n.type==='minus'?'− ИЗВ':'+ ДОБ'}</button>
+      <div><div class="ir-label">ДЪЛЖ м</div>
+        <input class="ir-input" type="number" min="0" step="0.01" value="${n.L||''}" placeholder="0"
+          oninput="niches.find(x=>x.id===${n.id}).L=parseFloat(this.value)||0;updateNicheSum();go()"></div>
+      <div><div class="ir-label">ШИРИ м</div>
+        <input class="ir-input" type="number" min="0" step="0.01" value="${n.W||''}" placeholder="0"
+          oninput="niches.find(x=>x.id===${n.id}).W=parseFloat(this.value)||0;updateNicheSum();go()"></div>
+      <div><div class="ir-label">ВИСОЧ м</div>
+        <input class="ir-input" type="number" min="0" step="0.01" value="${n.H||''}" placeholder="0"
+          oninput="niches.find(x=>x.id===${n.id}).H=parseFloat(this.value)||0;updateNicheSum();go()"></div>
+      <button class="ir-del" onclick="removeNiche(${n.id})">✕</button>`;
+    list.appendChild(row);
+  });
+  updateNicheSum();
+}
+function updateNicheSum(){
+  const el=document.getElementById('niches-sum');
+  const tot=nichesAdjust();
+  if(tot!==0){
+    el.style.display='block';
+    el.innerHTML='Корекция: <span class="'+(tot<0?'deduct-val':'add-val')+'">'+(tot>0?'+':'')+fmt(tot)+' м²</span>';
+  } else el.style.display='none';
+}
+
+// ══════════════════════════════════════
+// MAIN RESULTS
+// ══════════════════════════════════════
+function go(){
+  const L=parseFloat(document.getElementById('iL').value)||0;
+  const W=parseFloat(document.getElementById('iW').value)||0;
+  const H=parseFloat(document.getElementById('iH').value)||0;
+
+  drawDiagram(L,W,H);
+
+  const rc=document.getElementById('results');
+  if(L<=0||W<=0){
+    rc.innerHTML='<div class="empty">[ ВЪВЕДИ РАЗМЕРИТЕ ]</div>';
+    document.getElementById('diag-legend').innerHTML='';
+    calcMat();
+    return;
+  }
+
+  const ceil=L*W,s1=L*H,s2=L*H,s3=W*H,s4=W*H;
+  const steniAll=2*(L+W)*H,obikol=2*(L+W);
+  const openDed=openingsTotal(),nicheAdj=nichesAdjust();
+  const steniNet=steniAll-openDed+nicheAdj;
+  const total=ceil+steniAll,totalNet=ceil+steniNet,obem=L*W*H;
+  const hasAdj=openDed>0||nicheAdj!==0;
+
+  const leg=document.getElementById('diag-legend');
+  leg.innerHTML=`
+    <div style="border-bottom:1px solid #1e2d47;padding-bottom:4px;margin-bottom:4px;">
+      <div style="font-size:0.68rem;color:#64748b;font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;">Таван</div>
+      <div style="font-size:1.2rem;font-weight:700;color:#60a5fa;font-family:'Barlow Condensed',sans-serif;line-height:1.2;">${fmt(ceil)}<span style="font-size:0.55rem;margin-left:2px;opacity:0.8;">м²</span></div>
+    </div>
+    ${H>0?`<div style="border-bottom:1px solid #1e2d47;padding-bottom:4px;margin-bottom:4px;">
+      <div style="font-size:0.68rem;color:#64748b;font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;">Стени</div>
+      <div style="font-size:1.2rem;font-weight:700;color:#fbbf24;font-family:'Barlow Condensed',sans-serif;line-height:1.2;">${fmt(hasAdj?steniNet:steniAll)}<span style="font-size:0.55rem;margin-left:2px;opacity:0.8;">м²</span></div>
+    </div>`:''}
+    <div>
+      <div style="font-size:0.68rem;color:#64748b;font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;">Общо</div>
+      <div style="font-size:1.3rem;font-weight:700;color:#4ade80;font-family:'Barlow Condensed',sans-serif;line-height:1.2;">${fmt(hasAdj?totalNet:total)}<span style="font-size:0.55rem;margin-left:2px;opacity:0.8;">м²</span></div>
+    </div>
+  `;
+
+  let adjHTML='';
+  if(hasAdj){
+    let parts=[];
+    if(openDed>0) parts.push('<span style="color:var(--red)">−'+fmt(openDed)+' м² отвори</span>');
+    if(nicheAdj!==0) parts.push('<span style="color:'+(nicheAdj>0?'var(--green)':'var(--red)')+'">'+
+      (nicheAdj>0?'+':'')+fmt(nicheAdj)+' м² ниши</span>');
+    adjHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;
+      background:rgba(248,113,113,0.05);border:1px solid rgba(248,113,113,0.2);
+      border-radius:3px;font-family:var(--tech);font-size:0.58rem;gap:8px;flex-wrap:wrap;">
+      <span style="color:var(--dim);letter-spacing:1px">КОРЕКЦИИ</span>${parts.join(' ')}
+    </div>
+    <div class="card-total anim" style="border-color:rgba(52,211,153,0.5);">
+      <div><div class="ct-label" style="color:var(--green)">Нето квадратура</div><div class="ct-sub">СЛЕД КОРЕКЦИИ</div></div>
+      <div class="ct-val" style="color:var(--green)">${fmt(totalNet)}<span class="ct-unit">м²</span></div>
+    </div>`;
+  }
+
+  rc.innerHTML=`
+    <div class="card-total anim">
+      <div><div class="ct-label">${hasAdj?'Бруто квадратура':'Обща квадратура'}</div><div class="ct-sub">ТАВАН + 4 СТЕНИ</div></div>
+      <div class="ct-val">${fmt(total)}<span class="ct-unit">м²</span></div>
+    </div>
+    ${adjHTML}
+    <div class="card-peri anim">
+      <div><div class="cp-label">Обиколка на тавана</div><div class="cp-sub">2 × (${fmt(L)} + ${fmt(W)})</div></div>
+      <div class="cp-val">${fmt(obikol)}<span class="cp-unit">м</span></div>
+    </div>
+    <div class="walls-grid anim">
+      <div class="wall-card long">
+        <div class="wc-num">СТЕНА 1 &amp; 2</div>
+        <div class="wc-val">${fmt(s1+s2)}<span class="wc-unit">м²</span></div>
+        <div class="wc-dim">${fmt(L)} × ${fmt(H)} × 2</div>
+      </div>
+      <div class="wall-card">
+        <div class="wc-num">СТЕНА 3 &amp; 4</div>
+        <div class="wc-val">${fmt(s3+s4)}<span class="wc-unit">м²</span></div>
+        <div class="wc-dim">${fmt(W)} × ${fmt(H)} × 2</div>
+      </div>
+    </div>
+    <div class="bottom-row anim">
+      <div class="mini-card"><div class="mc-label">Таван / Под</div><div class="mc-val">${fmt(ceil)}<span class="mc-unit">м²</span></div></div>
+      <div class="mini-card"><div class="mc-label">Обем</div><div class="mc-val">${fmt(obem)}<span class="mc-unit">м³</span></div></div>
+    </div>`;
+
+  // also recalculate materials in real time
+  calcMat();
+}
+
+// ══════════════════════════════════════
+// MATERIALS PANEL
+// ══════════════════════════════════════
+let activeMat = null;
+
+function selectMat(id){
+  // highlight active card
+  ['boya','shp','lep','beton','gips'].forEach(c=>{
+    const card=document.getElementById('card-'+c);
+    if(card){
+      card.style.borderColor = c===id ? '#fbbf24' : (c==='beton'||c==='gips'?'#334155':'#1e3a5f');
+      card.style.background = c===id ? '#111827' : '#0d1424';
+    }
+  });
+  activeMat=id;
+  calcMat();
+  document.getElementById('matResultsPanel').style.display='block';
+}
+
+function toggleSub(id){
+  const body=document.getElementById(id+'-body');
+  const arrow=document.getElementById(id+'-arrow');
+  const isOpen=body.style.display==='flex'||body.style.display==='block';
+  body.style.display=isOpen?'none':'flex';
+  arrow.textContent=isOpen?'▼':'▲';
+  if(!isOpen) calcMat();
+}
+
+function toggleMaterials(){
+  const panel=document.getElementById('matPanel');
+  const btn=document.getElementById('matToggleBtn');
+  const arrow=document.getElementById('matArrow');
+  const isOpen=panel.classList.contains('open');
+  panel.classList.toggle('open',!isOpen);
+  btn.classList.toggle('open',!isOpen);
+  arrow.classList.toggle('open',!isOpen);
+  if(!isOpen) calcMat();
+}
+
+function getAreas(){
+  const L=parseFloat(document.getElementById('iL').value)||0;
+  const W=parseFloat(document.getElementById('iW').value)||0;
+  const H=parseFloat(document.getElementById('iH').value)||0;
+  const steniAll = L>0&&W>0&&H>0 ? 2*(L+W)*H : 0;
+  const ceil = L>0&&W>0 ? L*W : 0;
+  return {L,W,H,walls:steniAll,ceil,floor:ceil};
+}
+
+function calcMat(){
+  const {L,W,H,walls,ceil,floor}=getAreas();
+  const fromMain=document.getElementById('fromMainVal');
+  if(L>0&&W>0&&H>0) fromMain.textContent=fmt(L)+' × '+fmt(W)+' × '+fmt(H)+' м';
+  else fromMain.textContent='— (въведи размерите горе)';
+  const panel=document.getElementById('matResultsPanel');
+  if(!activeMat||!panel) return;
+  if(!L||!W||!H){ panel.innerHTML='<div class="mat-empty">[ ВЪВЕДИ РАЗМЕРИТЕ ГОРЕ ]</div>'; return; }
+
+  if(activeMat==='boya') renderBoya(walls,ceil,panel);
+  else if(activeMat==='shp') renderShp(walls,ceil,panel);
+  else if(activeMat==='lep') renderLep(walls,floor,panel);
+  else if(activeMat==='beton') renderBetonPanel(L,W,panel);
+  else if(activeMat==='gips') renderGips(L,W,panel);
+}
+
+function inp(id,label,val,step,min,onChange){
+  const handler=onChange?`oninput="${onChange}"`:'oninput="calcMat()"';
+  return `<div><div class="mp-label">${label}</div><input class="mp-inp" type="number" id="${id}" value="${val}" step="${step}" min="${min}" ${handler} style="width:100%;"></div>`;
+}
+function sel(id,label,opts,selVal,onChange){
+  const options=opts.map(([v,t])=>`<option value="${v}"${v===selVal?' selected':''}>${t}</option>`).join('');
+  const handler=onChange?`onchange="${onChange}"`:'onchange="calcMat()"';
+  return `<div><div class="mp-label">${label}</div><select class="mp-select" id="${id}" ${handler} style="width:100%;">${options}</select></div>`;
+}
+function resRow(label,val,unit){
+  return `<div style="display:flex;justify-content:space-between;align-items:flex-end;padding:8px 0;border-bottom:1px solid #1e2d47;">
+    <div style="font-family:var(--tech);font-size:0.8rem;color:#e2e8f0;letter-spacing:1px;">${label}</div>
+    <div><span style="font-family:var(--tech);font-size:2rem;color:#fbbf24;font-weight:bold;">${val}</span><span style="font-family:var(--tech);font-size:0.75rem;color:#94a3b8;margin-left:6px;">${unit}</span></div>
+  </div>`;
+}
+function note(txt){ return `<div style="font-family:var(--tech);font-size:0.68rem;color:#64748b;padding-top:8px;">${txt}</div>`; }
+
+function getV(id,def){ return parseFloat(document.getElementById(id)?.value)||def; }
+function getS(id,def){ return document.getElementById(id)?.value||def; }
+
+// State per card — persists across re-renders
+const matState = {
+  boya: {norma:'0.144', sloi:'2', pov:'walls'},
+  shp:  {norma:'0.9',   sloi:'2', pov:'walls'},
+  lep:  {norma:'10',    pov:'floor'},
+  beton:{type:'concrete', thick:'5'}
+};
+
+function saveState(card, fields){
+  fields.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) matState[card][id.replace(card+'_','')]=el.value;
+  });
+}
+
+function renderBoya(walls,ceil,panel){
+  const s=matState.boya;
+  const norma=parseFloat(s.norma)||0.144, sloi=parseInt(s.sloi)||2, pov=s.pov||'walls';
+  const m2=pov==='walls'?walls:pov==='ceil'?ceil:walls+ceil;
+  const litri=m2*norma*sloi;
+  panel.innerHTML=`
+    <div style="font-family:var(--tech);font-size:0.82rem;color:#60a5fa;margin-bottom:12px;letter-spacing:2px;font-weight:bold;">🎨 БОЯ — Spirit Mat</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+      ${inp('boyaNorma2','НОРМА л/м²',norma,0.001,0.05,"matState.boya.norma=this.value;calcMat();")}
+      ${sel('boyaSloi2','ПЛАСТА',[['1','1 пласт'],['2','2 пласта'],['3','3 пласта']],s.sloi,"matState.boya.sloi=this.value;calcMat();")}
+      ${sel('boyaPov2','ПОВЪРХНОСТ',[['walls','Стени'],['ceil','Таван'],['all','Стени+Таван']],s.pov,"matState.boya.pov=this.value;calcMat();")}
+    </div>
+    ${resRow('Необходими литри',fmt(litri),'л')}
+    ${note(fmt(m2)+' м² × '+norma+' л/м² × '+sloi+' пласта')}
+  `;
+}
+
+function renderShp(walls,ceil,panel){
+  const s=matState.shp;
+  const norma=parseFloat(s.norma)||0.9, sloi=parseInt(s.sloi)||2, pov=s.pov||'walls';
+  const m2=pov==='walls'?walls:pov==='ceil'?ceil:walls+ceil;
+  const kg=m2*norma*sloi, baki=Math.ceil(kg/20);
+  panel.innerHTML=`
+    <div style="font-family:var(--tech);font-size:0.82rem;color:#60a5fa;margin-bottom:12px;letter-spacing:2px;font-weight:bold;">🪣 ШПАКЛОВКА — Knauf Super Finish 20кг</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+      ${inp('shpNorma2','НОРМА кг/м²/слой',norma,0.1,0.1,"matState.shp.norma=this.value;calcMat();")}
+      ${sel('shpSloi2','СЛОЕВЕ',[['1','1 слой'],['2','2 слоя'],['3','3 слоя']],s.sloi,"matState.shp.sloi=this.value;calcMat();")}
+      ${sel('shpPov2','ПОВЪРХНОСТ',[['walls','Стени'],['ceil','Таван'],['all','Стени+Таван']],s.pov,"matState.shp.pov=this.value;calcMat();")}
+    </div>
+    ${resRow('Необходими баки',baki,'× 20кг')}
+    ${note(fmt(m2)+' м² × '+norma+' кг × '+sloi+' слоя = '+fmt(kg)+' кг')}
+  `;
+}
+
+function renderLep(walls,floor,panel){
+  const s=matState.lep;
+  const norma=parseFloat(s.norma)||10, pov=s.pov||'floor';
+  const m2=pov==='floor'?floor:pov==='walls'?walls:floor+walls;
+  const kg=m2*norma, chuvali=Math.ceil(kg/25);
+  panel.innerHTML=`
+    <div style="font-family:var(--tech);font-size:0.82rem;color:#60a5fa;margin-bottom:12px;letter-spacing:2px;font-weight:bold;">🔲 ЛЕПИЛО — Ceresit CM11 Plus 25кг</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+      ${inp('lepNorma2','НОРМА кг/м²',norma,0.5,1,"matState.lep.norma=this.value;calcMat();")}
+      ${sel('lepPov2','ПОВЪРХНОСТ',[['floor','Под'],['walls','Стени'],['all','Под+Стени']],s.pov,"matState.lep.pov=this.value;calcMat();")}
+    </div>
+    ${resRow('Необходими чувала',chuvali,'× 25кг')}
+    ${note(fmt(m2)+' м² × '+norma+' кг/м² = '+fmt(kg)+' кг')}
+  `;
+}
+
+function updateBetonType(val,L,W){
+  matState.beton.type=val;
+  const lbl=document.getElementById('betonThickLabel');
+  const inp=document.getElementById('betonThick2');
+  if(lbl) lbl.textContent=val==='selfleveling'?'ДЕБЕЛИНА (ММ)':'ДЕБЕЛИНА (СМ)';
+  if(inp){inp.step=val==='selfleveling'?'1':'0.5';inp.max=val==='selfleveling'?'20':'50';}
+  updateBetonResult(L,W,document.getElementById('matResultsPanel'));
+}
+function updateBetonThick(val){
+  matState.beton.thick=val;
+  const {L,W}=getAreas();
+  const panel=document.getElementById('matResultsPanel');
+  if(panel) updateBetonResult(L,W,panel);
+}
+
+function betonCalc(type, area, thM, T){
+  let rows='';
+  if(type==='concrete'){
+    const net=area*thM, order=Math.ceil(net*1.1*10)/10;
+    let klass='C16/20',kDesc='лека конструкция';
+    if(thM>=0.15){klass='C25/30';kDesc='натоварена конструкция';}
+    else if(thM>=0.08){klass='C20/25';kDesc='стандартна плоча';}
+    const kg=Math.round(order*2300), load=Math.round(kg/area);
+    rows=resRow('Готов бетон + 10%',order.toFixed(1),'м³')
+        +resRow('Клас бетон',klass,kDesc)
+        +resRow('Тегло ~2300кг/м³',kg,'кг')
+        +resRow('Натоварване на пода',load,'кг/м²');
+  } else if(type==='manual'){
+    const vol=area*thM*1.3*1.1;
+    const cKg=Math.round(vol*0.25*1400), bags=Math.ceil(cKg/25);
+    const sand=Math.round(vol*0.75*1.6*10)/10, sandKg=Math.round(vol*0.75*1600);
+    const waterL=Math.round(vol*110), totalKg=cKg+sandKg+waterL, load=Math.round(totalKg/area);
+    rows=resRow('Цимент',bags,'торби × 25кг')
+        +resRow('Пясък',sand,'тона')
+        +resRow('Вода',waterL,'литра')
+        +resRow('Обща маса',totalKg,'кг')
+        +resRow('Натоварване',load,'кг/м²');
+  } else if(type==='drymix'){
+    const totalKg=Math.round(area*T*20*1.1), bags=Math.ceil(totalKg/25);
+    const waterL=Math.round(totalKg*0.20), wetKg=totalKg+waterL, load=Math.round(wetKg/area);
+    rows=resRow('Суха замазка + 10%',bags,'торби × 25кг')
+        +resRow('Суха маса',totalKg,'кг')
+        +resRow('Вода ~0.20л/кг',waterL,'литра')
+        +resRow('Мокра маса',wetKg,'кг')
+        +resRow('Натоварване',load,'кг/м²');
+  } else if(type==='selfleveling'){
+    // T е в мм, норма 1.5кг/м²/мм, вода 0.27л/кг
+    const totalKg=Math.round(area*T*1.5*1.1), bags=Math.ceil(totalKg/25);
+    const waterL=Math.round(totalKg*0.27*10)/10, wetKg=Math.round(totalKg+waterL), load=Math.round(wetKg/area);
+    rows=resRow('Саморазливна + 10%',bags,'торби × 25кг')
+        +resRow('Суха маса',totalKg,'кг')
+        +resRow('Вода ~0.27л/кг',waterL,'литра')
+        +resRow('Мокра маса',wetKg,'кг')
+        +resRow('Натоварване',load,'кг/м²');
+  }
+  return rows;
+}
+
+function updateBetonResult(L,W,panel){
+  const s=matState.beton;
+  const type=s.type||'concrete', T=parseFloat(s.thick)||0;
+  const res=panel.querySelector('#betonResArea');
+  if(!res) return;
+  const area=L*W;
+  const thM=type==='selfleveling'?T/1000:T/100; // мм→м или см→м
+  res.innerHTML=!T?'<div class="mat-empty">[ ВЪВЕДИ ДЕБЕЛИНА ]</div>':betonCalc(type,area,thM,T);
+}
+
+function renderBetonPanel(L,W,panel){
+  const s=matState.beton;
+  const type=s.type||'concrete', T=parseFloat(s.thick)||5;
+  const area=L*W, thM=type==='selfleveling'?T/1000:T/100;
+  let betonRes='';
+  if(type&&T>0) betonRes=betonCalc(type,area,thM,T);
+  panel.innerHTML=`
+    <div style="font-family:var(--tech);font-size:0.82rem;color:var(--accent);margin-bottom:12px;letter-spacing:2px;font-weight:bold;">ЗАМАЗКИ</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+      ${sel('betonType2','ТИП',[['concrete','Готов бетон'],['manual','Ръчна 1:3'],['drymix','Суха замазка'],['selfleveling','Саморазливна']],s.type,"updateBetonType(this.value,"+L+","+W+");")}
+      <div>
+        <div class="mp-label" id="betonThickLabel">${type==='selfleveling'?'ДЕБЕЛИНА (ММ)':'ДЕБЕЛИНА (СМ)'}</div>
+        <input class="mp-inp" type="number" id="betonThick2" value="${T}" step="${type==='selfleveling'?1:0.5}" min="1" max="${type==='selfleveling'?20:50}"
+          style="width:100%;font-size:1.4rem;text-align:center;"
+          oninput="updateBetonThick(this.value)"
+          onchange="updateBetonThick(this.value)">
+      </div>
+    </div>
+    <div id="betonResArea">${betonRes||'<div class="mat-empty">[ ВЪВЕДИ ДЕБЕЛИНА ]</div>'}</div>
+  `;
+}
+
+function openGipsModal(){
+  const {L,W}=getAreas();
+  if(!L||!W){alert('Въведи размерите горе!');return;}
+  window.gipsState={ceilingOn:false, selectedWalls:new Set(), bestVariant:null, selectedCeilingVar:null};
+  document.getElementById('gipsModal').style.display='block';
+  document.body.style.overflow='hidden';
+  setTimeout(function(){initGipsModal();},10);
+}
+function closeGipsModal(){
+  document.getElementById('gipsModal').style.display='none';
+  document.body.style.overflow='';
+}
+function switchGipsTab(tab){
+  const {L,W,H}=getAreas();
+  const panel=document.getElementById('gipsModalContent');
+  // Update tab styles
+  document.getElementById('tabCeiling').style.background=tab==='ceiling'?'#1e2d47':'#0d1424';
+  document.getElementById('tabCeiling').style.borderColor=tab==='ceiling'?'#a78bfa':'#334155';
+  document.getElementById('tabCeiling').style.color=tab==='ceiling'?'#a78bfa':'#475569';
+  document.getElementById('tabWalls').style.background=tab==='walls'?'#1e2d47':'#0d1424';
+  document.getElementById('tabWalls').style.borderColor=tab==='walls'?'#a78bfa':'#334155';
+  document.getElementById('tabWalls').style.color=tab==='walls'?'#a78bfa':'#475569';
+  if(tab==='ceiling') renderGips(L,W,panel);
+  else renderGipsWalls(L,W,H,panel);
+}
+
+function renderGipsWalls(L,W,H,panel){
+  const MONO="'Share Tech Mono',monospace";
+  const SANS="'Barlow Condensed',sans-serif";
+  if(!H||H<=0){
+    panel.innerHTML=`<div style="font-family:${MONO};color:#ef4444;padding:20px;text-align:center;">Въведи ВИСОЧИНА горе за да смята стените.</div>`;
+    return;
+  }
+
+  // 4 стени: С1(Д×В), С2(Д×В), С3(Ш×В), С4(Ш×В)
+  const walls=[
+    {id:'С1', len:L, h:H, label:`С1 — ${L.toFixed(2).replace('.',',')}м × ${H.toFixed(2).replace('.',',')}м`},
+    {id:'С2', len:L, h:H, label:`С2 — ${L.toFixed(2).replace('.',',')}м × ${H.toFixed(2).replace('.',',')}м`},
+    {id:'С3', len:W, h:H, label:`С3 — ${W.toFixed(2).replace('.',',')}м × ${H.toFixed(2).replace('.',',')}м`},
+    {id:'С4', len:W, h:H, label:`С4 — ${W.toFixed(2).replace('.',',')}м × ${H.toFixed(2).replace('.',',')}м`},
+  ];
+
+  // Поддържаме множествен избор
+  if(!window.wallState) window.wallState={selected:new Set(['С1'])};
+  const state=window.wallState;
+
+  // Смятаме листите за всяка стена
+  function calcWallSheets(w){
+    const rnd=n=>Math.round(n*1000)/1000;
+    const LS=1.20,LL=2.00;
+    const cols=[];
+    let rem=w.len;
+    while(rem>0.005){cols.push(Math.min(rnd(rem),LS));rem=rnd(rem-cols[cols.length-1]);}
+    const fullH=Math.floor(rnd(w.h)/LL);
+    const endH=rnd(rnd(w.h)-fullH*LL);
+    const piecesFromOne=endH<0.005?2:Math.floor(rnd(LL/endH)+0.005);
+    let total=0;
+    cols.forEach(colW=>{
+      const ppp=Math.max(1,Math.floor(rnd(LS/colW)+0.005));
+      total+=Math.ceil(fullH/ppp);
+    });
+    const sharedSheets=endH>0.005?Math.ceil(cols.length/piecesFromOne):0;
+    total+=sharedSheets;
+    return total;
+  }
+
+  // Общо листи за избраните стени
+  const totalSelected=walls.filter(w=>state.selected.has(w.id)).reduce((s,w)=>s+calcWallSheets(w),0);
+
+  const btnHtml=walls.map(w=>{
+    const isSel=state.selected.has(w.id);
+    const sh=calcWallSheets(w);
+    return `<button onclick="toggleWall('${w.id}')" style="flex:1;padding:8px 4px;font-family:${MONO};font-size:0.65rem;letter-spacing:1px;border-radius:4px;cursor:pointer;background:${isSel?'#1e2d47':'#0d1424'};border:1px solid ${isSel?'#a78bfa':'#334155'};color:${isSel?'#a78bfa':'#475569'};">${w.id}<br><span style="font-size:0.55rem;color:#64748b;">${w.len.toFixed(2).replace('.',',')}×${w.h.toFixed(2).replace('.',',')}м</span><br><span style="font-size:0.6rem;color:${isSel?'#fbbf24':'#334155'};">${sh} листа</span></button>`;
+  }).join('');
+
+  // Показваме схемата за последно избраната
+  const lastSel=[...state.selected].pop()||'С1';
+  const sel=walls.find(w=>w.id===lastSel)||walls[0];
+
+  panel.innerHTML=`
+    <div style="font-family:${MONO};font-size:0.65rem;color:#64748b;letter-spacing:1px;margin-bottom:8px;">ПРЕДСТЕННА ОБШИВКА — ИЗБЕРЕТЕ СТЕНИ:</div>
+    <div style="display:flex;gap:6px;margin-bottom:10px;">${btnHtml}</div>
+    ${state.selected.size>1?`<div style="font-family:${MONO};font-size:0.75rem;background:#0d1424;border:1px solid #fbbf24;border-radius:5px;padding:8px 12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;"><span style="color:#64748b;">ОБЩО ИЗБРАНИ (${state.selected.size} стени)</span><span style="color:#fbbf24;font-size:1.3rem;font-weight:bold;">${totalSelected} <span style="font-size:0.6rem;">листа</span> &nbsp; ${totalSelected+1} <span style="font-size:0.6rem;">+резерв</span></span></div>`:''}
+    <div style="font-family:${MONO};font-size:0.6rem;color:#a78bfa;margin-bottom:8px;">СХЕМА: ${sel.label}</div>
+    <div id="wallSchemaContent"></div>
+  `;
+
+  renderWallSchema(sel.len, sel.h, document.getElementById('wallSchemaContent'));
+}
+
+function toggleWall(id){
+  if(!window.wallState) window.wallState={selected:new Set()};
+  const s=window.wallState.selected;
+  if(s.has(id)) { if(s.size>1) s.delete(id); }
+  else s.add(id);
+  // последно добавената е активната за схема
+  if(!window.wallState.selected.has(id)) window.wallState.selected.add(id);
+  const {L,W,H}=getAreas();
+  renderGipsWalls(L,W,H,document.getElementById('gipsModalContent'));
+}
+
+function renderWallSchema(wallLen, wallH, panel){
+  const MONO="'Share Tech Mono',monospace";
+  const rnd=n=>Math.round(n*1000)/1000;
+  const LS=1.20, LL=2.00;
+
+  // Колони по дължина (1.20м широки)
+  const cols=[];
+  let rem=wallLen;
+  while(rem>0.005){ cols.push(Math.min(rnd(rem),LS)); rem=rnd(rem-cols[cols.length-1]); }
+
+  // По височина: 2.00м цял + остатък
+  const fullH=Math.floor(rnd(wallH)/LL);
+  const endH=rnd(rnd(wallH)-fullH*LL);
+
+  // Разминаване: нечетни колони = endH горе + цели, четни = цели + endH долу
+  // От 1 лист (2.00м) режем endH парчета: floor(2.00/endH) парчета
+  const exactFitH=endH<0.005;
+  const startH=exactFitH?rnd(LL/2):endH;
+  const piecesFromOneSheet=exactFitH?2:Math.floor(rnd(LL/startH)+0.005);
+
+  // Листи на колона
+  function sheetsForCol(colW, isOdd){
+    const segH=fullH+(endH>0.005?1:0); // сегменти по височина
+    const ppp=Math.max(1,Math.floor(rnd(LS/colW)+0.005)); // парчета по ширина
+    return Math.ceil(segH/ppp);
+  }
+
+  // Споделен лист за парчетата по височина
+  const totalPiecesNeeded=cols.length; // 1 парче на колона
+  const sharedSheets=endH>0.005?Math.ceil(totalPiecesNeeded/piecesFromOneSheet):0;
+  let totalSheets=0;
+  cols.forEach((colW,ci)=>{
+    const ppp=Math.max(1,Math.floor(rnd(LS/colW)+0.005));
+    totalSheets+=Math.ceil(fullH/ppp);
+  });
+  totalSheets+=sharedSheets;
+  const orderSheets=totalSheets+1;
+
+  // SVG
+  const ox=62,oy=36,sc=Math.min(220/wallLen,130/wallH,45);
+  const rW=wallLen*sc,rH=wallH*sc;
+  const rightX=ox+rW+10;
+  const svgW=rightX+50, svgH=rH+oy+20;
+  const colors=['#60a5fa','#fbbf24','#4ade80','#f472b6','#a78bfa'];
+
+  let svgStr='', cumX=0;
+  cols.forEach((colW,ci)=>{
+    const cw=colW*sc, cx2=ox+cumX*sc;
+    const isOdd=ci%2===0;
+    const color=colors[ci%5];
+    const fill=`rgba(${ci%2===0?'96,165,250':'251,191,36'},0.${ci%2===0?'12':'09'})`;
+
+    // Сегменти по височина
+    let cy2=oy;
+    if(!isOdd){
+      // четна: цели + парче долу
+      for(let i=0;i<fullH;i++){
+        const sh=LL*sc;
+        svgStr+=`<rect x="${cx2}" y="${cy2}" width="${cw}" height="${sh}" fill="${fill}"/>`;
+        svgStr+=`<line x1="${cx2}" y1="${cy2}" x2="${cx2+cw}" y2="${cy2}" stroke="${color}" stroke-width="1.5"/>`;
+        svgStr+=`<line x1="${cx2}" y1="${cy2+sh}" x2="${cx2+cw}" y2="${cy2+sh}" stroke="${color}" stroke-width="1.5"/>`;
+        svgStr+=`<line x1="${cx2}" y1="${cy2}" x2="${cx2}" y2="${cy2+sh}" stroke="${ci===0?'#ef4444':color}" stroke-width="1.5" ${ci===0?'stroke-dasharray="4 2"':''}/>`;
+        svgStr+=`<line x1="${cx2+cw}" y1="${cy2}" x2="${cx2+cw}" y2="${cy2+sh}" stroke="${color}" stroke-width="1.5"/>`;
+        svgStr+=`<text x="${cx2+cw/2}" y="${cy2+sh/2}" fill="${color}" font-family="${MONO}" font-size="8" text-anchor="middle" dominant-baseline="middle">2,00м</text>`;
+        cy2+=sh;
+      }
+      if(endH>0.005){
+        const sh=endH*sc;
+        svgStr+=`<rect x="${cx2}" y="${cy2}" width="${cw}" height="${sh}" fill="rgba(239,68,68,0.15)"/>`;
+        svgStr+=`<line x1="${cx2}" y1="${cy2}" x2="${cx2+cw}" y2="${cy2}" stroke="${color}" stroke-width="1.5"/>`;
+        svgStr+=`<line x1="${cx2}" y1="${cy2+sh}" x2="${cx2+cw}" y2="${cy2+sh}" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="4 2"/>`;
+        svgStr+=`<line x1="${cx2}" y1="${cy2}" x2="${cx2}" y2="${cy2+sh}" stroke="${ci===0?'#ef4444':color}" stroke-width="1.5" ${ci===0?'stroke-dasharray="4 2"':''}/>`;
+        svgStr+=`<line x1="${cx2+cw}" y1="${cy2}" x2="${cx2+cw}" y2="${cy2+sh}" stroke="${color}" stroke-width="1.5"/>`;
+        const rot=cw<20;
+        svgStr+=`<text x="${cx2+cw/2}" y="${cy2+sh/2}" fill="#ef4444" font-family="${MONO}" font-size="${cw<25?6:8}" text-anchor="middle" dominant-baseline="middle" ${rot?`transform="rotate(-90,${cx2+cw/2},${cy2+sh/2})"`:''}>${(endH*100).toFixed(0)}см</text>`;
+      }
+    } else {
+      // нечетна: парче горе + цели
+      if(endH>0.005){
+        const sh=endH*sc;
+        svgStr+=`<rect x="${cx2}" y="${cy2}" width="${cw}" height="${sh}" fill="rgba(239,68,68,0.15)"/>`;
+        svgStr+=`<line x1="${cx2}" y1="${cy2}" x2="${cx2+cw}" y2="${cy2}" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="4 2"/>`;
+        svgStr+=`<line x1="${cx2}" y1="${cy2+sh}" x2="${cx2+cw}" y2="${cy2+sh}" stroke="${color}" stroke-width="1.5"/>`;
+        svgStr+=`<line x1="${cx2}" y1="${cy2}" x2="${cx2}" y2="${cy2+sh}" stroke="${ci===0?'#ef4444':color}" stroke-width="1.5" ${ci===0?'stroke-dasharray="4 2"':''}/>`;
+        svgStr+=`<line x1="${cx2+cw}" y1="${cy2}" x2="${cx2+cw}" y2="${cy2+sh}" stroke="${color}" stroke-width="1.5"/>`;
+        const rot=cw<20;
+        svgStr+=`<text x="${cx2+cw/2}" y="${cy2+sh/2}" fill="#ef4444" font-family="${MONO}" font-size="${cw<25?6:8}" text-anchor="middle" dominant-baseline="middle" ${rot?`transform="rotate(-90,${cx2+cw/2},${cy2+sh/2})"`:''}>${(endH*100).toFixed(0)}см</text>`;
+        cy2+=sh;
+      }
+      for(let i=0;i<fullH;i++){
+        const sh=LL*sc;
+        svgStr+=`<rect x="${cx2}" y="${cy2}" width="${cw}" height="${sh}" fill="${fill}"/>`;
+        svgStr+=`<line x1="${cx2}" y1="${cy2}" x2="${cx2+cw}" y2="${cy2}" stroke="${color}" stroke-width="1.5"/>`;
+        svgStr+=`<line x1="${cx2}" y1="${cy2+sh}" x2="${cx2+cw}" y2="${cy2+sh}" stroke="${color}" stroke-width="1.5"/>`;
+        svgStr+=`<line x1="${cx2}" y1="${cy2}" x2="${cx2}" y2="${cy2+sh}" stroke="${ci===0?'#ef4444':color}" stroke-width="1.5" ${ci===0?'stroke-dasharray="4 2"':''}/>`;
+        svgStr+=`<line x1="${cx2+cw}" y1="${cy2}" x2="${cx2+cw}" y2="${cy2+sh}" stroke="${color}" stroke-width="1.5"/>`;
+        svgStr+=`<text x="${cx2+cw/2}" y="${cy2+sh/2}" fill="${color}" font-family="${MONO}" font-size="8" text-anchor="middle" dominant-baseline="middle">2,00м</text>`;
+        cy2+=sh;
+      }
+    }
+
+    // Етикет отдолу
+    svgStr+=`<text x="${cx2+cw/2}" y="${oy+rH+12}" fill="${color}" font-family="${MONO}" font-size="7" text-anchor="middle">${(colW*100).toFixed(0)}см</text>`;
+    cumX=rnd(cumX+colW);
+  });
+
+  // Рамка
+  svgStr+=`<rect x="${ox}" y="${oy}" width="${rW}" height="${rH}" fill="none" stroke="#334155" stroke-width="1.5"/>`;
+
+  // Дясно: кумулативни по дължина
+  svgStr+=`<line x1="${rightX}" y1="${oy}" x2="${rightX}" y2="${oy+rH}" stroke="#475569" stroke-width="0.8"/>`;
+  let cumX2=0;
+  svgStr+=`<line x1="${rightX-3}" y1="${oy}" x2="${rightX+3}" y2="${oy}" stroke="#475569" stroke-width="1"/>`;
+  svgStr+=`<text x="${rightX+5}" y="${oy}" fill="#475569" font-family="${MONO}" font-size="7" dominant-baseline="middle">0</text>`;
+  cols.forEach((colW,ci)=>{
+    cumX2=rnd(cumX2+colW);
+    const px=ox+cumX2*sc;
+    const color=colors[ci%5];
+    svgStr+=`<line x1="${rightX-3}" y1="${oy}" x2="${rightX+3}" y2="${oy}" stroke="#475569" stroke-width="1"/>`;
+    // vertical ticks on right at y positions... actually right axis is horizontal for walls
+    // use bottom axis instead
+  });
+
+  // Долу: кумулативни по дължина
+  let cumXb=0;
+  svgStr+=`<line x1="${ox}" y1="${oy+rH+20}" x2="${ox+rW}" y2="${oy+rH+20}" stroke="#475569" stroke-width="0.8"/>`;
+  svgStr+=`<line x1="${ox}" y1="${oy+rH+17}" x2="${ox}" y2="${oy+rH+23}" stroke="#475569" stroke-width="1"/>`;
+  svgStr+=`<text x="${ox}" y="${oy+rH+30}" fill="#475569" font-family="${MONO}" font-size="7" text-anchor="middle">0</text>`;
+  cols.forEach((colW,ci)=>{
+    cumXb=rnd(cumXb+colW);
+    const px=ox+cumXb*sc;
+    const color=colors[ci%5];
+    svgStr+=`<line x1="${px}" y1="${oy+rH+17}" x2="${px}" y2="${oy+rH+23}" stroke="${color}" stroke-width="1.2"/>`;
+    svgStr+=`<text x="${px}" y="${oy+rH+30}" fill="${color}" font-family="${MONO}" font-size="7" text-anchor="middle">${cumXb.toFixed(2).replace('.',',')}м</text>`;
+  });
+
+  // Вертикална ос вдясно с В
+  const midY=oy+rH/2;
+  svgStr+=`<text x="${rightX+38}" y="${midY}" fill="#e2e8f0" font-family="${MONO}" font-size="8" font-weight="bold" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90,${rightX+38},${midY})">${wallH.toFixed(2).replace('.',',')} м</text>`;
+
+  // Отгоре: обща дължина
+  const dims=`
+    <rect x="${ox+rW/2-24}" y="${oy-22}" width="48" height="13" fill="#0a0f1a" rx="2"/>
+    <text x="${ox+rW/2}" y="${oy-16}" fill="#e2e8f0" font-family="${MONO}" font-size="9" font-weight="bold" text-anchor="middle" dominant-baseline="middle">${wallLen.toFixed(2).replace('.',',')} м</text>
+    <line x1="${ox}" y1="${oy-22}" x2="${ox+rW}" y2="${oy-22}" stroke="#334155" stroke-width="0.7"/>
+    <line x1="${ox}" y1="${oy-25}" x2="${ox}" y2="${oy-19}" stroke="#334155" stroke-width="0.7"/>
+    <line x1="${ox+rW}" y1="${oy-25}" x2="${ox+rW}" y2="${oy-19}" stroke="#334155" stroke-width="0.7"/>`;
+
+  panel.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
+      <div style="background:#0d1424;border:1px solid #fbbf24;border-radius:6px;padding:10px;text-align:center;">
+        <div style="font-family:${MONO};font-size:0.55rem;color:#64748b;">БЕЗ РЕЗЕРВ</div>
+        <div style="font-size:2rem;font-weight:bold;color:#fbbf24;line-height:1;">${totalSheets}</div>
+        <div style="font-family:${MONO};font-size:0.55rem;color:#64748b;">ЛИСТА</div>
+      </div>
+      <div style="background:#0d1424;border:1px solid #ef4444;border-radius:6px;padding:10px;text-align:center;">
+        <div style="font-family:${MONO};font-size:0.55rem;color:#64748b;">ПАРЧЕТА</div>
+        <div style="font-size:2rem;font-weight:bold;color:#ef4444;line-height:1;">${sharedSheets}</div>
+        <div style="font-family:${MONO};font-size:0.55rem;color:#64748b;">СПОДЕЛЕНИ</div>
+      </div>
+      <div style="background:#0d1424;border:2px solid #4ade80;border-radius:6px;padding:10px;text-align:center;">
+        <div style="font-family:${MONO};font-size:0.55rem;color:#64748b;">ПОРЪЧАЙ</div>
+        <div style="font-size:2rem;font-weight:bold;color:#4ade80;line-height:1;">${orderSheets}</div>
+        <div style="font-family:${MONO};font-size:0.55rem;color:#64748b;">+1 РЕЗЕРВ</div>
+      </div>
+    </div>
+    <div style="background:#0d1424;border:1px solid #1e3a5f;border-radius:6px;padding:12px;">
+      <div style="font-family:${MONO};font-size:0.6rem;color:#64748b;letter-spacing:2px;margin-bottom:10px;">СХЕМА — ПРЕДСТЕННА ОБШИВКА</div>
+      <svg viewBox="0 0 ${svgW} ${svgH+20}" style="width:100%;height:auto;display:block;" xmlns="http://www.w3.org/2000/svg">
+        ${dims}${svgStr}
+      </svg>
+      <div style="display:flex;gap:16px;margin-top:8px;flex-wrap:wrap;">
+        <span style="font-family:${MONO};font-size:0.65rem;color:#94a3b8;"><span style="color:#3b82f6;">━</span> ФАБРИЧЕН</span>
+        <span style="font-family:${MONO};font-size:0.65rem;color:#94a3b8;"><span style="color:#ef4444;">╌</span> НАРЯЗАН → стена</span>
+      </div>
+    </div>`;
+}
+
+function renderGips(L,W,panel){
+  const MONO="'Share Tech Mono',monospace";
+  const SANS="'Barlow Condensed',sans-serif";
+  const LS=1.20, LL=2.00;
+  const rnd=n=>Math.round(n*1000)/1000;
+
+  function calcVariant(along, across, label){
+    const rows=[];
+    let rem=across;
+    while(rem>0.005){ rows.push(Math.min(rnd(rem),LS)); rem=rnd(rem-rows[rows.length-1]); }
+
+    const fullAlong=Math.floor(rnd(along)/LL);
+    const X=rnd(rnd(along)-fullAlong*LL);
+    const exactFit=X<0.005;
+    const startX=exactFit?1.00:X;
+
+    // Ред 1 (нечетен): fullAlong цели + 1 лист за X (ако X>0)
+    // Ред 2 (четен): startX идва от СЪЩИЯ лист като X на Ред 1 → не се брои нов лист!
+    //   Ред 2 = само fullAlong цели листи (startX е от споделения лист с Ред 1)
+    // Ако exactFit: 1 споделен лист за 1.00+1.00 → Ред 2 = fullAlong-1 цели + 1 споделен
+    const sheetsR1 = fullAlong + (X>0.005 ? 1 : 0); // включва листа за X
+    // Ред 2 НЕ добавя нов лист за startX — вземаме го от листа на Ред 1
+    const sheetsR2 = exactFit ? fullAlong : fullAlong; // startX споделен с Ред 1
+
+    let total=0, fire=[];
+    rows.forEach((rowW,ri)=>{
+      const ppp=Math.max(1,Math.floor(rnd(LS/rowW)+0.005));
+      const base=ri%2===0?sheetsR1:sheetsR2;
+      total+=Math.ceil(base/ppp);
+      // Фира: само ако остатъкът от листа не може да се ползва
+      // При X>0: от 1 лист режем X → остава LL-X → тази остатъчна лента е фира
+      if(ri%2!==0&&!exactFit){
+        const fireSize=rnd(LL-X-startX); // остатък след X и startX от 1 лист
+        if(fireSize>0.005) fire.push({label:`Ред ${ri+1} остатък`,size:`${(fireSize*100).toFixed(0)}×${(rowW*100).toFixed(0)}см`});
+      }
+      if(Math.abs(rowW-LS)>0.005&&ppp===1) fire.push({label:`Ред ${ri+1} ширина`,size:`${along.toFixed(2).replace('.',',')}м×${(rnd(LS-rowW)*100).toFixed(0)}см`});
+    });
+
+    return {along,across,rows,fullAlong,X,exactFit,startX,sheetsR1,sheetsR2,total,fire,label};
+  }
+
+  const varA=calcVariant(L,W,`По дължина ${L.toFixed(2).replace('.',',')}м`);
+  const varB=calcVariant(W,L,`По ширина ${W.toFixed(2).replace('.',',')}м`);
+  const best=varA.total<=varB.total?'A':'B';
+
+  function drawVariant(v, containerId, isHorizontal){
+    const {along,across,rows,fullAlong,X,exactFit,startX,sheetsR1,sheetsR2,total,fire,label}=v;
+    // Horizontal: wider viewBox for landscape layout
+    const ox=62, oy=46;
+    const sc=isHorizontal?Math.min(230/along,130/across,40):Math.min(155/along,130/across,36);
+    const rW=along*sc,rH=across*sc;
+    const rightX=ox+rW+10;
+    const svgW=rightX+50;
+    const svgH=rH+oy+20;
+    const colors=['#60a5fa','#fbbf24','#4ade80','#f472b6','#a78bfa'];
+    const bgFills=['rgba(96,165,250,0.12)','rgba(251,191,36,0.09)','rgba(74,222,128,0.09)','rgba(244,114,182,0.09)','rgba(167,139,250,0.09)'];
+    let svgStr='',cy=oy;
+    let cumW=0;
+
+    rows.forEach((rowW,ri)=>{
+      const rh=rowW*sc,color=colors[ri%5],bgFill=bgFills[ri%5];
+      let cx=ox;
+      function seg(w,wallL,wallR,lbl,sf){
+        const pw=w*sc;
+        svgStr+=`<rect x="${cx}" y="${cy}" width="${pw}" height="${rh}" fill="${sf||bgFill}"/>`;
+        svgStr+=`<line x1="${cx}" y1="${cy}" x2="${cx+pw}" y2="${cy}" stroke="${color}" stroke-width="2"/>`;
+        svgStr+=`<line x1="${cx}" y1="${cy+rh}" x2="${cx+pw}" y2="${cy+rh}" stroke="${color}" stroke-width="2"/>`;
+        const lc=wallL?'#ef4444':color,rc=wallR?'#ef4444':color;
+        svgStr+=`<line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy+rh}" stroke="${lc}" stroke-width="2" ${lc==='#ef4444'?'stroke-dasharray="4 2"':''}/>`;
+        svgStr+=`<line x1="${cx+pw}" y1="${cy}" x2="${cx+pw}" y2="${cy+rh}" stroke="${rc}" stroke-width="2" ${rc==='#ef4444'?'stroke-dasharray="4 2"':''}/>`;
+        const rot=pw<22;
+        svgStr+=`<text x="${cx+pw/2}" y="${cy+rh/2}" fill="${pw<14?'#94a3b8':color}" font-family="${MONO}" font-size="${pw<22?5:8}" text-anchor="middle" dominant-baseline="middle" ${rot?`transform="rotate(-90,${cx+pw/2},${cy+rh/2})"`:''}>${lbl}</text>`;
+        cx+=pw;
+      }
+      const isR1=ri%2===0;
+      if(isR1){
+        for(let i=0;i<fullAlong;i++) seg(LL,i===0,false,`${LL.toFixed(1)}м`);
+        if(X>0.005) seg(X,false,true,`${(X*100).toFixed(0)}см`,'rgba(239,68,68,0.2)');
+      } else {
+        seg(startX,true,false,`${(startX*100).toFixed(0)}см`,exactFit?'rgba(74,222,128,0.2)':'rgba(239,68,68,0.2)');
+        const mid=exactFit?fullAlong-1:fullAlong;
+        for(let i=0;i<mid;i++) seg(LL,false,!exactFit&&i===mid-1,`${LL.toFixed(1)}м`);
+        if(exactFit) seg(startX,false,true,`${(startX*100).toFixed(0)}см`,'rgba(74,222,128,0.2)');
+      }
+
+      // Ляво: Р1→120 на 1 ред
+      svgStr+=`<text x="${ox-4}" y="${cy+rh/2}" fill="${color}" font-family="${MONO}" font-size="7.5" text-anchor="end" dominant-baseline="middle">Р${ri+1}→${(rowW*100).toFixed(0)}</text>`;
+
+      // Дясно: тик + кумулативна позиция след реда
+      cumW=rnd(cumW+rowW);
+      svgStr+=`<line x1="${rightX-3}" y1="${cy+rh}" x2="${rightX+3}" y2="${cy+rh}" stroke="${color}" stroke-width="1.2"/>`;
+      svgStr+=`<text x="${rightX+5}" y="${cy+rh}" fill="${color}" font-family="${MONO}" font-size="7" dominant-baseline="middle">${cumW.toFixed(2).replace('.',',')}м</text>`;
+
+      cy+=rh;
+    });
+
+    // Дясна вертикална линия + начален тик
+    svgStr+=`<line x1="${rightX}" y1="${oy}" x2="${rightX}" y2="${oy+rH}" stroke="#475569" stroke-width="0.8"/>`;
+    svgStr+=`<line x1="${rightX-3}" y1="${oy}" x2="${rightX+3}" y2="${oy}" stroke="#475569" stroke-width="1"/>`;
+    svgStr+=`<text x="${rightX+5}" y="${oy}" fill="#475569" font-family="${MONO}" font-size="7" dominant-baseline="middle">0</text>`;
+    // 3.00м вертикален етикет
+    const midY=oy+rH/2;
+    svgStr+=`<text x="${rightX+38}" y="${midY}" fill="#e2e8f0" font-family="${MONO}" font-size="8" font-weight="bold" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90,${rightX+38},${midY})">${across.toFixed(2).replace('.',',')} м</text>`;
+
+    // Отгоре: сегментни тикове по дължина
+    let segX=ox;
+    // Тик на началото
+    svgStr+=`<line x1="${segX}" y1="${oy-20}" x2="${segX}" y2="${oy-12}" stroke="#475569" stroke-width="1"/>`;
+    for(let i=0;i<fullAlong;i++){
+      const nx=segX+LL*sc;
+      svgStr+=`<line x1="${nx}" y1="${oy-20}" x2="${nx}" y2="${oy-12}" stroke="#94a3b8" stroke-width="1"/>`;
+      svgStr+=`<rect x="${(segX+nx)/2-22}" y="${oy-26}" width="44" height="11" fill="#0a0f1a" rx="2"/>`;
+      svgStr+=`<text x="${(segX+nx)/2}" y="${oy-21}" fill="#94a3b8" font-family="${MONO}" font-size="7" text-anchor="middle" dominant-baseline="middle">${LL.toFixed(2).replace('.',',')} м</text>`;
+      segX=nx;
+    }
+    if(X>0.005){
+      const nx=segX+X*sc;
+      svgStr+=`<line x1="${nx}" y1="${oy-20}" x2="${nx}" y2="${oy-12}" stroke="#ef4444" stroke-width="1" stroke-dasharray="3 2"/>`;
+      svgStr+=`<rect x="${(segX+nx)/2-18}" y="${oy-26}" width="36" height="11" fill="#0a0f1a" rx="2"/>`;
+      svgStr+=`<text x="${(segX+nx)/2}" y="${oy-21}" fill="#ef4444" font-family="${MONO}" font-size="7" text-anchor="middle" dominant-baseline="middle">${(X*100).toFixed(0)} см</text>`;
+    }
+    // Хоризонтална линия за сегментите
+    svgStr+=`<line x1="${ox}" y1="${oy-20}" x2="${ox+rW}" y2="${oy-20}" stroke="#475569" stroke-width="0.8"/>`;
+
+    const dims=`
+      <rect x="${ox+rW/2-22}" y="${oy-34}" width="44" height="12" fill="#0a0f1a" rx="2"/>
+      <text x="${ox+rW/2}" y="${oy-28}" fill="#e2e8f0" font-family="${MONO}" font-size="9" font-weight="bold" text-anchor="middle" dominant-baseline="middle">${along.toFixed(2).replace('.',',')} м</text>
+      <line x1="${ox}" y1="${oy-34}" x2="${ox+rW}" y2="${oy-34}" stroke="#334155" stroke-width="0.7"/>
+      <line x1="${ox}" y1="${oy-37}" x2="${ox}" y2="${oy-31}" stroke="#334155" stroke-width="0.7"/>
+      <line x1="${ox+rW}" y1="${oy-37}" x2="${ox+rW}" y2="${oy-31}" stroke="#334155" stroke-width="0.7"/>
+`;
+
+    return `
+      <svg viewBox="0 0 ${svgW} ${svgH}" style="width:100%;height:auto;display:block;" xmlns="http://www.w3.org/2000/svg">
+        ${dims}${svgStr}
+        <rect x="${ox}" y="${oy}" width="${rW}" height="${rH}" fill="none" stroke="#334155" stroke-width="1.5"/>
+      </svg>
+      <div style="font-family:${MONO};font-size:0.62rem;color:#94a3b8;margin-top:6px;line-height:1.8;">
+        Разминаване: <b style="color:#4ade80">${(startX*100).toFixed(0)}см</b> ·
+        Фира: <b style="color:#ef4444">${fire.length} парч.</b>
+        ${fire.map(f=>`<br>  → ${f.label}: ${f.size}`).join('')}
+      </div>`;
+  }
+
+  panel.innerHTML=`
+    <div style="font-family:${MONO};font-size:0.7rem;color:#64748b;letter-spacing:2px;margin-bottom:12px;">
+      ВАРИАНТ А: <span style="color:${best==='A'?'#4ade80':'#94a3b8'}">${varA.total} листа ${best==='A'?'← ПО-МАЛКО':''}</span> &nbsp;|&nbsp;
+      ВАРИАНТ Б: <span style="color:${best==='B'?'#4ade80':'#94a3b8'}">${varB.total} листа ${best==='B'?'← ПО-МАЛКО':''}</span>
+    </div>
+
+    <div style="background:#0d1424;border:1px solid ${best==='A'?'#4ade80':'#334155'};border-radius:6px;padding:12px;margin-bottom:12px;">
+      <div style="font-family:${MONO};font-size:0.7rem;color:${best==='A'?'#4ade80':'#60a5fa'};margin-bottom:8px;letter-spacing:1px;">
+        ${best==='A'?'★ ':''} ВАРИАНТ А — ${varA.label}
+        &nbsp;<span style="color:#fbbf24;font-size:1rem;font-weight:bold;">${varA.total}</span> <span style="color:#64748b;font-size:0.6rem;">листа</span>
+      </div>
+      ${drawVariant(varA,'svgA',true)}
+    </div>
+
+    <div style="background:#0d1424;border:1px solid ${best==='B'?'#4ade80':'#334155'};border-radius:6px;padding:12px;margin-bottom:12px;">
+      <div style="font-family:${MONO};font-size:0.7rem;color:${best==='B'?'#4ade80':'#fbbf24'};margin-bottom:8px;letter-spacing:1px;">
+        ${best==='B'?'★ ':''} ВАРИАНТ Б — ${varB.label}
+        &nbsp;<span style="color:#fbbf24;font-size:1rem;font-weight:bold;">${varB.total}</span> <span style="color:#64748b;font-size:0.6rem;">листа</span>
+      </div>
+      ${drawVariant(varB,'svgB',false)}
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div style="background:#0d1424;border:1px solid #fbbf24;border-radius:6px;padding:12px;text-align:center;">
+        <div style="font-family:${MONO};font-size:0.6rem;color:#64748b;">НАЙ-МАЛКО</div>
+        <div style="font-size:2.5rem;font-weight:bold;color:#fbbf24;line-height:1;">${Math.min(varA.total,varB.total)}</div>
+        <div style="font-family:${MONO};font-size:0.6rem;color:#64748b;">ЛИСТА</div>
+      </div>
+      <div style="background:#0d1424;border:1px solid #ef4444;border-radius:6px;padding:12px;text-align:center;">
+        <div style="font-family:${MONO};font-size:0.6rem;color:#64748b;">ФИРА</div>
+        <div style="font-size:2.5rem;font-weight:bold;color:#ef4444;line-height:1;">${(best==='A'?varA:varB).fire.length}</div>
+        <div style="font-family:${MONO};font-size:0.6rem;color:#64748b;">ПАРЧЕТА</div>
+      </div>
+      <div style="background:#0d1424;border:2px solid #4ade80;border-radius:6px;padding:12px;text-align:center;">
+        <div style="font-family:${MONO};font-size:0.6rem;color:#64748b;">ПОРЪЧАЙ</div>
+        <div style="font-size:2.5rem;font-weight:bold;color:#4ade80;line-height:1;">${Math.min(varA.total,varB.total)+1}</div>
+        <div style="font-family:${MONO};font-size:0.6rem;color:#64748b;">+1 РЕЗЕРВ</div>
+      </div>
+    </div>
+
+    <div style="background:#0d1424;border:1px solid #334155;border-radius:6px;padding:12px;">
+      <div style="font-family:${MONO};font-size:0.68rem;color:#94a3b8;line-height:1.8;">
+        ✓ Фабричен само до фабричен<br>
+        ✗ Фабричен до нарязан — ЗАБРАНЕНО<br>
+        ✓ Нарязаното винаги към стената
+      </div>
+    </div>`;
+}
+
+
+function matRow(icon,name,sub,val,unit){
+  return `<div class="mat-res-row"><div class="mrr-left"><div class="mrr-icon">${icon}</div><div><div class="mrr-name">${name}</div><div class="mrr-sub">${sub}</div></div></div><div><div class="mrr-val">${val}</div><div class="mrr-unit">${unit}</div></div></div>`;
+}
+function renderConcrete(area,thM,el){
+  const net=area*thM; const order=Math.ceil(net*1.1*10)/10;
+  let klass='C16/20',kDesc='подова плоча, лека конструкция';
+  if(thM>=0.15){klass='C25/30';kDesc='натоварена конструкция';}
+  else if(thM>=0.08){klass='C20/25';kDesc='стандартна плоча, под';}
+  el.innerHTML=`<div class="mat-results anim">${matRow('🚛','Готов бетон','нетен обем: '+fmt(net)+' м³ + 10%',order.toFixed(1),'кубика (м³)')}${matRow('🏷️','Препоръчан клас',kDesc,klass,'марка')}</div><div class="mat-note"><strong>Мин. доставка 4–6 куб.</strong> Закръглявай нагоре.</div>`;
+}
+function renderManual(area,thM,el){
+  const totalVol=area*thM*1.3*1.1;
+  const cVol=totalVol*0.25, sVol=totalVol*0.75;
+  const cKg=Math.round(cVol*1400);
+  const bags25=Math.ceil(cKg/25);
+  const sandKg=Math.round(sVol*1600);
+  const sandTons=Math.round(sVol*1.6*10)/10;
+  const waterL=Math.round(totalVol*110); // ~110л/м³ замазка
+  const totalKg=cKg+sandKg+waterL;
+  const loadKgM2=Math.round(totalKg/area);
+  el.innerHTML=`
+    <div class="mat-results anim">
+      ${matRow('🧱','Цимент','~'+cKg+' кг',bags25,'торби × 25кг')}
+      ${matRow('⛏️','Пясък','~'+fmt(sVol)+' м³',sandTons,'тона')}
+      ${matRow('💧','Вода','~110 л/м³ замазка',waterL,'литра')}
+      ${matRow('⚖️','Обща маса','цимент + пясък + вода',totalKg,'кг')}
+      ${matRow('🏗️','Натоварване','обща маса ÷ '+fmt(area)+' м²',loadKgM2,'кг/м²')}
+    </div>
+    <div class="mat-note">×1.3 компакция + 10% резерв. Съотношение 1:3.</div>`;
+}
+function renderDryMix(area,thCm,el){
+  const totalKg=Math.round(area*thCm*20*1.1); // 20кг/м²/см — Baumit/Knauf, +10% резерв
+  const bags=Math.ceil(totalKg/25);
+  const waterPerKg=0.20; // л/кг — редактируемо
+  const waterL=Math.round(totalKg*waterPerKg*10)/10;
+  const wetKg=Math.round(totalKg+waterL);
+  const loadKgM2=Math.round(wetKg/area);
+  el.innerHTML=`
+    <div class="mat-results anim">
+      ${matRow('📦','Суха замазка','~'+totalKg+' кг + 10% резерв',bags,'торби × 25кг')}
+      ${matRow('💧','Вода','~'+waterPerKg+' л/кг суха смес',waterL,'литра')}
+      ${matRow('⚖️','Мокра маса','суха + вода',wetKg,'кг общо')}
+      ${matRow('🏗️','Натоварване на пода','мокра маса ÷ '+fmt(area)+' м²',loadKgM2,'кг/м²')}
+    </div>
+    <div class="mat-note">По <strong>20кг/м²/см</strong> — Baumit Солидо, Knauf и подобни. Вода: ~0.20 л/кг (вижте опаковката).</div>`;
+}
+// ── NEW GIPS MODAL FUNCTIONS ──────────────────────────────
+
+window.gipsState = {ceilingOn:false, selectedWalls:new Set(), bestVariant:null, selectedCeilingVar:null};
+
+function initGipsModal(){
+  const {L,W,H}=getAreas();
+  renderCeilingSection(L,W);
+  renderWallsSection(L,W,H);
+  updateGipsTotal();
+}
+
+function calcVariantSimple(along,across){
+  const rnd=n=>Math.round(n*1000)/1000;
+  const LS=1.20, LL=2.00;
+  const fullCount=Math.floor(rnd(along)/LL);
+  const X=rnd(rnd(along)-fullCount*LL);
+  const exactFit=X<0.005;
+  const startX=exactFit?1.00:X;
+  const rows=[];
+  let rem=across;
+  while(rem>0.005){rows.push(Math.min(rnd(rem),LS));rem=rnd(rem-rows[rows.length-1]);}
+  let total=0;
+  if(!exactFit){
+    // Цели листи
+    rows.forEach(function(rowW){
+      const ppp=Math.max(1,Math.floor(rnd(LS/rowW)+0.005));
+      total+=Math.ceil(fullCount/ppp);
+    });
+    // X-парчета: 1 на ред, от 1 лист floor(LL/startX) парчета
+    const ppl=Math.floor(rnd(LL/startX)+0.005);
+    total+=Math.ceil(rows.length/ppl);
+  } else {
+    // exactFit: нечетни редове = цели, четни = 1 лист краища + остатъчни цели
+    rows.forEach(function(rowW,ri){
+      const ppp=Math.max(1,Math.floor(rnd(LS/rowW)+0.005));
+      if(ri%2===0){
+        total+=Math.ceil(fullCount/ppp);
+      } else {
+        total+=1+Math.ceil(Math.max(0,fullCount-1)/ppp);
+      }
+    });
+  }
+  return {total:total, along:along, across:across, exactFit:exactFit};
+}
+
+function updateGipsTotal(){
+  const {L,W,H}=getAreas();
+  const state=window.gipsState;
+  const rnd=n=>Math.round(n*1000)/1000;
+  const LS=1.20, LL=2.00;
+  let sheets=0, cdCount=0, udCount=0;
+
+  if(state.ceilingOn && state.bestVariant){
+    const v=state.bestVariant;
+    sheets+=v.total;
+    let cdPos=0.60;
+    while(cdPos<=v.across+0.005){cdCount++;cdPos=rnd(cdPos+0.60);}
+    const udLm=rnd(2*v.along+2*v.across);
+    udCount+=Math.ceil(udLm/3);
+  }
+
+  state.selectedWalls.forEach(function(wid){
+    const walls=getWallDefs(L,W,H);
+    const w=walls.find(function(x){return x.id===wid;});
+    if(!w) return;
+    const cols=[];
+    let rem=w.len;
+    while(rem>0.005){cols.push(Math.min(rnd(rem),LS));rem=rnd(rem-cols[cols.length-1]);}
+    const fullH=Math.floor(rnd(w.h)/LL);
+    const endH=rnd(rnd(w.h)-fullH*LL);
+    const sheetsR1=fullH+(endH>0.005?1:0);
+    const sheetsR2=1+fullH;
+    let wSh=0;
+    cols.forEach(function(colW,ci){
+      const ppp=Math.max(1,Math.floor(rnd(LS/colW)+0.005));
+      wSh+=Math.ceil((ci%2===0?sheetsR1:sheetsR2)/ppp);
+    });
+    sheets+=wSh+1;
+    let cdPos=0.60;
+    while(cdPos<=w.len+0.005){cdCount++;cdPos=rnd(cdPos+0.60);}
+    const udLm=rnd(2*w.len+2*w.h);
+    udCount+=Math.ceil(udLm/3);
+  });
+
+  const hasSel=state.ceilingOn||state.selectedWalls.size>0;
+  const reserves=(state.ceilingOn?1:0)+state.selectedWalls.size;
+
+  function setEl(id,val){ var e=document.getElementById(id); if(e) e.textContent=val; }
+  setEl('totalSheets', hasSel?sheets:'--');
+  setEl('totalSheetsRes', hasSel?'(+'+reserves+' резерв)':'');
+  setEl('totalCD', hasSel?cdCount:'--');
+  setEl('totalCDsize', hasSel?'бр '+(H&&H>3?'×4м':'×3м'):'');
+  setEl('totalUD', hasSel?udCount:'--');
+  setEl('totalUDsize', hasSel?'бр ×3м':'');
+  setEl('totalOrder', hasSel?(sheets+reserves):'--');
+  var forEl=document.getElementById('totalFor');
+  if(forEl){
+    if(hasSel){
+      var parts=[];
+      if(state.ceilingOn) parts.push('таван');
+      state.selectedWalls.forEach(function(w){parts.push(w);});
+      forEl.textContent=parts.join(' + ');
+    } else { forEl.textContent=''; }
+  }
+}
+
+function getWallDefs(L,W,H){
+  if(!H||H<=0) return [];
+  return [
+    {id:'С1',len:L,h:H},{id:'С2',len:L,h:H},
+    {id:'С3',len:W,h:H},{id:'С4',len:W,h:H}
+  ];
+}
+
+function toggleCeiling(){
+  const state=window.gipsState;
+  state.ceilingOn=!state.ceilingOn;
+  const btn=document.getElementById('btnCeiling');
+  if(btn){
+    if(state.ceilingOn){
+      btn.style.background='#1e2d47';btn.style.borderColor='#a78bfa';btn.style.color='#a78bfa';
+      btn.textContent='✓ ВКЛЮЧЕНО';
+    } else {
+      btn.style.background='#0d1424';btn.style.borderColor='#334155';btn.style.color='#475569';
+      btn.textContent='+ ВКЛЮЧИ';
+    }
+  }
+  updateGipsTotal();
+}
+
+function renderCeilingSection(L,W){
+  const MONO="'Share Tech Mono',monospace";
+  const varA=calcVariantSimple(L,W);
+  const varB=calcVariantSimple(W,L);
+  const state=window.gipsState;
+  if(!state.selectedCeilingVar){
+    state.selectedCeilingVar=varA.total<=varB.total?'A':'B';
+  }
+  const selVar=state.selectedCeilingVar==='A'?varA:varB;
+  state.bestVariant=selVar;
+
+  const panel=document.getElementById('ceilingContent');
+  if(!panel) return;
+
+  const selA=state.selectedCeilingVar==='A';
+  const selB=!selA;
+  var bgA=selA?'#1e2d47':'#0d1424', boA=selA?'#a78bfa':'#334155', coA=selA?'#a78bfa':'#475569', cA=selA?'#fbbf24':'#475569';
+  var bgB=selB?'#1e2d47':'#0d1424', boB=selB?'#a78bfa':'#334155', coB=selB?'#a78bfa':'#475569', cB=selB?'#fbbf24':'#475569';
+
+  var btnA='<button onclick="selectCeilingVar(\'A\')" style="flex:1;padding:7px 4px;font-family:'+MONO+';font-size:0.62rem;border-radius:4px;cursor:pointer;background:'+bgA+';border:1px solid '+boA+';color:'+coA+';">ВАР А — по '+L.toFixed(2).replace('.',',')+'м<br><span style="font-size:0.55rem;color:'+cA+';">'+varA.total+' листа'+(varA.total<=varB.total?' ★':'')+'</span></button>';
+  var btnB='<button onclick="selectCeilingVar(\'B\')" style="flex:1;padding:7px 4px;font-family:'+MONO+';font-size:0.62rem;border-radius:4px;cursor:pointer;background:'+bgB+';border:1px solid '+boB+';color:'+coB+';">ВАР Б — по '+W.toFixed(2).replace('.',',')+'м<br><span style="font-size:0.55rem;color:'+cB+';">'+varB.total+' листа'+(varB.total<=varA.total?' ★':'')+'</span></button>';
+
+  panel.innerHTML='<div style="display:flex;gap:6px;margin-bottom:12px;">'+btnA+btnB+'</div><div id="ceilingSchemaInner"></div>';
+
+  var schPanel=document.getElementById('ceilingSchemaInner');
+  if(schPanel) renderGips(selVar.along,selVar.across,schPanel);
+}
+
+function selectCeilingVar(v){
+  window.gipsState.selectedCeilingVar=v;
+  const {L,W}=getAreas();
+  const varA=calcVariantSimple(L,W);
+  const varB=calcVariantSimple(W,L);
+  window.gipsState.bestVariant=v==='A'?varA:varB;
+  renderCeilingSection(L,W);
+  updateGipsTotal();
+}
+
+function renderWallsSection(L,W,H){
+  const MONO="'Share Tech Mono',monospace";
+  const walls=getWallDefs(L,W,H);
+  const state=window.gipsState;
+  var btnPanel=document.getElementById('wallButtons');
+  if(!btnPanel) return;
+
+  if(!H||H<=0){
+    btnPanel.innerHTML='<div style="font-family:'+MONO+';color:#ef4444;font-size:0.65rem;">Въведи ВИСОЧИНА за стени</div>';
+    var wc=document.getElementById('wallsContent'); if(wc) wc.innerHTML='';
+    return;
+  }
+
+  btnPanel.innerHTML=walls.map(function(w){
+    var isSel=state.selectedWalls.has(w.id);
+    var bg=isSel?'#1e2d47':'#0d1424', bo=isSel?'#60a5fa':'#334155', co=isSel?'#60a5fa':'#475569';
+    return '<button onclick="toggleGipsWall(\''+w.id+'\')" style="flex:1;padding:8px 4px;font-family:'+MONO+';font-size:0.65rem;border-radius:4px;cursor:pointer;background:'+bg+';border:1px solid '+bo+';color:'+co+';">'+w.id+'<br><span style="font-size:0.5rem;color:#64748b;">'+w.len.toFixed(2).replace('.',',')+'×'+w.h.toFixed(2).replace('.',',')+'м</span></button>';
+  }).join('');
+
+  var wContent=document.getElementById('wallsContent');
+  if(!wContent) return;
+  wContent.innerHTML='';
+  walls.filter(function(w){return state.selectedWalls.has(w.id);}).forEach(function(w){
+    var div=document.createElement('div');
+    div.style.cssText='margin-bottom:12px;background:#0a0f1a;border-radius:6px;padding:10px;';
+    div.innerHTML='<div style="font-family:'+MONO+';font-size:0.65rem;color:#60a5fa;margin-bottom:8px;">'+w.id+' — '+w.len.toFixed(2).replace('.',',')+'м × '+w.h.toFixed(2).replace('.',',')+'м</div>';
+    wContent.appendChild(div);
+    renderWallSchema(w.len,w.h,div);
+  });
+}
+
+function toggleGipsWall(id){
+  const state=window.gipsState;
+  if(state.selectedWalls.has(id)) state.selectedWalls.delete(id);
+  else state.selectedWalls.add(id);
+  const {L,W,H}=getAreas();
+  renderWallsSection(L,W,H);
+  updateGipsTotal();
+}
+
+function calcProfiles(len,h){
+  const rnd=n=>Math.round(n*1000)/1000;
+  var cdArr=[], pos=0.60;
+  while(pos<=len+0.005){cdArr.push(rnd(pos));pos=rnd(pos+0.60);}
+  const cdSize=h<=3?3:4;
+  const udLm=rnd(2*len+2*h);
+  return {cdArr:cdArr, cdSize:cdSize, udCount:Math.ceil(udLm/3), udLm:udLm};
+}
+
+function exportGipsPDF(){
+  const state=window.gipsState;
+  const {L,W,H}=getAreas();
+  var txt='МАТЕРИАЛЕН СПИСЪК — ГИПСОКАРТОН\n================================\n\n';
+  if(state.ceilingOn&&state.bestVariant){
+    const v=state.bestVariant;
+    var cdCount=0, pos=0.60;
+    while(pos<=v.across+0.005){cdCount++;pos=Math.round((pos+0.60)*1000)/1000;}
+    const udLm=Math.round((2*v.along+2*v.across)*100)/100;
+    txt+='ТАВАН ('+v.along.toFixed(2)+'м × '+v.across.toFixed(2)+'м):\n';
+    txt+='  ГК листи: '+v.total+' бр + 1 резерв = '+(v.total+1)+' бр\n';
+    txt+='  CD: '+cdCount+' бр × '+(v.across>3?4:3)+'м\n';
+    txt+='  UD: '+Math.ceil(udLm/3)+' бр × 3м ('+udLm+' лм)\n\n';
+  }
+  getWallDefs(L,W,H).filter(function(w){return state.selectedWalls.has(w.id);}).forEach(function(w){
+    const prof=calcProfiles(w.len,w.h);
+    txt+=w.id+' ('+w.len.toFixed(2)+'м × '+w.h.toFixed(2)+'м):\n';
+    txt+='  CD: '+prof.cdArr.length+' бр × '+prof.cdSize+'м\n';
+    txt+='  UD: '+prof.udCount+' бр × 3м ('+prof.udLm.toFixed(2)+' лм)\n\n';
+  });
+  navigator.clipboard.writeText(txt).then(function(){alert('Копирано в клипборда!');}).catch(function(){alert(txt);});
+}
+
+</script>
+</body>
+</html>
