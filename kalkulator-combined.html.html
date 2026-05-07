@@ -434,6 +434,17 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       <div id="wallsContent"></div>
     </div>
 
+    <!-- ПРЕГРАДНИ СТЕНИ -->
+    <div style="background:#0d1424;border:1px solid #1e3a5f;border-radius:8px;padding:12px;margin-bottom:14px;">
+      <div style="font-family:'Share Tech Mono',monospace;font-size:0.75rem;color:#4ade80;letter-spacing:2px;margin-bottom:10px;">ПРЕГРАДНИ СТЕНИ</div>
+      <div id="partitionButtons" style="display:flex;gap:6px;margin-bottom:8px;"></div>
+      <div style="display:flex;gap:6px;margin-bottom:12px;" id="partitionLayerBtns">
+        <button onclick="selectPartitionLayers(1)" id="btnPL1" style="flex:1;padding:6px 4px;font-family:'Share Tech Mono',monospace;font-size:0.62rem;border-radius:4px;cursor:pointer;background:#1e2d47;border:1px solid #4ade80;color:#4ade80;">1 ПЛАСТ</button>
+        <button onclick="selectPartitionLayers(2)" id="btnPL2" style="flex:1;padding:6px 4px;font-family:'Share Tech Mono',monospace;font-size:0.62rem;border-radius:4px;cursor:pointer;background:#0d1424;border:1px solid #334155;color:#475569;">2 ПЛАСТА</button>
+      </div>
+      <div id="partitionContent"></div>
+    </div>
+
     <!-- PDF БУТОН -->
     <button onclick="exportGipsPDF()" style="width:100%;padding:12px;font-family:'Share Tech Mono',monospace;font-size:0.7rem;letter-spacing:2px;border-radius:6px;cursor:pointer;background:#1e2d47;border:1px solid #334155;color:#94a3b8;margin-bottom:16px;">📄 ЕКСПОРТ — МАТЕРИАЛЕН СПИСЪК</button>
 
@@ -974,7 +985,7 @@ function renderBetonPanel(L,W,panel){
 function openGipsModal(){
   const {L,W}=getAreas();
   if(!L||!W){alert('Въведи размерите горе!');return;}
-  window.gipsState={ceilingOn:false, selectedWalls:new Set(), bestVariant:null, selectedCeilingVar:null};
+  window.gipsState={ceilingOn:false, selectedWalls:new Set(), bestVariant:null, selectedCeilingVar:null, selectedPartitions:new Set(), partitionLayers:1};
   document.getElementById('gipsModal').style.display='block';
   document.body.style.overflow='hidden';
   setTimeout(function(){initGipsModal();},10);
@@ -1498,6 +1509,7 @@ function initGipsModal(){
   const {L,W,H}=getAreas();
   renderCeilingSection(L,W);
   renderWallsSection(L,W,H);
+  renderPartitionSection(L,W,H);
   updateGipsTotal();
 }
 
@@ -1574,7 +1586,32 @@ function updateGipsTotal(){
     udCount+=Math.ceil(udLm/3);
   });
 
-  const hasSel=state.ceilingOn||state.selectedWalls.size>0;
+  // Преградни стени
+  state.selectedPartitions.forEach(function(wid){
+    const walls=getPartitionDefs(L,W,H);
+    const w=walls.find(function(x){return x.id===wid;});
+    if(!w) return;
+    const rnd=n=>Math.round(n*1000)/1000;
+    const LS=1.20,LL=2.00;
+    const cols=[];let rem=w.len;
+    while(rem>0.005){cols.push(Math.min(rnd(rem),LS));rem=rnd(rem-cols[cols.length-1]);}
+    const fullH=Math.floor(rnd(w.h)/LL);
+    const endH=rnd(rnd(w.h)-fullH*LL);
+    const ppl=endH<0.005?2:Math.floor(rnd(LL/endH)+0.005);
+    let wSh=0;
+    cols.forEach(function(colW){
+      const ppp=Math.max(1,Math.floor(rnd(LS/colW)+0.005));
+      wSh+=Math.ceil(fullH/ppp);
+    });
+    wSh+=Math.ceil(cols.length/ppl);
+    sheets+=wSh*2*state.partitionLayers+2; // 2 страни × пластове + 2 резерв
+    let cwPos=0.60;
+    while(cwPos<=w.len+0.005){cdCount++;cwPos=rnd(cwPos+0.60);}
+    const uwLm=rnd(2*w.len+2*w.h);
+    udCount+=4; // винаги 4 бр × 4м
+  });
+
+  const hasSel=state.ceilingOn||state.selectedWalls.size>0||state.selectedPartitions.size>0;
   const reserves=(state.ceilingOn?1:0)+state.selectedWalls.size;
 
   function setEl(id,val){ var e=document.getElementById(id); if(e) e.textContent=val; }
@@ -1591,6 +1628,7 @@ function updateGipsTotal(){
       var parts=[];
       if(state.ceilingOn) parts.push('таван');
       state.selectedWalls.forEach(function(w){parts.push(w);});
+      state.selectedPartitions.forEach(function(w){parts.push(w);});
       forEl.textContent=parts.join(' + ');
     } else { forEl.textContent=''; }
   }
@@ -1728,6 +1766,242 @@ function exportGipsPDF(){
     txt+='  UD: '+prof.udCount+' бр × 3м ('+prof.udLm.toFixed(2)+' лм)\n\n';
   });
   navigator.clipboard.writeText(txt).then(function(){alert('Копирано в клипборда!');}).catch(function(){alert(txt);});
+}
+
+// ── ПРЕГРАДНИ СТЕНИ ──────────────────────────────────────
+
+function getPartitionDefs(L,W,H){
+  if(!H||H<=0) return [];
+  return [
+    {id:'П1',len:L,h:H},{id:'П2',len:L,h:H},
+    {id:'П3',len:W,h:H},{id:'П4',len:W,h:H}
+  ];
+}
+
+function selectPartitionLayers(n){
+  window.gipsState.partitionLayers=n;
+  var b1=document.getElementById('btnPL1');
+  var b2=document.getElementById('btnPL2');
+  if(b1){
+    b1.style.background=n===1?'#1e2d47':'#0d1424';
+    b1.style.borderColor=n===1?'#4ade80':'#334155';
+    b1.style.color=n===1?'#4ade80':'#475569';
+  }
+  if(b2){
+    b2.style.background=n===2?'#1e2d47':'#0d1424';
+    b2.style.borderColor=n===2?'#4ade80':'#334155';
+    b2.style.color=n===2?'#4ade80':'#475569';
+  }
+  var {L,W,H}=getAreas();
+  renderPartitionSection(L,W,H);
+  updateGipsTotal();
+}
+
+function togglePartitionWall(id){
+  var state=window.gipsState;
+  if(state.selectedPartitions.has(id)) state.selectedPartitions.delete(id);
+  else state.selectedPartitions.add(id);
+  var {L,W,H}=getAreas();
+  renderPartitionSection(L,W,H);
+  updateGipsTotal();
+}
+
+function renderPartitionSection(L,W,H){
+  var MONO="'Share Tech Mono',monospace";
+  var walls=getPartitionDefs(L,W,H);
+  var state=window.gipsState;
+  var btnPanel=document.getElementById('partitionButtons');
+  if(!btnPanel) return;
+
+  if(!H||H<=0){
+    btnPanel.innerHTML='<div style="font-family:'+MONO+';color:#ef4444;font-size:0.65rem;">Въведи ВИСОЧИНА за преградни стени</div>';
+    var pc=document.getElementById('partitionContent'); if(pc) pc.innerHTML='';
+    return;
+  }
+
+  btnPanel.innerHTML=walls.map(function(w){
+    var isSel=state.selectedPartitions.has(w.id);
+    var bg=isSel?'#1e2d47':'#0d1424', bo=isSel?'#4ade80':'#334155', co=isSel?'#4ade80':'#475569';
+    return '<button onclick="togglePartitionWall(\''+w.id+'\')" style="flex:1;padding:8px 4px;font-family:'+MONO+';font-size:0.65rem;border-radius:4px;cursor:pointer;background:'+bg+';border:1px solid '+bo+';color:'+co+';">'+w.id+'<br><span style="font-size:0.5rem;color:#64748b;">'+w.len.toFixed(2).replace('.',',')+'x'+w.h.toFixed(2).replace('.',',')+'\u043c</span></button>';
+  }).join('');
+
+  var content=document.getElementById('partitionContent');
+  if(!content) return;
+  content.innerHTML='';
+  walls.filter(function(w){return state.selectedPartitions.has(w.id);}).forEach(function(w){
+    var div=document.createElement('div');
+    div.style.cssText='margin-bottom:12px;background:#0a0f1a;border-radius:6px;padding:10px;';
+    div.innerHTML='<div style="font-family:'+MONO+';font-size:0.65rem;color:#4ade80;margin-bottom:8px;">'+w.id+' — '+w.len.toFixed(2).replace('.',',')+'\u043c \xd7 '+w.h.toFixed(2).replace('.',',')+'\u043c — CW 75 · '+state.partitionLayers+' \u043f\u043b\u0430\u0441\u0442\xd7 2 \u0441\u0442\u0440\u0430\u043d\u0438</div>';
+    content.appendChild(div);
+    renderPartitionSchema(w.len,w.h,state.partitionLayers,div);
+  });
+}
+
+function renderPartitionSchema(len,h,layers,panel){
+  var MONO="'Share Tech Mono',monospace";
+  var rnd=function(n){return Math.round(n*1000)/1000;};
+  var LS=1.20, LL=2.00;
+
+  // Колони по дължина
+  var cols=[];
+  var rem=len;
+  while(rem>0.005){cols.push(Math.min(rnd(rem),LS));rem=rnd(rem-cols[cols.length-1]);}
+
+  // Редове по височина
+  var fullH=Math.floor(rnd(h)/LL);
+  var endH=rnd(rnd(h)-fullH*LL);
+  var exactFitH=endH<0.005;
+  var startH=exactFitH?1.00:endH;
+  var ppl=exactFitH?2:Math.floor(rnd(LL/startH)+0.005);
+
+  // Брой листи на 1 страна
+  var totalOneSide=0;
+  cols.forEach(function(colW){
+    var ppp=Math.max(1,Math.floor(rnd(LS/colW)+0.005));
+    totalOneSide+=Math.ceil(fullH/ppp);
+  });
+  totalOneSide+=Math.ceil(cols.length/ppl);
+
+  var total1=totalOneSide*2*1; // 2 страни, 1 пласт
+  var total2=totalOneSide*2*2; // 2 страни, 2 пласта
+  var totalSheets=totalOneSide*2*layers;
+  var orderSheets=totalSheets+2;
+
+  // CW профили
+  var cwArr=[];
+  var pos=0.60;
+  while(pos<=len+0.005){cwArr.push(rnd(pos));pos=rnd(pos+0.60);}
+  var cwSize=h<=3?3:4;
+
+  // UW периметър
+  var uwLm=rnd(2*len+2*h);
+  var uwBr=4; // винаги 4 бр × 4м
+
+  // SVG
+  var ox=52, oy=36;
+  var sc=Math.min(230/len, 120/h, 45);
+  var rW=rnd(len*sc), rH=rnd(h*sc);
+  var svgW=ox+rW+60, svgH=oy+rH+40;
+  var colors=['#60a5fa','#fbbf24','#4ade80','#f472b6','#a78bfa'];
+
+  var svgStr='';
+
+  // UW горе, долу, ляво, дясно
+  svgStr+='<rect x="'+ox+'" y="'+oy+'" width="'+rW+'" height="6" fill="#b8862d" rx="1"/>';
+  svgStr+='<rect x="'+ox+'" y="'+(oy+rH-6)+'" width="'+rW+'" height="6" fill="#b8862d" rx="1"/>';
+  svgStr+='<rect x="'+ox+'" y="'+oy+'" width="6" height="'+rH+'" fill="#b8862d" rx="1"/>';
+  svgStr+='<rect x="'+(ox+rW-6)+'" y="'+oy+'" width="6" height="'+rH+'" fill="#b8862d" rx="1"/>';
+
+  // CW профили
+  cwArr.forEach(function(p){
+    var px=rnd(ox+p*sc);
+    if(px < ox+rW-6){
+      svgStr+='<rect x="'+px+'" y="'+(oy+6)+'" width="4" height="'+(rH-12)+'" fill="#7F77DD" rx="1"/>';
+    }
+  });
+
+  // ГК колони
+  var cumX=0;
+  cols.forEach(function(colW,ci){
+    var cw=rnd(colW*sc);
+    var cx2=rnd(ox+cumX*sc);
+    var isOdd=ci%2===0;
+    var color=colors[ci%5];
+    var fill=ci%2===0?'rgba(96,165,250,0.15)':'rgba(251,191,36,0.15)';
+
+    var cy2=oy+6;
+    if(isOdd){
+      // нечетна: endH горе + цели долу
+      if(endH>0.005){
+        var sh=rnd(endH*sc);
+        svgStr+='<rect x="'+cx2+'" y="'+cy2+'" width="'+cw+'" height="'+sh+'" fill="rgba(239,68,68,0.18)" stroke="#ef4444" stroke-width="1" stroke-dasharray="3 2" rx="1"/>';
+        var rot=cw<18;
+        svgStr+='<text x="'+(cx2+cw/2)+'" y="'+(cy2+sh/2)+'" fill="#ef4444" font-family="'+MONO+'" font-size="'+(cw<22?6:8)+'" text-anchor="middle" dominant-baseline="middle" '+(rot?'transform="rotate(-90,'+(cx2+cw/2)+','+(cy2+sh/2)+')"':'')+'>'+Math.round(endH*100)+'\u0441\u043c</text>';
+        cy2=rnd(cy2+sh);
+      }
+      for(var i=0;i<fullH;i++){
+        var sh=rnd(LL*sc);
+        svgStr+='<rect x="'+cx2+'" y="'+cy2+'" width="'+cw+'" height="'+sh+'" fill="'+fill+'" stroke="'+color+'" stroke-width="1" rx="1"/>';
+        svgStr+='<text x="'+(cx2+cw/2)+'" y="'+(cy2+sh/2)+'" fill="'+color+'" font-family="'+MONO+'" font-size="'+(cw<22?6:8)+'" text-anchor="middle" dominant-baseline="middle">2,00\u043c</text>';
+        cy2=rnd(cy2+sh);
+      }
+    } else {
+      // четна: цели горе + endH долу
+      for(var i=0;i<fullH;i++){
+        var sh=rnd(LL*sc);
+        svgStr+='<rect x="'+cx2+'" y="'+cy2+'" width="'+cw+'" height="'+sh+'" fill="'+fill+'" stroke="'+color+'" stroke-width="1" rx="1"/>';
+        svgStr+='<text x="'+(cx2+cw/2)+'" y="'+(cy2+sh/2)+'" fill="'+color+'" font-family="'+MONO+'" font-size="'+(cw<22?6:8)+'" text-anchor="middle" dominant-baseline="middle">2,00\u043c</text>';
+        cy2=rnd(cy2+sh);
+      }
+      if(endH>0.005){
+        var sh=rnd(endH*sc);
+        svgStr+='<rect x="'+cx2+'" y="'+cy2+'" width="'+cw+'" height="'+sh+'" fill="rgba(239,68,68,0.18)" stroke="#ef4444" stroke-width="1" stroke-dasharray="3 2" rx="1"/>';
+        var rot=cw<18;
+        svgStr+='<text x="'+(cx2+cw/2)+'" y="'+(cy2+sh/2)+'" fill="#ef4444" font-family="'+MONO+'" font-size="'+(cw<22?6:8)+'" text-anchor="middle" dominant-baseline="middle" '+(rot?'transform="rotate(-90,'+(cx2+cw/2)+','+(cy2+sh/2)+')"':'')+'>'+Math.round(endH*100)+'\u0441\u043c</text>';
+      }
+    }
+
+    // Ширина отдолу
+    svgStr+='<text x="'+(cx2+cw/2)+'" y="'+(oy+rH+12)+'" fill="'+color+'" font-family="'+MONO+'" font-size="7" text-anchor="middle">'+Math.round(colW*100)+'\u0441\u043c</text>';
+    cumX=rnd(cumX+colW);
+  });
+
+  // Рамка
+  svgStr+='<rect x="'+ox+'" y="'+oy+'" width="'+rW+'" height="'+rH+'" fill="none" stroke="#334155" stroke-width="1.5"/>';
+
+  // Размер горе
+  var dims='<line x1="'+ox+'" y1="'+(oy-16)+'" x2="'+(ox+rW)+'" y2="'+(oy-16)+'" stroke="#475569" stroke-width="0.5"/>'
+    +'<line x1="'+ox+'" y1="'+(oy-19)+'" x2="'+ox+'" y2="'+(oy-13)+'" stroke="#475569" stroke-width="0.5"/>'
+    +'<line x1="'+(ox+rW)+'" y1="'+(oy-19)+'" x2="'+(ox+rW)+'" y2="'+(oy-13)+'" stroke="#475569" stroke-width="0.5"/>'
+    +'<rect x="'+(ox+rW/2-22)+'" y="'+(oy-23)+'" width="44" height="13" fill="#0a0f1a" rx="2"/>'
+    +'<text x="'+(ox+rW/2)+'" y="'+(oy-16)+'" fill="#e2e8f0" font-family="'+MONO+'" font-size="9" font-weight="bold" text-anchor="middle" dominant-baseline="middle">'+len.toFixed(2).replace('.',',')+' \u043c</text>';
+
+  // Размер вдясно
+  var midY=rnd(oy+rH/2);
+  dims+='<text x="'+(ox+rW+42)+'" y="'+midY+'" fill="#e2e8f0" font-family="'+MONO+'" font-size="9" font-weight="bold" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90,'+(ox+rW+42)+','+midY+')">'+h.toFixed(2).replace('.',',')+' \u043c</text>';
+
+  // Разминаване стрелка вдясно
+  if(endH>0.005){
+    var arrX=ox+rW+14;
+    dims+='<line x1="'+arrX+'" y1="'+oy+'" x2="'+arrX+'" y2="'+(oy+rnd(endH*sc))+'" stroke="#ef4444" stroke-width="1"/>';
+    dims+='<text x="'+(arrX+4)+'" y="'+(oy+rnd(endH*sc/2))+'" fill="#ef4444" font-family="'+MONO+'" font-size="7" dominant-baseline="middle">'+Math.round(endH*100)+'\u0441\u043c</text>';
+  }
+
+  // CW позиции отдолу
+  var cumXb=0;
+  var axisStr='<line x1="'+ox+'" y1="'+(oy+rH+20)+'" x2="'+(ox+rW)+'" y2="'+(oy+rH+20)+'" stroke="#475569" stroke-width="0.5"/>';
+  axisStr+='<line x1="'+ox+'" y1="'+(oy+rH+17)+'" x2="'+ox+'" y2="'+(oy+rH+23)+'" stroke="#475569" stroke-width="0.5"/>';
+  axisStr+='<text x="'+ox+'" y="'+(oy+rH+30)+'" fill="#475569" font-family="'+MONO+'" font-size="7" text-anchor="middle">0</text>';
+  cwArr.forEach(function(p,i){
+    var px=rnd(ox+p*sc);
+    axisStr+='<line x1="'+px+'" y1="'+(oy+rH+17)+'" x2="'+px+'" y2="'+(oy+rH+23)+'" stroke="#7F77DD" stroke-width="1"/>';
+    axisStr+='<text x="'+px+'" y="'+(oy+rH+30)+'" fill="#7F77DD" font-family="'+MONO+'" font-size="7" text-anchor="middle">'+rnd(p).toFixed(2).replace('.',',')+'</text>';
+  });
+
+  panel.innerHTML+='<svg viewBox="0 0 '+svgW+' '+(svgH+20)+'" style="width:100%;height:auto;display:block;" xmlns="http://www.w3.org/2000/svg">'+dims+svgStr+axisStr+'</svg>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px;">'
+    +'<div style="background:#0d1424;border:1px solid #1e3a5f;border-radius:5px;padding:8px;text-align:center;">'
+    +'<div style="font-family:'+MONO+';font-size:0.5rem;color:#64748b;">1 ПЛАСТ · 2 СТРАНИ</div>'
+    +'<div style="font-family:'+MONO+';font-size:1.1rem;font-weight:bold;color:'+(layers===1?'#fbbf24':'#475569')+';">'+total1+'</div>'
+    +'<div style="font-family:'+MONO+';font-size:0.45rem;color:#475569;">листа</div></div>'
+    +'<div style="background:#0d1424;border:1px solid #1e3a5f;border-radius:5px;padding:8px;text-align:center;">'
+    +'<div style="font-family:'+MONO+';font-size:0.5rem;color:#64748b;">2 ПЛАСТА · 2 СТРАНИ</div>'
+    +'<div style="font-family:'+MONO+';font-size:1.1rem;font-weight:bold;color:'+(layers===2?'#fbbf24':'#475569')+';">'+total2+'</div>'
+    +'<div style="font-family:'+MONO+';font-size:0.45rem;color:#475569;">листа</div></div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px;">'
+    +'<div style="background:#0d1424;border:1px solid #1e3a5f;border-radius:5px;padding:6px;text-align:center;">'
+    +'<div style="font-family:'+MONO+';font-size:0.5rem;color:#64748b;">CW 75</div>'
+    +'<div style="font-family:'+MONO+';font-size:0.9rem;font-weight:bold;color:#7F77DD;">'+cwArr.length+' \xd7 '+cwSize+'\u043c</div></div>'
+    +'<div style="background:#0d1424;border:1px solid #1e3a5f;border-radius:5px;padding:6px;text-align:center;">'
+    +'<div style="font-family:'+MONO+';font-size:0.5rem;color:#64748b;">UW · периметър</div>'
+    +'<div style="font-family:'+MONO+';font-size:0.9rem;font-weight:bold;color:#b8862d;">4 \xd7 4\u043c</div>'
+    +'<div style="font-family:'+MONO+';font-size:0.45rem;color:#475569;">('+uwLm.toFixed(2)+' \u043b\u043c)</div></div>'
+    +'<div style="background:#0d1424;border:2px solid #4ade80;border-radius:5px;padding:6px;text-align:center;">'
+    +'<div style="font-family:'+MONO+';font-size:0.5rem;color:#64748b;">ПОРЪЧАЙ</div>'
+    +'<div style="font-family:'+MONO+';font-size:0.9rem;font-weight:bold;color:#4ade80;">'+orderSheets+'</div>'
+    +'<div style="font-family:'+MONO+';font-size:0.45rem;color:#475569;">+2 резерв</div></div>'
+    +'</div>';
 }
 
 </script>
