@@ -1110,126 +1110,134 @@ function renderWallSchema(wallLen, wallH, panel){
     return Math.ceil(segH/ppp);
   }
 
-  // Споделен лист за парчетата по височина
-  const totalPiecesNeeded=cols.length; // 1 парче на колона
-  const sharedSheets=endH>0.005?Math.ceil(totalPiecesNeeded/piecesFromOneSheet):0;
-  let totalSheets=0;
-  cols.forEach((colW,ci)=>{
+  // Споделен лист за парчетата по височина — с free slot логика
+  let totalSheets=0,colsNeedingShared=0;
+  cols.forEach((colW)=>{
     const ppp=Math.max(1,Math.floor(rnd(LS/colW)+0.005));
     totalSheets+=Math.ceil(fullH/ppp);
+    if(!exactFitH){
+      const usedInLast=fullH%ppp===0?ppp:fullH%ppp;
+      if(ppp-usedInLast===0) colsNeedingShared++;
+    }
   });
+  const sharedSheets=exactFitH?0:Math.ceil(colsNeedingShared/piecesFromOneSheet);
   totalSheets+=sharedSheets;
   const orderSheets=totalSheets+1;
 
-  // SVG
-  const ox=62,oy=36,sc=Math.min(220/wallLen,130/wallH,45);
-  const rW=wallLen*sc,rH=wallH*sc;
-  const rightX=ox+rW+10;
-  const svgW=rightX+50, svgH=rH+oy+20;
-  const colors=['#60a5fa','#fbbf24','#4ade80','#f472b6','#a78bfa'];
+  // SVG — нова логика с К етикети долу, ос горе, скролируема
+  const SC2=Math.min(400/wallLen,90), HSC2=Math.min(180/wallH,85);
+  const MIN_COL2=5;
+  const Y_SIZE2=10, Y_AXIS2=28, Y_SCHEMA2=38;
+  const ox2=8, oy2=Y_SCHEMA2;
+  const rW2=Math.round(wallLen*SC2), rH2=Math.round(wallH*HSC2);
+  const svgW2=ox2+rW2+70, svgH2=oy2+rH2+55;
+  const colors2=['#60a5fa','#fbbf24','#4ade80','#f472b6','#a78bfa'];
+  const fills2=['rgba(96,165,250,0.15)','rgba(251,191,36,0.12)','rgba(74,222,128,0.12)','rgba(244,114,182,0.15)','rgba(167,139,250,0.12)'];
 
-  let svgStr='', cumX=0;
+  let svgStr2='', cumX2=0;
+  const tinyInfoArr2=[];
+
   cols.forEach((colW,ci)=>{
-    const cw=colW*sc, cx2=ox+cumX*sc;
-    const isOdd=ci%2===0;
-    const color=colors[ci%5];
-    const fill=`rgba(${ci%2===0?'96,165,250':'251,191,36'},0.${ci%2===0?'12':'09'})`;
+    const cwRaw2=Math.round(colW*SC2);
+    const isTiny2=cwRaw2<14;
+    const cw2=Math.max(cwRaw2,MIN_COL2);
+    const cx3=Math.round(ox2+cumX2*SC2);
+    const isOdd2=ci%2===0;
+    const color2=colors2[ci%5];
+    const fill2=fills2[ci%5];
+    let cy3=oy2;
 
-    // Сегменти по височина
-    let cy2=oy;
-    if(!isOdd){
-      // четна: цели + парче долу
-      for(let i=0;i<fullH;i++){
-        const sh=LL*sc;
-        svgStr+=`<rect x="${cx2}" y="${cy2}" width="${cw}" height="${sh}" fill="${fill}"/>`;
-        svgStr+=`<line x1="${cx2}" y1="${cy2}" x2="${cx2+cw}" y2="${cy2}" stroke="${color}" stroke-width="1.5"/>`;
-        svgStr+=`<line x1="${cx2}" y1="${cy2+sh}" x2="${cx2+cw}" y2="${cy2+sh}" stroke="${color}" stroke-width="1.5"/>`;
-        svgStr+=`<line x1="${cx2}" y1="${cy2}" x2="${cx2}" y2="${cy2+sh}" stroke="${ci===0?'#ef4444':color}" stroke-width="1.5" ${ci===0?'stroke-dasharray="4 2"':''}/>`;
-        svgStr+=`<line x1="${cx2+cw}" y1="${cy2}" x2="${cx2+cw}" y2="${cy2+sh}" stroke="${color}" stroke-width="1.5"/>`;
-        svgStr+=`<text x="${cx2+cw/2}" y="${cy2+sh/2}" fill="${color}" font-family="${MONO}" font-size="8" text-anchor="middle" dominant-baseline="middle">2,00м</text>`;
-        cy2+=sh;
-      }
+    if(isOdd2){
       if(endH>0.005){
-        const sh=endH*sc;
-        svgStr+=`<rect x="${cx2}" y="${cy2}" width="${cw}" height="${sh}" fill="rgba(239,68,68,0.15)"/>`;
-        svgStr+=`<line x1="${cx2}" y1="${cy2}" x2="${cx2+cw}" y2="${cy2}" stroke="${color}" stroke-width="1.5"/>`;
-        svgStr+=`<line x1="${cx2}" y1="${cy2+sh}" x2="${cx2+cw}" y2="${cy2+sh}" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="4 2"/>`;
-        svgStr+=`<line x1="${cx2}" y1="${cy2}" x2="${cx2}" y2="${cy2+sh}" stroke="${ci===0?'#ef4444':color}" stroke-width="1.5" ${ci===0?'stroke-dasharray="4 2"':''}/>`;
-        svgStr+=`<line x1="${cx2+cw}" y1="${cy2}" x2="${cx2+cw}" y2="${cy2+sh}" stroke="${color}" stroke-width="1.5"/>`;
-        const rot=cw<20;
-        svgStr+=`<text x="${cx2+cw/2}" y="${cy2+sh/2}" fill="#ef4444" font-family="${MONO}" font-size="${cw<25?6:8}" text-anchor="middle" dominant-baseline="middle" ${rot?`transform="rotate(-90,${cx2+cw/2},${cy2+sh/2})"`:''}>${(endH*100).toFixed(0)}см</text>`;
+        const sh=Math.max(Math.round(endH*HSC2),8);
+        svgStr2+=`<rect x="${cx3}" y="${cy3}" width="${cw2}" height="${sh}" fill="rgba(239,68,68,0.18)" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 2" rx="1"/>`;
+        if(!isTiny2) svgStr2+=`<text x="${cx3+cw2/2}" y="${cy3+sh/2}" fill="#ef4444" font-family="${MONO}" font-size="8" text-anchor="middle" dominant-baseline="middle">${Math.round(endH*100)}см</text>`;
+        cy3+=sh;
+      }
+      for(let i=0;i<fullH;i++){
+        const sh=Math.round(LL*HSC2);
+        svgStr2+=`<rect x="${cx3}" y="${cy3}" width="${cw2}" height="${sh}" fill="${fill2}" stroke="${color2}" stroke-width="1.5" rx="1"/>`;
+        if(!isTiny2) svgStr2+=`<text x="${cx3+cw2/2}" y="${cy3+sh/2}" fill="${color2}" font-family="${MONO}" font-size="8" text-anchor="middle" dominant-baseline="middle">2,00м</text>`;
+        cy3+=sh;
       }
     } else {
-      // нечетна: парче горе + цели
-      if(endH>0.005){
-        const sh=endH*sc;
-        svgStr+=`<rect x="${cx2}" y="${cy2}" width="${cw}" height="${sh}" fill="rgba(239,68,68,0.15)"/>`;
-        svgStr+=`<line x1="${cx2}" y1="${cy2}" x2="${cx2+cw}" y2="${cy2}" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="4 2"/>`;
-        svgStr+=`<line x1="${cx2}" y1="${cy2+sh}" x2="${cx2+cw}" y2="${cy2+sh}" stroke="${color}" stroke-width="1.5"/>`;
-        svgStr+=`<line x1="${cx2}" y1="${cy2}" x2="${cx2}" y2="${cy2+sh}" stroke="${ci===0?'#ef4444':color}" stroke-width="1.5" ${ci===0?'stroke-dasharray="4 2"':''}/>`;
-        svgStr+=`<line x1="${cx2+cw}" y1="${cy2}" x2="${cx2+cw}" y2="${cy2+sh}" stroke="${color}" stroke-width="1.5"/>`;
-        const rot=cw<20;
-        svgStr+=`<text x="${cx2+cw/2}" y="${cy2+sh/2}" fill="#ef4444" font-family="${MONO}" font-size="${cw<25?6:8}" text-anchor="middle" dominant-baseline="middle" ${rot?`transform="rotate(-90,${cx2+cw/2},${cy2+sh/2})"`:''}>${(endH*100).toFixed(0)}см</text>`;
-        cy2+=sh;
-      }
       for(let i=0;i<fullH;i++){
-        const sh=LL*sc;
-        svgStr+=`<rect x="${cx2}" y="${cy2}" width="${cw}" height="${sh}" fill="${fill}"/>`;
-        svgStr+=`<line x1="${cx2}" y1="${cy2}" x2="${cx2+cw}" y2="${cy2}" stroke="${color}" stroke-width="1.5"/>`;
-        svgStr+=`<line x1="${cx2}" y1="${cy2+sh}" x2="${cx2+cw}" y2="${cy2+sh}" stroke="${color}" stroke-width="1.5"/>`;
-        svgStr+=`<line x1="${cx2}" y1="${cy2}" x2="${cx2}" y2="${cy2+sh}" stroke="${ci===0?'#ef4444':color}" stroke-width="1.5" ${ci===0?'stroke-dasharray="4 2"':''}/>`;
-        svgStr+=`<line x1="${cx2+cw}" y1="${cy2}" x2="${cx2+cw}" y2="${cy2+sh}" stroke="${color}" stroke-width="1.5"/>`;
-        svgStr+=`<text x="${cx2+cw/2}" y="${cy2+sh/2}" fill="${color}" font-family="${MONO}" font-size="8" text-anchor="middle" dominant-baseline="middle">2,00м</text>`;
-        cy2+=sh;
+        const sh=Math.round(LL*HSC2);
+        svgStr2+=`<rect x="${cx3}" y="${cy3}" width="${cw2}" height="${sh}" fill="${fill2}" stroke="${color2}" stroke-width="1.5" rx="1"/>`;
+        if(!isTiny2) svgStr2+=`<text x="${cx3+cw2/2}" y="${cy3+sh/2}" fill="${color2}" font-family="${MONO}" font-size="8" text-anchor="middle" dominant-baseline="middle">2,00м</text>`;
+        cy3+=sh;
+      }
+      if(endH>0.005){
+        const sh=Math.max(Math.round(endH*HSC2),8);
+        svgStr2+=`<rect x="${cx3}" y="${cy3}" width="${cw2}" height="${sh}" fill="rgba(239,68,68,0.18)" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 2" rx="1"/>`;
+        if(!isTiny2) svgStr2+=`<text x="${cx3+cw2/2}" y="${cy3+sh/2}" fill="#ef4444" font-family="${MONO}" font-size="8" text-anchor="middle" dominant-baseline="middle">${Math.round(endH*100)}см</text>`;
       }
     }
 
-    // Етикет отдолу
-    svgStr+=`<text x="${cx2+cw/2}" y="${oy+rH+12}" fill="${color}" font-family="${MONO}" font-size="7" text-anchor="middle">${(colW*100).toFixed(0)}см</text>`;
-    cumX=rnd(cumX+colW);
-  });
+    if(isTiny2){
+      const midY2=oy2+rH2/2;
+      const rx2=ox2+rW2+6;
+      svgStr2+=`<line x1="${cx3+cw2}" y1="${midY2}" x2="${rx2}" y2="${midY2}" stroke="${color2}" stroke-width="0.8" stroke-dasharray="3 2"/>`;
+      svgStr2+=`<line x1="${rx2}" y1="${midY2-12}" x2="${rx2}" y2="${midY2+12}" stroke="${color2}" stroke-width="1.5"/>`;
+      svgStr2+=`<line x1="${rx2-3}" y1="${midY2-12}" x2="${rx2+3}" y2="${midY2-12}" stroke="${color2}" stroke-width="1.5"/>`;
+      svgStr2+=`<line x1="${rx2-3}" y1="${midY2+12}" x2="${rx2+3}" y2="${midY2+12}" stroke="${color2}" stroke-width="1.5"/>`;
+      svgStr2+=`<text x="${rx2+6}" y="${midY2-5}" fill="${color2}" font-family="${MONO}" font-size="8" font-weight="bold">${Math.round(colW*100)}см</text>`;
+      svgStr2+=`<text x="${rx2+6}" y="${midY2+6}" fill="#f59e0b" font-family="${MONO}" font-size="6">▼ПОСЛ.</text>`;
+      tinyInfoArr2.push({colW,color:color2,ci});
+    }
 
-  // Рамка
-  svgStr+=`<rect x="${ox}" y="${oy}" width="${rW}" height="${rH}" fill="none" stroke="#334155" stroke-width="1.5"/>`;
+    svgStr2+=`<text x="${cx3+cw2/2}" y="${oy2+rH2+16}" fill="${color2}" font-family="${MONO}" font-size="8" text-anchor="middle" font-weight="${isTiny2?'bold':'normal'}">К${ci+1}·${Math.round(colW*100)}см</text>`;
+    if(isTiny2) svgStr2+=`<text x="${cx3+cw2/2}" y="${oy2+rH2+27}" fill="#f59e0b" font-family="${MONO}" font-size="6.5" text-anchor="middle">▼ПОСЛ.</text>`;
 
-  // Дясно: кумулативни по дължина
-  svgStr+=`<line x1="${rightX}" y1="${oy}" x2="${rightX}" y2="${oy+rH}" stroke="#475569" stroke-width="0.8"/>`;
-  let cumX2=0;
-  svgStr+=`<line x1="${rightX-3}" y1="${oy}" x2="${rightX+3}" y2="${oy}" stroke="#475569" stroke-width="1"/>`;
-  svgStr+=`<text x="${rightX+5}" y="${oy}" fill="#475569" font-family="${MONO}" font-size="7" dominant-baseline="middle">0</text>`;
-  cols.forEach((colW,ci)=>{
     cumX2=rnd(cumX2+colW);
-    const px=ox+cumX2*sc;
-    const color=colors[ci%5];
-    svgStr+=`<line x1="${rightX-3}" y1="${oy}" x2="${rightX+3}" y2="${oy}" stroke="#475569" stroke-width="1"/>`;
-    // vertical ticks on right at y positions... actually right axis is horizontal for walls
-    // use bottom axis instead
   });
 
-  // Долу: кумулативни по дължина
-  let cumXb=0;
-  svgStr+=`<line x1="${ox}" y1="${oy+rH+20}" x2="${ox+rW}" y2="${oy+rH+20}" stroke="#475569" stroke-width="0.8"/>`;
-  svgStr+=`<line x1="${ox}" y1="${oy+rH+17}" x2="${ox}" y2="${oy+rH+23}" stroke="#475569" stroke-width="1"/>`;
-  svgStr+=`<text x="${ox}" y="${oy+rH+30}" fill="#475569" font-family="${MONO}" font-size="7" text-anchor="middle">0</text>`;
+  svgStr2+=`<rect x="${ox2}" y="${oy2}" width="${rW2}" height="${rH2}" fill="none" stroke="#334155" stroke-width="1.5"/>`;
+
+  let dims2='';
+  let cumT2=0;
+  dims2+=`<line x1="${ox2}" y1="${Y_AXIS2-3}" x2="${ox2}" y2="${Y_AXIS2+3}" stroke="#64748b" stroke-width="1"/>`;
+  dims2+=`<text x="${ox2}" y="${Y_AXIS2-8}" fill="#94a3b8" font-family="${MONO}" font-size="8" text-anchor="middle">0</text>`;
   cols.forEach((colW,ci)=>{
-    cumXb=rnd(cumXb+colW);
-    const px=ox+cumXb*sc;
-    const color=colors[ci%5];
-    svgStr+=`<line x1="${px}" y1="${oy+rH+17}" x2="${px}" y2="${oy+rH+23}" stroke="${color}" stroke-width="1.2"/>`;
-    svgStr+=`<text x="${px}" y="${oy+rH+30}" fill="${color}" font-family="${MONO}" font-size="7" text-anchor="middle">${cumXb.toFixed(2).replace('.',',')}м</text>`;
+    cumT2=rnd(cumT2+colW);
+    const px2=Math.round(ox2+cumT2*SC2);
+    const isLast2=ci===cols.length-1;
+    dims2+=`<line x1="${px2}" y1="${Y_AXIS2-3}" x2="${px2}" y2="${Y_AXIS2+3}" stroke="#64748b" stroke-width="1"/>`;
+    dims2+=`<text x="${isLast2?px2+4:px2}" y="${Y_AXIS2-8}" fill="${isLast2?'#e2e8f0':'#94a3b8'}" font-family="${MONO}" font-size="8" font-weight="${isLast2?'bold':'normal'}" text-anchor="${isLast2?'start':'middle'}">${cumT2.toFixed(2).replace('.',',')}</text>`;
   });
+  dims2+=`<line x1="${ox2}" y1="${Y_AXIS2}" x2="${ox2+rW2}" y2="${Y_AXIS2}" stroke="#334155" stroke-width="0.5"/>`;
+  dims2+=`<line x1="${ox2}" y1="${Y_SIZE2}" x2="${ox2+rW2}" y2="${Y_SIZE2}" stroke="#475569" stroke-width="0.8"/>`;
+  dims2+=`<line x1="${ox2}" y1="${Y_SIZE2-4}" x2="${ox2}" y2="${Y_SIZE2+4}" stroke="#475569" stroke-width="0.8"/>`;
+  dims2+=`<line x1="${ox2+rW2}" y1="${Y_SIZE2-4}" x2="${ox2+rW2}" y2="${Y_SIZE2+4}" stroke="#475569" stroke-width="0.8"/>`;
+  dims2+=`<rect x="${ox2+rW2/2-24}" y="${Y_SIZE2-8}" width="48" height="13" fill="#0d1424" rx="2"/>`;
+  dims2+=`<text x="${ox2+rW2/2}" y="${Y_SIZE2}" fill="#e2e8f0" font-family="${MONO}" font-size="9" font-weight="bold" text-anchor="middle" dominant-baseline="middle">${wallLen.toFixed(2).replace('.',',')} м</text>`;
+  const midY2b=oy2+rH2/2;
+  dims2+=`<text x="${ox2+rW2+46}" y="${midY2b}" fill="#e2e8f0" font-family="${MONO}" font-size="9" font-weight="bold" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90,${ox2+rW2+46},${midY2b})">${wallH.toFixed(2).replace('.',',')} м</text>`;
+  if(endH>0.005){
+    const arrX2=ox2+rW2+14;
+    const endPx2=Math.round(endH*HSC2);
+    dims2+=`<line x1="${arrX2}" y1="${oy2}" x2="${arrX2}" y2="${oy2+endPx2}" stroke="#ef4444" stroke-width="1.2"/>`;
+    dims2+=`<line x1="${arrX2-3}" y1="${oy2}" x2="${arrX2+3}" y2="${oy2}" stroke="#ef4444" stroke-width="1.2"/>`;
+    dims2+=`<line x1="${arrX2-3}" y1="${oy2+endPx2}" x2="${arrX2+3}" y2="${oy2+endPx2}" stroke="#ef4444" stroke-width="1.2"/>`;
+    dims2+=`<text x="${arrX2+5}" y="${oy2+endPx2/2}" fill="#ef4444" font-family="${MONO}" font-size="7.5" dominant-baseline="middle">${Math.round(endH*100)}см</text>`;
+  }
 
-  // Вертикална ос вдясно с В
-  const midY=oy+rH/2;
-  svgStr+=`<text x="${rightX+38}" y="${midY}" fill="#e2e8f0" font-family="${MONO}" font-size="8" font-weight="bold" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90,${rightX+38},${midY})">${wallH.toFixed(2).replace('.',',')} м</text>`;
-
-  // Отгоре: обща дължина
-  const dims=`
-    <rect x="${ox+rW/2-24}" y="${oy-22}" width="48" height="13" fill="#0a0f1a" rx="2"/>
-    <text x="${ox+rW/2}" y="${oy-16}" fill="#e2e8f0" font-family="${MONO}" font-size="9" font-weight="bold" text-anchor="middle" dominant-baseline="middle">${wallLen.toFixed(2).replace('.',',')} м</text>
-    <line x1="${ox}" y1="${oy-22}" x2="${ox+rW}" y2="${oy-22}" stroke="#334155" stroke-width="0.7"/>
-    <line x1="${ox}" y1="${oy-25}" x2="${ox}" y2="${oy-19}" stroke="#334155" stroke-width="0.7"/>
-    <line x1="${ox+rW}" y1="${oy-25}" x2="${ox+rW}" y2="${oy-19}" stroke="#334155" stroke-width="0.7"/>`;
+  let tinyHtml2='';
+  tinyInfoArr2.forEach(t=>{
+    tinyHtml2+=`<div style="background:#111827;border:1px solid ${t.color};border-radius:6px;padding:10px;display:flex;align-items:center;gap:12px;margin-top:8px;">`
+      +`<div style="width:10px;height:48px;background:${t.color};border-radius:2px;flex-shrink:0;opacity:0.7;"></div>`
+      +`<div style="flex:1;">`
+      +`<div style="font-family:${MONO};font-size:0.5rem;color:#64748b;letter-spacing:1px;margin-bottom:2px;">ПОСЛЕДНА КОЛОНА ▼ПОСЛ.</div>`
+      +`<div style="font-family:${MONO};font-size:1.2rem;font-weight:bold;color:${t.color};line-height:1;">${Math.round(t.colW*100)} см</div>`
+      +`<div style="font-family:${MONO};font-size:0.55rem;color:#94a3b8;margin-top:3px;">широка · ${wallH.toFixed(2)}м висока</div>`
+      +`<div style="font-family:${MONO};font-size:0.55rem;color:#ef4444;">разминаване: ${Math.round(endH*100)}см горе и долу</div>`
+      +`</div>`
+      +`<div style="text-align:right;">`
+      +`<div style="font-family:${MONO};font-size:0.5rem;color:#64748b;">ЛИСТИ</div>`
+      +`<div style="font-family:${MONO};font-size:1.1rem;font-weight:bold;color:#fbbf24;">1</div>`
+      +`<div style="font-family:${MONO};font-size:0.45rem;color:#475569;">включени</div>`
+      +`</div></div>`;
+  });
 
   panel.innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
@@ -1251,9 +1259,10 @@ function renderWallSchema(wallLen, wallH, panel){
     </div>
     <div style="background:#0d1424;border:1px solid #1e3a5f;border-radius:6px;padding:12px;">
       <div style="font-family:${MONO};font-size:0.6rem;color:#64748b;letter-spacing:2px;margin-bottom:10px;">СХЕМА — ПРЕДСТЕННА ОБШИВКА</div>
-      <svg viewBox="0 0 ${svgW} ${svgH+20}" style="width:100%;height:auto;display:block;" xmlns="http://www.w3.org/2000/svg">
-        ${dims}${svgStr}
-      </svg>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+        <svg viewBox="0 0 ${svgW2} ${svgH2}" style="width:${svgW2}px;height:${svgH2}px;min-width:${svgW2}px;display:block;" xmlns="http://www.w3.org/2000/svg">${dims2}${svgStr2}</svg>
+      </div>
+      ${tinyHtml2}
       <div style="display:flex;gap:16px;margin-top:8px;flex-wrap:wrap;">
         <span style="font-family:${MONO};font-size:0.65rem;color:#94a3b8;"><span style="color:#3b82f6;">━</span> ФАБРИЧЕН</span>
         <span style="font-family:${MONO};font-size:0.65rem;color:#94a3b8;"><span style="color:#ef4444;">╌</span> НАРЯЗАН → стена</span>
@@ -1281,22 +1290,36 @@ function renderGips(L,W,panel){
     // Ред 2 (четен): startX идва от СЪЩИЯ лист като X на Ред 1 → не се брои нов лист!
     //   Ред 2 = само fullAlong цели листи (startX е от споделения лист с Ред 1)
     // Ако exactFit: 1 споделен лист за 1.00+1.00 → Ред 2 = fullAlong-1 цели + 1 споделен
-    const sheetsR1 = fullAlong + (X>0.005 ? 1 : 0); // включва листа за X
-    // Ред 2 НЕ добавя нов лист за startX — вземаме го от листа на Ред 1
-    const sheetsR2 = exactFit ? fullAlong : fullAlong; // startX споделен с Ред 1
+    const sheetsR1 = fullAlong + (X>0.005 ? 1 : 0);
+    const sheetsR2 = exactFit ? fullAlong : fullAlong;
 
     let total=0, fire=[];
-    rows.forEach((rowW,ri)=>{
-      const ppp=Math.max(1,Math.floor(rnd(LS/rowW)+0.005));
-      const base=ri%2===0?sheetsR1:sheetsR2;
-      total+=Math.ceil(base/ppp);
-      // Фира: само ако остатъкът от листа не може да се ползва
-      // При X>0: от 1 лист режем X → остава LL-X → тази остатъчна лента е фира
-      if(ri%2!==0&&!exactFit){
-        const fireSize=rnd(LL-X-startX); // остатък след X и startX от 1 лист
-        if(fireSize>0.005) fire.push({label:`Ред ${ri+1} остатък`,size:`${(fireSize*100).toFixed(0)}×${(rowW*100).toFixed(0)}см`});
-      }
-      if(Math.abs(rowW-LS)>0.005&&ppp===1) fire.push({label:`Ред ${ri+1} ширина`,size:`${along.toFixed(2).replace('.',',')}м×${(rnd(LS-rowW)*100).toFixed(0)}см`});
+
+    if(!exactFit){
+      // Цели листи
+      rows.forEach(rowW=>{
+        const ppp=Math.max(1,Math.floor(rnd(LS/rowW)+0.005));
+        total+=Math.ceil(fullAlong/ppp);
+      });
+      // X-парчета: 1 на ред, споделени от 1 лист
+      // Ако X ≤ остатъка по ширина от последния ред → X парчетата идват от вече купените листи
+      const ppl=Math.floor(rnd(LL/startX)+0.005);
+      const _lastRowWaste=rnd(LS-rows[rows.length-1]);
+      if(X>_lastRowWaste+0.005) total+=Math.ceil(rows.length/ppl);
+    } else {
+      // exactFit
+      rows.forEach((rowW,ri)=>{
+        const ppp=Math.max(1,Math.floor(rnd(LS/rowW)+0.005));
+        if(ri%2===0) total+=Math.ceil(fullAlong/ppp);
+        else if(ppp>=2) total+=Math.ceil(fullAlong/ppp);
+        else total+=1+Math.ceil(Math.max(0,fullAlong-1)/ppp);
+      });
+    }
+
+    // Фира по ширина
+    rows.forEach(rowW=>{
+      if(Math.abs(rowW-LS)>0.005&&Math.floor(rnd(LS/rowW)+0.005)===1)
+        fire.push({label:'Ред ширина',size:along.toFixed(2).replace('.',',')+'м×'+(rnd(LS-rowW)*100).toFixed(0)+'см'});
     });
 
     return {along,across,rows,fullAlong,X,exactFit,startX,sheetsR1,sheetsR2,total,fire,label};
@@ -1317,22 +1340,25 @@ function renderGips(L,W,panel){
     const svgH=rH+oy+20;
     const colors=['#60a5fa','#fbbf24','#4ade80','#f472b6','#a78bfa'];
     const bgFills=['rgba(96,165,250,0.12)','rgba(251,191,36,0.09)','rgba(74,222,128,0.09)','rgba(244,114,182,0.09)','rgba(167,139,250,0.09)'];
-    let svgStr='',cy=oy;
+    let svgStr='',tileStr='',cy=oy;
     let cumW=0;
 
     rows.forEach((rowW,ri)=>{
-      const rh=rowW*sc,color=colors[ri%5],bgFill=bgFills[ri%5];
+      const rh=Math.max(rowW*sc,8),color=colors[ri%5],bgFill=bgFills[ri%5];
       let cx=ox;
       function seg(w,wallL,wallR,lbl,sf){
-        const pw=w*sc;
-        svgStr+=`<rect x="${cx}" y="${cy}" width="${pw}" height="${rh}" fill="${sf||bgFill}"/>`;
-        svgStr+=`<line x1="${cx}" y1="${cy}" x2="${cx+pw}" y2="${cy}" stroke="${color}" stroke-width="2"/>`;
-        svgStr+=`<line x1="${cx}" y1="${cy+rh}" x2="${cx+pw}" y2="${cy+rh}" stroke="${color}" stroke-width="2"/>`;
+        const pw=Math.max(w*sc,8);
+        tileStr+=`<rect x="${cx}" y="${cy}" width="${pw}" height="${rh}" fill="${sf||bgFill}"/>`;
+        const topColor=sf&&sf.includes('239')?'#ef4444':(wallR?null:'#60a5fa');
+        if(topColor) tileStr+=`<rect x="${cx}" y="${cy}" width="${pw}" height="3" fill="${topColor}" opacity="0.85"/>`;
+        tileStr+=`<line x1="${cx}" y1="${cy}" x2="${cx+pw}" y2="${cy}" stroke="${color}" stroke-width="2"/>`;
+        tileStr+=`<line x1="${cx}" y1="${cy+rh}" x2="${cx+pw}" y2="${cy+rh}" stroke="${color}" stroke-width="2"/>`;
         const lc=wallL?'#ef4444':color,rc=wallR?'#ef4444':color;
-        svgStr+=`<line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy+rh}" stroke="${lc}" stroke-width="2" ${lc==='#ef4444'?'stroke-dasharray="4 2"':''}/>`;
-        svgStr+=`<line x1="${cx+pw}" y1="${cy}" x2="${cx+pw}" y2="${cy+rh}" stroke="${rc}" stroke-width="2" ${rc==='#ef4444'?'stroke-dasharray="4 2"':''}/>`;
+        tileStr+=`<line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy+rh}" stroke="${lc}" stroke-width="2" ${lc==='#ef4444'?'stroke-dasharray="4 2"':''}/>`;
+        tileStr+=`<line x1="${cx+pw}" y1="${cy}" x2="${cx+pw}" y2="${cy+rh}" stroke="${rc}" stroke-width="2" ${rc==='#ef4444'?'stroke-dasharray="4 2"':''}/>`;
         const rot=pw<22;
-        svgStr+=`<text x="${cx+pw/2}" y="${cy+rh/2}" fill="${pw<14?'#94a3b8':color}" font-family="${MONO}" font-size="${pw<22?5:8}" text-anchor="middle" dominant-baseline="middle" ${rot?`transform="rotate(-90,${cx+pw/2},${cy+rh/2})"`:''}>${lbl}</text>`;
+        tileStr+=`<text x="${cx+pw/2}" y="${cy+rh/2}" fill="${pw<14?'#94a3b8':color}" font-family="${MONO}" font-size="${pw<22?5:8}" text-anchor="middle" dominant-baseline="middle" ${rot?`transform="rotate(-90,${cx+pw/2},${cy+rh/2})"`:''}>${lbl}</text>`;
+        if(sf&&sf.includes('239')&&pw>=24) tileStr+=`<text x="${cx+pw/2}" y="${cy+rh/2+8}" fill="#ef4444" font-family="${MONO}" font-size="5" text-anchor="middle" dominant-baseline="middle">НАРЯЗАН</text>`;
         cx+=pw;
       }
       const isR1=ri%2===0;
@@ -1342,12 +1368,23 @@ function renderGips(L,W,panel){
       } else {
         seg(startX,true,false,`${(startX*100).toFixed(0)}см`,exactFit?'rgba(74,222,128,0.2)':'rgba(239,68,68,0.2)');
         const mid=exactFit?fullAlong-1:fullAlong;
-        for(let i=0;i<mid;i++) seg(LL,false,!exactFit&&i===mid-1,`${LL.toFixed(1)}м`);
+        for(let i=0;i<mid;i++) seg(LL,false,false,`${LL.toFixed(1)}м`);
         if(exactFit) seg(startX,false,true,`${(startX*100).toFixed(0)}см`,'rgba(74,222,128,0.2)');
       }
 
       // Ляво: Р1→120 на 1 ред
-      svgStr+=`<text x="${ox-4}" y="${cy+rh/2}" fill="${color}" font-family="${MONO}" font-size="7.5" text-anchor="end" dominant-baseline="middle">Р${ri+1}→${(rowW*100).toFixed(0)}</text>`;
+      const isTinyRow = rowW * sc < 14;
+      if(!isTinyRow){
+        svgStr+=`<text x="${ox-4}" y="${cy+rh/2}" fill="${color}" font-family="${MONO}" font-size="7.5" text-anchor="end" dominant-baseline="middle">Р${ri+1}→${(rowW*100).toFixed(0)}см</text>${ri===rows.length-1?`<text x="${ox-4}" y="${cy+rh/2+9}" fill="#f59e0b" font-family="${MONO}" font-size="6" text-anchor="end" dominant-baseline="middle">▼ПОСЛ.</text>`:""}`;
+      } else {
+        // Тесен ред: dim линия вляво с размер
+        const arrX=ox-28;
+        svgStr+=`<line x1="${arrX}" y1="${cy}" x2="${arrX}" y2="${cy+rh}" stroke="${color}" stroke-width="1.5"/>`;
+        svgStr+=`<line x1="${arrX-3}" y1="${cy}" x2="${arrX+3}" y2="${cy}" stroke="${color}" stroke-width="1.5"/>`;
+        svgStr+=`<line x1="${arrX-3}" y1="${cy+rh}" x2="${arrX+3}" y2="${cy+rh}" stroke="${color}" stroke-width="1.5"/>`;
+        svgStr+=`<text x="${ox-4}" y="${cy-6}" fill="${color}" font-family="${MONO}" font-size="6.5" text-anchor="end" dominant-baseline="middle">Р${ri+1}→${(rowW*100).toFixed(0)}см</text>`;
+        if(ri===rows.length-1) svgStr+=`<text x="${ox-4}" y="${cy-14}" fill="#f59e0b" font-family="${MONO}" font-size="6" text-anchor="end" dominant-baseline="middle">▼ПОСЛ.</text>`;
+      }
 
       // Дясно: тик + кумулативна позиция след реда
       cumW=rnd(cumW+rowW);
@@ -1395,7 +1432,10 @@ function renderGips(L,W,panel){
 
     return `
       <svg viewBox="0 0 ${svgW} ${svgH}" style="width:100%;height:auto;display:block;" xmlns="http://www.w3.org/2000/svg">
-        ${dims}${svgStr}
+        <defs><clipPath id="gipsClip_${containerId}"><rect x="${ox}" y="${oy}" width="${rW}" height="${rH}"/></clipPath></defs>
+        ${dims}
+        <g clip-path="url(#gipsClip_${containerId})">${tileStr}</g>
+        ${svgStr}
         <rect x="${ox}" y="${oy}" width="${rW}" height="${rH}" fill="none" stroke="#334155" stroke-width="1.5"/>
       </svg>
       <div style="font-family:${MONO};font-size:0.62rem;color:#94a3b8;margin-top:6px;line-height:1.8;">
@@ -1531,13 +1571,17 @@ function calcVariantSimple(along,across){
       total+=Math.ceil(fullCount/ppp);
     });
     // X-парчета: 1 на ред, от 1 лист floor(LL/startX) парчета
+    // Ако X ≤ остатъка по ширина от последния ред → X парчетата идват от вече купените листи
     const ppl=Math.floor(rnd(LL/startX)+0.005);
-    total+=Math.ceil(rows.length/ppl);
+    const _lastRowWaste=rnd(LS-rows[rows.length-1]);
+    if(X>_lastRowWaste+0.005) total+=Math.ceil(rows.length/ppl);
   } else {
     // exactFit: нечетни редове = цели, четни = 1 лист краища + остатъчни цели
     rows.forEach(function(rowW,ri){
       const ppp=Math.max(1,Math.floor(rnd(LS/rowW)+0.005));
       if(ri%2===0){
+        total+=Math.ceil(fullCount/ppp);
+      } else if(ppp>=2){
         total+=Math.ceil(fullCount/ppp);
       } else {
         total+=1+Math.ceil(Math.max(0,fullCount-1)/ppp);
@@ -1545,6 +1589,29 @@ function calcVariantSimple(along,across){
     });
   }
   return {total:total, along:along, across:across, exactFit:exactFit};
+}
+
+function calcWallSheets(len,h){
+  var rnd=function(n){return Math.round(n*1000)/1000;};
+  var LS=1.20,LL=2.00;
+  var cols=[],rem=len;
+  while(rem>0.005){cols.push(Math.min(rnd(rem),LS));rem=rnd(rem-cols[cols.length-1]);}
+  var fullH=Math.floor(rnd(h)/LL);
+  var endH=rnd(rnd(h)-fullH*LL);
+  var exactFitH=endH<0.005;
+  var piecesFromOne=exactFitH?0:Math.floor(rnd(LL/endH)+0.005);
+  var totalCeils=0,colsNeedingShared=0;
+  cols.forEach(function(colW){
+    var ppp=Math.max(1,Math.floor(rnd(LS/colW)+0.005));
+    totalCeils+=Math.ceil(fullH/ppp);
+    if(!exactFitH){
+      var usedInLast=fullH%ppp===0?ppp:fullH%ppp;
+      var freeSlots=ppp-usedInLast;
+      if(freeSlots===0) colsNeedingShared++;
+    }
+  });
+  var sharedSheets=exactFitH?0:Math.ceil(colsNeedingShared/piecesFromOne);
+  return totalCeils+sharedSheets;
 }
 
 function updateGipsTotal(){
@@ -1567,19 +1634,7 @@ function updateGipsTotal(){
     const walls=getWallDefs(L,W,H);
     const w=walls.find(function(x){return x.id===wid;});
     if(!w) return;
-    const cols=[];
-    let rem=w.len;
-    while(rem>0.005){cols.push(Math.min(rnd(rem),LS));rem=rnd(rem-cols[cols.length-1]);}
-    const fullH=Math.floor(rnd(w.h)/LL);
-    const endH=rnd(rnd(w.h)-fullH*LL);
-    const sheetsR1=fullH+(endH>0.005?1:0);
-    const sheetsR2=1+fullH;
-    let wSh=0;
-    cols.forEach(function(colW,ci){
-      const ppp=Math.max(1,Math.floor(rnd(LS/colW)+0.005));
-      wSh+=Math.ceil((ci%2===0?sheetsR1:sheetsR2)/ppp);
-    });
-    sheets+=wSh+1;
+    sheets+=calcWallSheets(w.len,w.h);
     let cdPos=0.60;
     while(cdPos<=w.len+0.005){cdCount++;cdPos=rnd(cdPos+0.60);}
     const udLm=rnd(2*w.len+2*w.h);
@@ -1591,20 +1646,7 @@ function updateGipsTotal(){
     const walls=getPartitionDefs(L,W,H);
     const w=walls.find(function(x){return x.id===wid;});
     if(!w) return;
-    const rnd=n=>Math.round(n*1000)/1000;
-    const LS=1.20,LL=2.00;
-    const cols=[];let rem=w.len;
-    while(rem>0.005){cols.push(Math.min(rnd(rem),LS));rem=rnd(rem-cols[cols.length-1]);}
-    const fullH=Math.floor(rnd(w.h)/LL);
-    const endH=rnd(rnd(w.h)-fullH*LL);
-    const ppl=endH<0.005?2:Math.floor(rnd(LL/endH)+0.005);
-    let wSh=0;
-    cols.forEach(function(colW){
-      const ppp=Math.max(1,Math.floor(rnd(LS/colW)+0.005));
-      wSh+=Math.ceil(fullH/ppp);
-    });
-    wSh+=Math.ceil(cols.length/ppl);
-    sheets+=wSh*2*state.partitionLayers+2; // 2 страни × пластове + 2 резерв
+    sheets+=calcWallSheets(w.len,w.h)*2*state.partitionLayers; // 2 страни × пластове
     let cwPos=0.60;
     while(cwPos<=w.len+0.005){cdCount++;cwPos=rnd(cwPos+0.60);}
     const uwLm=rnd(2*w.len+2*w.h);
@@ -1612,7 +1654,31 @@ function updateGipsTotal(){
   });
 
   const hasSel=state.ceilingOn||state.selectedWalls.size>0||state.selectedPartitions.size>0;
-  const reserves=(state.ceilingOn?1:0)+state.selectedWalls.size;
+  var _els=[];
+  if(state.ceilingOn&&state.bestVariant){
+    var _v=state.bestVariant;
+    var _X=rnd(rnd(_v.along)-Math.floor(rnd(_v.along)/LL)*LL);
+    _els.push({exactFit:_X<0.005,piecesFromOne:_X<0.005?0:Math.floor(rnd(LL/_X)+0.005)});
+  }
+  state.selectedWalls.forEach(function(wid){
+    var _walls=getWallDefs(L,W,H);
+    var _w=_walls.find(function(x){return x.id===wid;});
+    if(!_w) return;
+    var _fullH=Math.floor(rnd(_w.h)/LL);
+    var _endH=rnd(rnd(_w.h)-_fullH*LL);
+    _els.push({exactFit:_endH<0.005,piecesFromOne:_endH<0.005?0:Math.floor(rnd(LL/_endH)+0.005)});
+  });
+  state.selectedPartitions.forEach(function(wid){
+    var _parts=getPartitionDefs(L,W,H);
+    var _w=_parts.find(function(x){return x.id===wid;});
+    if(!_w) return;
+    var _fullH=Math.floor(rnd(_w.h)/LL);
+    var _endH=rnd(rnd(_w.h)-_fullH*LL);
+    _els.push({exactFit:_endH<0.005,piecesFromOne:_endH<0.005?0:Math.floor(rnd(LL/_endH)+0.005)});
+  });
+  var _mustAlone=_els.filter(function(e){return !e.exactFit&&e.piecesFromOne===1;}).length;
+  var _canShare=_els.filter(function(e){return !e.exactFit&&e.piecesFromOne>=2;}).length;
+  const reserves=_mustAlone+Math.ceil(_canShare/2);
 
   function setEl(id,val){ var e=document.getElementById(id); if(e) e.textContent=val; }
   setEl('totalSheets', hasSel?sheets:'--');
@@ -1854,18 +1920,13 @@ function renderPartitionSchema(len,h,layers,panel){
   var startH=exactFitH?1.00:endH;
   var ppl=exactFitH?2:Math.floor(rnd(LL/startH)+0.005);
 
-  // Брой листи на 1 страна
-  var totalOneSide=0;
-  cols.forEach(function(colW){
-    var ppp=Math.max(1,Math.floor(rnd(LS/colW)+0.005));
-    totalOneSide+=Math.ceil(fullH/ppp);
-  });
-  totalOneSide+=Math.ceil(cols.length/ppl);
+  // Брой листи на 1 страна — с free slot логика
+  var totalOneSide=calcWallSheets(len,h);
 
   var total1=totalOneSide*2*1; // 2 страни, 1 пласт
   var total2=totalOneSide*2*2; // 2 страни, 2 пласта
   var totalSheets=totalOneSide*2*layers;
-  var orderSheets=totalSheets+2;
+  var orderSheets=totalSheets+1;
 
   // CW профили
   var cwArr=[];
@@ -1877,108 +1938,148 @@ function renderPartitionSchema(len,h,layers,panel){
   var uwLm=rnd(2*len+2*h);
   var uwBr=4; // винаги 4 бр × 4м
 
-  // SVG
-  var ox=52, oy=36;
-  var sc=Math.min(230/len, 120/h, 45);
-  var rW=rnd(len*sc), rH=rnd(h*sc);
-  var svgW=ox+rW+60, svgH=oy+rH+40;
-  var colors=['#60a5fa','#fbbf24','#4ade80','#f472b6','#a78bfa'];
+  // SVG — нова логика с К етикети долу, ос горе, скролируема
+  var SC=rnd(Math.min(400/len,90)), HSC=rnd(Math.min(180/h,85));
+  var MIN_COL=5;
+  var Y_SIZE=10, Y_AXIS=28, Y_UW=40, Y_SCHEMA=46;
+  var ox=8, oy=Y_SCHEMA;
+  var rW=rnd(len*SC), rH=rnd(h*HSC);
+  var svgW=ox+rW+70, svgH=oy+rH+55;
+  var colors2=['#60a5fa','#fbbf24','#4ade80','#f472b6','#a78bfa'];
+  var fills2=['rgba(96,165,250,0.15)','rgba(251,191,36,0.12)','rgba(74,222,128,0.12)','rgba(244,114,182,0.15)','rgba(167,139,250,0.12)'];
 
-  var svgStr='';
+  var svgStr='', cumX2=0;
+  var tinyInfoArr=[];
 
-  // UW горе, долу, ляво, дясно
-  svgStr+='<rect x="'+ox+'" y="'+oy+'" width="'+rW+'" height="6" fill="#b8862d" rx="1"/>';
-  svgStr+='<rect x="'+ox+'" y="'+(oy+rH-6)+'" width="'+rW+'" height="6" fill="#b8862d" rx="1"/>';
-  svgStr+='<rect x="'+ox+'" y="'+oy+'" width="6" height="'+rH+'" fill="#b8862d" rx="1"/>';
-  svgStr+='<rect x="'+(ox+rW-6)+'" y="'+oy+'" width="6" height="'+rH+'" fill="#b8862d" rx="1"/>';
-
-  // CW профили
-  cwArr.forEach(function(p){
-    var px=rnd(ox+p*sc);
-    if(px < ox+rW-6){
-      svgStr+='<rect x="'+px+'" y="'+(oy+6)+'" width="4" height="'+(rH-12)+'" fill="#7F77DD" rx="1"/>';
-    }
-  });
-
-  // ГК колони
-  var cumX=0;
   cols.forEach(function(colW,ci){
-    var cw=rnd(colW*sc);
-    var cx2=rnd(ox+cumX*sc);
+    var cwRaw=rnd(colW*SC);
+    var isTiny=cwRaw<14;
+    var cw=Math.max(cwRaw,MIN_COL);
+    var cx2=rnd(ox+cumX2*SC);
     var isOdd=ci%2===0;
-    var color=colors[ci%5];
-    var fill=ci%2===0?'rgba(96,165,250,0.15)':'rgba(251,191,36,0.15)';
+    var color=colors2[ci%5];
+    var fill=fills2[ci%5];
 
+    // Рисуване на колоната
     var cy2=oy+6;
     if(isOdd){
-      // нечетна: endH горе + цели долу
       if(endH>0.005){
-        var sh=rnd(endH*sc);
-        svgStr+='<rect x="'+cx2+'" y="'+cy2+'" width="'+cw+'" height="'+sh+'" fill="rgba(239,68,68,0.18)" stroke="#ef4444" stroke-width="1" stroke-dasharray="3 2" rx="1"/>';
-        var rot=cw<18;
-        svgStr+='<text x="'+(cx2+cw/2)+'" y="'+(cy2+sh/2)+'" fill="#ef4444" font-family="'+MONO+'" font-size="'+(cw<22?6:8)+'" text-anchor="middle" dominant-baseline="middle" '+(rot?'transform="rotate(-90,'+(cx2+cw/2)+','+(cy2+sh/2)+')"':'')+'>'+Math.round(endH*100)+'\u0441\u043c</text>';
+        var sh=Math.max(rnd(endH*HSC),8);
+        svgStr+='<rect x="'+cx2+'" y="'+cy2+'" width="'+cw+'" height="'+sh+'" fill="rgba(239,68,68,0.2)" stroke="#ef4444" stroke-width="1" stroke-dasharray="3 2" rx="1"/>';
+        svgStr+='<text x="'+(cx2+cw/2)+'" y="'+(cy2+sh/2)+'" fill="#ef4444" font-family="'+MONO+'" font-size="'+(cw<20?6:8)+'" text-anchor="middle" dominant-baseline="middle">'+(isTiny?'':Math.round(endH*100)+'\u0441\u043c')+'</text>';
         cy2=rnd(cy2+sh);
       }
       for(var i=0;i<fullH;i++){
-        var sh=rnd(LL*sc);
+        var sh=rnd(LL*HSC);
         svgStr+='<rect x="'+cx2+'" y="'+cy2+'" width="'+cw+'" height="'+sh+'" fill="'+fill+'" stroke="'+color+'" stroke-width="1" rx="1"/>';
-        svgStr+='<text x="'+(cx2+cw/2)+'" y="'+(cy2+sh/2)+'" fill="'+color+'" font-family="'+MONO+'" font-size="'+(cw<22?6:8)+'" text-anchor="middle" dominant-baseline="middle">2,00\u043c</text>';
+        svgStr+='<text x="'+(cx2+cw/2)+'" y="'+(cy2+sh/2)+'" fill="'+color+'" font-family="'+MONO+'" font-size="'+(cw<20?6:8)+'" text-anchor="middle" dominant-baseline="middle">'+(isTiny?'':'2,00\u043c')+'</text>';
         cy2=rnd(cy2+sh);
       }
     } else {
-      // четна: цели горе + endH долу
       for(var i=0;i<fullH;i++){
-        var sh=rnd(LL*sc);
+        var sh=rnd(LL*HSC);
         svgStr+='<rect x="'+cx2+'" y="'+cy2+'" width="'+cw+'" height="'+sh+'" fill="'+fill+'" stroke="'+color+'" stroke-width="1" rx="1"/>';
-        svgStr+='<text x="'+(cx2+cw/2)+'" y="'+(cy2+sh/2)+'" fill="'+color+'" font-family="'+MONO+'" font-size="'+(cw<22?6:8)+'" text-anchor="middle" dominant-baseline="middle">2,00\u043c</text>';
+        svgStr+='<text x="'+(cx2+cw/2)+'" y="'+(cy2+sh/2)+'" fill="'+color+'" font-family="'+MONO+'" font-size="'+(cw<20?6:8)+'" text-anchor="middle" dominant-baseline="middle">'+(isTiny?'':'2,00\u043c')+'</text>';
         cy2=rnd(cy2+sh);
       }
       if(endH>0.005){
-        var sh=rnd(endH*sc);
-        svgStr+='<rect x="'+cx2+'" y="'+cy2+'" width="'+cw+'" height="'+sh+'" fill="rgba(239,68,68,0.18)" stroke="#ef4444" stroke-width="1" stroke-dasharray="3 2" rx="1"/>';
-        var rot=cw<18;
-        svgStr+='<text x="'+(cx2+cw/2)+'" y="'+(cy2+sh/2)+'" fill="#ef4444" font-family="'+MONO+'" font-size="'+(cw<22?6:8)+'" text-anchor="middle" dominant-baseline="middle" '+(rot?'transform="rotate(-90,'+(cx2+cw/2)+','+(cy2+sh/2)+')"':'')+'>'+Math.round(endH*100)+'\u0441\u043c</text>';
+        var sh=Math.max(rnd(endH*HSC),8);
+        svgStr+='<rect x="'+cx2+'" y="'+cy2+'" width="'+cw+'" height="'+sh+'" fill="rgba(239,68,68,0.2)" stroke="#ef4444" stroke-width="1" stroke-dasharray="3 2" rx="1"/>';
+        svgStr+='<text x="'+(cx2+cw/2)+'" y="'+(cy2+sh/2)+'" fill="#ef4444" font-family="'+MONO+'" font-size="'+(cw<20?6:8)+'" text-anchor="middle" dominant-baseline="middle">'+(isTiny?'':Math.round(endH*100)+'\u0441\u043c')+'</text>';
       }
     }
 
-    // Ширина отдолу
-    svgStr+='<text x="'+(cx2+cw/2)+'" y="'+(oy+rH+12)+'" fill="'+color+'" font-family="'+MONO+'" font-size="7" text-anchor="middle">'+Math.round(colW*100)+'\u0441\u043c</text>';
-    cumX=rnd(cumX+colW);
+    // Тясна колона: стрелка вдясно
+    if(isTiny){
+      var midY3=rnd(oy+6+(rH-6)/2);
+      var rx3=ox+rW+6;
+      svgStr+='<line x1="'+(cx2+cw)+'" y1="'+midY3+'" x2="'+rx3+'" y2="'+midY3+'" stroke="'+color+'" stroke-width="0.8" stroke-dasharray="3 2"/>';
+      svgStr+='<line x1="'+rx3+'" y1="'+(midY3-12)+'" x2="'+rx3+'" y2="'+(midY3+12)+'" stroke="'+color+'" stroke-width="1.5"/>';
+      svgStr+='<line x1="'+(rx3-3)+'" y1="'+(midY3-12)+'" x2="'+(rx3+3)+'" y2="'+(midY3-12)+'" stroke="'+color+'" stroke-width="1.5"/>';
+      svgStr+='<line x1="'+(rx3-3)+'" y1="'+(midY3+12)+'" x2="'+(rx3+3)+'" y2="'+(midY3+12)+'" stroke="'+color+'" stroke-width="1.5"/>';
+      svgStr+='<text x="'+(rx3+6)+'" y="'+(midY3-5)+'" fill="'+color+'" font-family="'+MONO+'" font-size="8" font-weight="bold">'+Math.round(colW*100)+'\u0441\u043c</text>';
+      svgStr+='<text x="'+(rx3+6)+'" y="'+(midY3+6)+'" fill="#f59e0b" font-family="'+MONO+'" font-size="6">\u25bc\u041f\u041e\u0421\u041b.</text>';
+      tinyInfoArr.push({colW:colW,color:color,cx2:cx2,cw:cw,ci:ci});
+    }
+
+    // К етикет долу
+    svgStr+='<text x="'+(cx2+cw/2)+'" y="'+(oy+rH+16)+'" fill="'+color+'" font-family="'+MONO+'" font-size="8" text-anchor="middle" font-weight="'+(isTiny?'bold':'normal')+'">К'+(ci+1)+'\u00b7'+Math.round(colW*100)+'\u0441\u043c</text>';
+    if(isTiny) svgStr+='<text x="'+(cx2+cw/2)+'" y="'+(oy+rH+27)+'" fill="#f59e0b" font-family="'+MONO+'" font-size="6.5" text-anchor="middle">\u25bc\u041f\u041e\u0421\u041b.</text>';
+
+    cumX2=rnd(cumX2+colW);
   });
 
   // Рамка
-  svgStr+='<rect x="'+ox+'" y="'+oy+'" width="'+rW+'" height="'+rH+'" fill="none" stroke="#334155" stroke-width="1.5"/>';
+  svgStr+='<rect x="'+ox+'" y="'+(oy+6)+'" width="'+rW+'" height="'+(rH-6)+'" fill="none" stroke="#334155" stroke-width="1.5"/>';
+
+  // UW горе/долу
+  svgStr+='<rect x="'+ox+'" y="'+Y_UW+'" width="'+rW+'" height="6" fill="#b8862d" opacity="0.7" rx="1"/>';
+  svgStr+='<rect x="'+ox+'" y="'+(oy+rH)+'" width="'+rW+'" height="6" fill="#b8862d" opacity="0.7" rx="1"/>';
+
+  // CW профили
+  cwArr.forEach(function(p){
+    var px=rnd(ox+p*SC);
+    if(px<ox+rW-6) svgStr+='<rect x="'+px+'" y="'+(oy+6)+'" width="4" height="'+(rH-12)+'" fill="#7F77DD" opacity="0.8" rx="1"/>';
+  });
+
+  // Ос горе — кумулативни позиции
+  var dims2='';
+  var cumT=0;
+  dims2+='<line x1="'+ox+'" y1="'+(Y_AXIS-3)+'" x2="'+ox+'" y2="'+(Y_AXIS+3)+'" stroke="#64748b" stroke-width="1"/>';
+  dims2+='<text x="'+ox+'" y="'+(Y_AXIS-8)+'" fill="#94a3b8" font-family="'+MONO+'" font-size="8" text-anchor="middle">0</text>';
+  cols.forEach(function(colW,ci){
+    cumT=rnd(cumT+colW);
+    var px=rnd(ox+cumT*SC);
+    var isLast=ci===cols.length-1;
+    dims2+='<line x1="'+px+'" y1="'+(Y_AXIS-3)+'" x2="'+px+'" y2="'+(Y_AXIS+3)+'" stroke="#64748b" stroke-width="1"/>';
+    dims2+='<text x="'+(isLast?px+4:px)+'" y="'+(Y_AXIS-8)+'" fill="'+(isLast?'#e2e8f0':'#94a3b8')+'" font-family="'+MONO+'" font-size="8" font-weight="'+(isLast?'bold':'normal')+'" text-anchor="'+(isLast?'start':'middle')+'">'+cumT.toFixed(2).replace('.',',')+' </text>';
+  });
+  dims2+='<line x1="'+ox+'" y1="'+Y_AXIS+'" x2="'+(ox+rW)+'" y2="'+Y_AXIS+'" stroke="#334155" stroke-width="0.5"/>';
 
   // Размер горе
-  var dims='<line x1="'+ox+'" y1="'+(oy-16)+'" x2="'+(ox+rW)+'" y2="'+(oy-16)+'" stroke="#475569" stroke-width="0.5"/>'
-    +'<line x1="'+ox+'" y1="'+(oy-19)+'" x2="'+ox+'" y2="'+(oy-13)+'" stroke="#475569" stroke-width="0.5"/>'
-    +'<line x1="'+(ox+rW)+'" y1="'+(oy-19)+'" x2="'+(ox+rW)+'" y2="'+(oy-13)+'" stroke="#475569" stroke-width="0.5"/>'
-    +'<rect x="'+(ox+rW/2-22)+'" y="'+(oy-23)+'" width="44" height="13" fill="#0a0f1a" rx="2"/>'
-    +'<text x="'+(ox+rW/2)+'" y="'+(oy-16)+'" fill="#e2e8f0" font-family="'+MONO+'" font-size="9" font-weight="bold" text-anchor="middle" dominant-baseline="middle">'+len.toFixed(2).replace('.',',')+' \u043c</text>';
+  dims2+='<line x1="'+ox+'" y1="'+Y_SIZE+'" x2="'+(ox+rW)+'" y2="'+Y_SIZE+'" stroke="#475569" stroke-width="0.8"/>';
+  dims2+='<line x1="'+ox+'" y1="'+(Y_SIZE-4)+'" x2="'+ox+'" y2="'+(Y_SIZE+4)+'" stroke="#475569" stroke-width="0.8"/>';
+  dims2+='<line x1="'+(ox+rW)+'" y1="'+(Y_SIZE-4)+'" x2="'+(ox+rW)+'" y2="'+(Y_SIZE+4)+'" stroke="#475569" stroke-width="0.8"/>';
+  dims2+='<rect x="'+(ox+rW/2-24)+'" y="'+(Y_SIZE-8)+'" width="48" height="13" fill="#0d1424" rx="2"/>';
+  dims2+='<text x="'+(ox+rW/2)+'" y="'+Y_SIZE+'" fill="#e2e8f0" font-family="'+MONO+'" font-size="9" font-weight="bold" text-anchor="middle" dominant-baseline="middle">'+len.toFixed(2).replace('.',',')+' \u043c</text>';
 
   // Размер вдясно
-  var midY=rnd(oy+rH/2);
-  dims+='<text x="'+(ox+rW+42)+'" y="'+midY+'" fill="#e2e8f0" font-family="'+MONO+'" font-size="9" font-weight="bold" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90,'+(ox+rW+42)+','+midY+')">'+h.toFixed(2).replace('.',',')+' \u043c</text>';
+  var midY4=rnd(oy+rH/2);
+  dims2+='<text x="'+(ox+rW+46)+'" y="'+midY4+'" fill="#e2e8f0" font-family="'+MONO+'" font-size="9" font-weight="bold" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90,'+(ox+rW+46)+','+midY4+')">'+h.toFixed(2).replace('.',',')+' \u043c</text>';
 
   // Разминаване стрелка вдясно
   if(endH>0.005){
-    var arrX=ox+rW+14;
-    dims+='<line x1="'+arrX+'" y1="'+oy+'" x2="'+arrX+'" y2="'+(oy+rnd(endH*sc))+'" stroke="#ef4444" stroke-width="1"/>';
-    dims+='<text x="'+(arrX+4)+'" y="'+(oy+rnd(endH*sc/2))+'" fill="#ef4444" font-family="'+MONO+'" font-size="7" dominant-baseline="middle">'+Math.round(endH*100)+'\u0441\u043c</text>';
+    var arrX2=ox+rW+14;
+    dims2+='<line x1="'+arrX2+'" y1="'+(oy+6)+'" x2="'+arrX2+'" y2="'+(oy+6+rnd(endH*HSC))+'" stroke="#ef4444" stroke-width="1.2"/>';
+    dims2+='<line x1="'+(arrX2-3)+'" y1="'+(oy+6)+'" x2="'+(arrX2+3)+'" y2="'+(oy+6)+'" stroke="#ef4444" stroke-width="1.2"/>';
+    dims2+='<line x1="'+(arrX2-3)+'" y1="'+(oy+6+rnd(endH*HSC))+'" x2="'+(arrX2+3)+'" y2="'+(oy+6+rnd(endH*HSC))+'" stroke="#ef4444" stroke-width="1.2"/>';
+    dims2+='<text x="'+(arrX2+5)+'" y="'+(oy+6+rnd(endH*HSC/2))+'" fill="#ef4444" font-family="'+MONO+'" font-size="7.5" dominant-baseline="middle">'+Math.round(endH*100)+'\u0441\u043c</text>';
   }
 
-  // CW позиции отдолу
-  var cumXb=0;
-  var axisStr='<line x1="'+ox+'" y1="'+(oy+rH+20)+'" x2="'+(ox+rW)+'" y2="'+(oy+rH+20)+'" stroke="#475569" stroke-width="0.5"/>';
-  axisStr+='<line x1="'+ox+'" y1="'+(oy+rH+17)+'" x2="'+ox+'" y2="'+(oy+rH+23)+'" stroke="#475569" stroke-width="0.5"/>';
-  axisStr+='<text x="'+ox+'" y="'+(oy+rH+30)+'" fill="#475569" font-family="'+MONO+'" font-size="7" text-anchor="middle">0</text>';
-  cwArr.forEach(function(p,i){
-    var px=rnd(ox+p*sc);
-    axisStr+='<line x1="'+px+'" y1="'+(oy+rH+17)+'" x2="'+px+'" y2="'+(oy+rH+23)+'" stroke="#7F77DD" stroke-width="1"/>';
-    axisStr+='<text x="'+px+'" y="'+(oy+rH+30)+'" fill="#7F77DD" font-family="'+MONO+'" font-size="7" text-anchor="middle">'+rnd(p).toFixed(2).replace('.',',')+'</text>';
+  // Инфо блок за тясно парче
+  var tinyHtml='';
+  tinyInfoArr.forEach(function(t){
+    tinyHtml+='<div style="background:#111827;border:1px solid '+t.color+';border-radius:6px;padding:10px;display:flex;align-items:center;gap:12px;margin-top:8px;">'
+      +'<div style="width:10px;height:48px;background:'+t.color+';border-radius:2px;flex-shrink:0;opacity:0.7;"></div>'
+      +'<div style="flex:1;">'
+      +'<div style="font-family:'+MONO+';font-size:0.5rem;color:#64748b;letter-spacing:1px;margin-bottom:2px;">\u041f\u041e\u0421\u041b\u0415\u0414\u041d\u0410 \u041a\u041e\u041b\u041e\u041d\u0410 \u25bc\u041f\u041e\u0421\u041b.</div>'
+      +'<div style="font-family:'+MONO+';font-size:1.2rem;font-weight:bold;color:'+t.color+';line-height:1;">'+Math.round(t.colW*100)+' \u0441\u043c</div>'
+      +'<div style="font-family:'+MONO+';font-size:0.55rem;color:#94a3b8;margin-top:3px;">\u0448\u0438\u0440\u043e\u043a\u0430 \u00b7 '+h.toFixed(2)+'\u043c \u0432\u0438\u0441\u043e\u043a\u0430</div>'
+      +'<div style="font-family:'+MONO+';font-size:0.55rem;color:#ef4444;">\u0440\u0430\u0437\u043c\u0438\u043d\u0430\u0432\u0430\u043d\u0435: '+Math.round(endH*100)+'\u0441\u043c \u0433\u043e\u0440\u0435 \u0438 \u0434\u043e\u043b\u0443</div>'
+      +'</div>'
+      +'<div style="text-align:right;">'
+      +'<div style="font-family:'+MONO+';font-size:0.5rem;color:#64748b;">\u041b\u0418\u0421\u0422\u0418</div>'
+      +'<div style="font-family:'+MONO+';font-size:1.1rem;font-weight:bold;color:#fbbf24;">1</div>'
+      +'<div style="font-family:'+MONO+';font-size:0.45rem;color:#475569;">\u00d7 2 \u0441\u0442\u0440\u0430\u043d\u0438</div>'
+      +'</div></div>';
   });
 
-  panel.innerHTML+='<svg viewBox="0 0 '+svgW+' '+(svgH+20)+'" style="width:100%;height:auto;display:block;" xmlns="http://www.w3.org/2000/svg">'+dims+svgStr+axisStr+'</svg>'
+  panel.innerHTML+='<div style="background:#0d1424;border:1px solid #1e3a5f;border-radius:6px;padding:12px;margin-top:8px;">'
+    +'<div style="font-family:'+MONO+';font-size:0.6rem;color:#64748b;letter-spacing:2px;margin-bottom:10px;">\u0421\u0425\u0415\u041c\u0410 \u2014 \u041f\u0420\u0415\u0413\u0420\u0410\u0414\u041d\u0410 \u0421\u0422\u0415\u041d\u0410</div>'
+    +'<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">'
+    +'<svg viewBox="0 0 '+svgW+' '+svgH+'" style="width:'+svgW+'px;height:'+svgH+'px;min-width:'+svgW+'px;display:block;" xmlns="http://www.w3.org/2000/svg">'+dims2+svgStr+'</svg>'
+    +'</div>'
+    +tinyHtml
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px;">'
     +'<div style="background:#0d1424;border:1px solid #1e3a5f;border-radius:5px;padding:8px;text-align:center;">'
     +'<div style="font-family:'+MONO+';font-size:0.5rem;color:#64748b;">1 ПЛАСТ · 2 СТРАНИ</div>'
@@ -2000,7 +2101,7 @@ function renderPartitionSchema(len,h,layers,panel){
     +'<div style="background:#0d1424;border:2px solid #4ade80;border-radius:5px;padding:6px;text-align:center;">'
     +'<div style="font-family:'+MONO+';font-size:0.5rem;color:#64748b;">ПОРЪЧАЙ</div>'
     +'<div style="font-family:'+MONO+';font-size:0.9rem;font-weight:bold;color:#4ade80;">'+orderSheets+'</div>'
-    +'<div style="font-family:'+MONO+';font-size:0.45rem;color:#475569;">+2 резерв</div></div>'
+    +'<div style="font-family:'+MONO+';font-size:0.45rem;color:#475569;">+1 резерв</div></div>'
     +'</div>';
 }
 
