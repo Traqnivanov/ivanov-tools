@@ -278,7 +278,10 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     <div class="hdr-left">
       <div class="hdr-title">М² Калкулатор</div>
     </div>
-    <div class="hdr-brand">IVANOV REMONTI<br><span style="color:var(--muted)">v3.0</span></div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button onclick="clearLS()" style="font-family:'Share Tech Mono',monospace;font-size:0.62rem;color:#64748b;background:none;border:1px solid #334155;border-radius:3px;padding:3px 8px;cursor:pointer;letter-spacing:1px;" onmouseover="this.style.borderColor='#ef4444';this.style.color='#ef4444'" onmouseout="this.style.borderColor='#334155';this.style.color='#64748b'">✕ ИЗЧИСТИ</button>
+      <div class="hdr-brand">IVANOV REMONTI<br><span style="color:var(--muted)">v3.0</span></div>
+    </div>
   </div>
 
   <!-- INPUTS -->
@@ -347,7 +350,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
   </button>
 
   <!-- ══ MATERIALS PANEL ══ -->
-  <div id="matPanel" style="display:flex;flex-direction:column;gap:10px;">
+  <div id="matPanel" style="flex-direction:column;gap:10px;display:none;">
 
     <div class="from-main" id="fromMainInfo">
       <span>●</span> РАЗМЕРИ: <span id="fromMainVal">—</span>
@@ -388,6 +391,23 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 
     </div>
 
+    <!-- НЕТО М² ПОЛЕ — винаги видимо -->
+    <div id="netoM2Block" style="background:#0d1424;border:1px solid #334155;border-radius:6px;padding:10px 14px;">
+      <div style="font-family:'Share Tech Mono',monospace;font-size:0.58rem;color:#64748b;letter-spacing:2px;margin-bottom:6px;">РАБОТНА ПЛОЩ М² <span style="color:#475569;">· въведи ръчно или от стаята горе</span></div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input type="number" id="netoM2Input" min="0" step="0.1" placeholder="0"
+          style="background:#111827;border:1px solid #334155;border-radius:4px;font-family:'Share Tech Mono',monospace;font-size:1.6rem;color:#fbbf24;width:120px;text-align:center;padding:6px;outline:none;"
+          oninput="onNetoM2Change()"
+          onfocus="this.style.borderColor='#fbbf24'"
+          onblur="this.style.borderColor='#334155'">
+        <button onclick="document.getElementById('netoM2Input').value='';onNetoM2Change();" style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:#64748b;background:none;border:1px solid #334155;border-radius:3px;padding:3px 7px;cursor:pointer;letter-spacing:1px;" onmouseover="this.style.borderColor='#ef4444';this.style.color='#ef4444'" onmouseout="this.style.borderColor='#334155';this.style.color='#64748b'">✕</button>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:#475569;line-height:1.8;">
+          <div id="netoM2Auto" style="color:#64748b;"></div>
+          <div id="netoM2Hint" style="color:#334155;"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- РЕЗУЛТАТИ -->
     <div id="matResultsPanel" style="display:none;background:#0a0f1a;border:1px solid #1e3a5f;border-radius:6px;padding:14px;"></div>
 
@@ -407,10 +427,10 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     <div style="background:#0d1424;border:1px solid #1e3a5f;border-radius:6px;padding:8px 10px;">
       <div style="font-family:'Share Tech Mono',monospace;font-size:0.55rem;color:#64748b;letter-spacing:1px;margin-bottom:6px;">ОБЩО</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;" id="gipsTotalBar">
-        <div style="text-align:center;"><div style="font-family:'Share Tech Mono',monospace;font-size:0.45rem;color:#64748b;">ГК 1200/2000/12.5мм</div><div style="font-family:'Share Tech Mono',monospace;font-size:1rem;font-weight:bold;color:#fbbf24;" id="totalSheets">--</div><div style="font-family:'Share Tech Mono',monospace;font-size:0.5rem;color:#475569;" id="totalSheetsRes"></div></div>
-        <div style="text-align:center;"><div style="font-family:'Share Tech Mono',monospace;font-size:0.5rem;color:#64748b;">CD</div><div style="font-family:'Share Tech Mono',monospace;font-size:1rem;font-weight:bold;color:#a78bfa;" id="totalCD">--</div><div style="font-family:'Share Tech Mono',monospace;font-size:0.5rem;color:#475569;" id="totalCDsize"></div></div>
-        <div style="text-align:center;"><div style="font-family:'Share Tech Mono',monospace;font-size:0.5rem;color:#64748b;">UD</div><div style="font-family:'Share Tech Mono',monospace;font-size:1rem;font-weight:bold;color:#60a5fa;" id="totalUD">--</div><div style="font-family:'Share Tech Mono',monospace;font-size:0.5rem;color:#475569;" id="totalUDsize"></div></div>
-        <div style="text-align:center;"><div style="font-family:'Share Tech Mono',monospace;font-size:0.5rem;color:#64748b;">ПОРЪЧАЙ</div><div style="font-family:'Share Tech Mono',monospace;font-size:1rem;font-weight:bold;color:#4ade80;" id="totalOrder">--</div><div style="font-family:'Share Tech Mono',monospace;font-size:0.45rem;color:#475569;line-height:1.3;" id="totalFor"></div></div>
+        <div style="text-align:center;"><div style="font-family:'Share Tech Mono',monospace;font-size:0.45rem;color:#64748b;">ГК 1200/2000/12.5мм</div><input id="totalSheets" type="number" min="0" step="1" value="0" style="font-family:'Share Tech Mono',monospace;font-size:1rem;font-weight:bold;color:#fbbf24;background:transparent;border:none;border-bottom:1px solid #334155;outline:none;width:100%;text-align:center;padding:0;" onfocus="this.style.borderBottomColor='#fbbf24'" onblur="this.style.borderBottomColor='#334155'" oninput="window.gipsState.resSheets=parseFloat(this.value)||null;saveLS();"><div style="font-family:'Share Tech Mono',monospace;font-size:0.5rem;color:#475569;" id="totalSheetsRes"></div></div>
+        <div style="text-align:center;"><div style="font-family:'Share Tech Mono',monospace;font-size:0.5rem;color:#64748b;">CD</div><input id="totalCD" type="number" min="0" step="1" value="0" style="font-family:'Share Tech Mono',monospace;font-size:1rem;font-weight:bold;color:#a78bfa;background:transparent;border:none;border-bottom:1px solid #334155;outline:none;width:100%;text-align:center;padding:0;" onfocus="this.style.borderBottomColor='#a78bfa'" onblur="this.style.borderBottomColor='#334155'" oninput="window.gipsState.resCD=parseFloat(this.value)||null;saveLS();"><div style="font-family:'Share Tech Mono',monospace;font-size:0.5rem;color:#475569;" id="totalCDsize"></div></div>
+        <div style="text-align:center;"><div style="font-family:'Share Tech Mono',monospace;font-size:0.5rem;color:#64748b;">UD</div><input id="totalUD" type="number" min="0" step="1" value="0" style="font-family:'Share Tech Mono',monospace;font-size:1rem;font-weight:bold;color:#60a5fa;background:transparent;border:none;border-bottom:1px solid #334155;outline:none;width:100%;text-align:center;padding:0;" onfocus="this.style.borderBottomColor='#60a5fa'" onblur="this.style.borderBottomColor='#334155'" oninput="window.gipsState.resUD=parseFloat(this.value)||null;saveLS();"><div style="font-family:'Share Tech Mono',monospace;font-size:0.5rem;color:#475569;" id="totalUDsize"></div></div>
+        <div style="text-align:center;"><div style="font-family:'Share Tech Mono',monospace;font-size:0.5rem;color:#64748b;">ПОРЪЧАЙ</div><input id="totalOrder" type="number" min="0" step="1" value="0" style="font-family:'Share Tech Mono',monospace;font-size:1rem;font-weight:bold;color:#4ade80;background:transparent;border:none;border-bottom:1px solid #334155;outline:none;width:100%;text-align:center;padding:0;" onfocus="this.style.borderBottomColor='#4ade80'" onblur="this.style.borderBottomColor='#334155'" oninput="window.gipsState.resOrder=parseFloat(this.value)||null;saveLS();"><div style="font-family:'Share Tech Mono',monospace;font-size:0.45rem;color:#475569;line-height:1.3;" id="totalFor"></div></div>
       </div>
     </div>
   </div>
@@ -657,6 +677,7 @@ function updateNicheSum(){
 // MAIN RESULTS
 // ══════════════════════════════════════
 function go(){
+  saveLS();
   const L=parseFloat(document.getElementById('iL').value)||0;
   const W=parseFloat(document.getElementById('iW').value)||0;
   const H=parseFloat(document.getElementById('iH').value)||0;
@@ -758,6 +779,8 @@ function selectMat(id){
     }
   });
   activeMat=id;
+  netoM2Manual=null; // нулираме ръчната корекция при смяна на материал
+  saveLS();
   calcMat();
   document.getElementById('matResultsPanel').style.display='block';
 }
@@ -775,8 +798,8 @@ function toggleMaterials(){
   const panel=document.getElementById('matPanel');
   const btn=document.getElementById('matToggleBtn');
   const arrow=document.getElementById('matArrow');
-  const isOpen=panel.classList.contains('open');
-  panel.classList.toggle('open',!isOpen);
+  const isOpen=panel.style.display!=='none';
+  panel.style.display = isOpen ? 'none' : 'flex';
   btn.classList.toggle('open',!isOpen);
   arrow.classList.toggle('open',!isOpen);
   if(!isOpen) calcMat();
@@ -787,22 +810,74 @@ function getAreas(){
   const W=parseFloat(document.getElementById('iW').value)||0;
   const H=parseFloat(document.getElementById('iH').value)||0;
   const steniAll = L>0&&W>0&&H>0 ? 2*(L+W)*H : 0;
+  const openDed = openingsTotal();
+  const steniNet = Math.max(0, steniAll - openDed);
   const ceil = L>0&&W>0 ? L*W : 0;
-  return {L,W,H,walls:steniAll,ceil,floor:ceil};
+  return {L,W,H,walls:steniAll,wallsNet:steniNet,ceil,floor:ceil};
+}
+
+// Следи дали потребителят е редактирал ръчно
+let netoM2Manual = null;
+let lastAutoM2 = 0;
+
+function onNetoM2Change(){
+  const inp = document.getElementById('netoM2Input');
+  const val = parseFloat(inp.value);
+  // Ако е изчистено или 0 — нулираме ръчното, автоматичното поема
+  netoM2Manual = (inp.value==='' || isNaN(val) || val<=0) ? null : val;
+  saveLS();
+  calcMat();
+}
+
+function getWorkingM2(autoM2){
+  // Ако стаята е нулирана — изчистваме ръчното
+  if(autoM2 === 0 && lastAutoM2 > 0){
+    netoM2Manual = null;
+    const inp = document.getElementById('netoM2Input');
+    if(inp) inp.value = '';
+  }
+  lastAutoM2 = autoM2;
+  if(netoM2Manual !== null && netoM2Manual > 0) return netoM2Manual;
+  return autoM2;
+}
+
+function updateNetoM2Field(wallsNet){
+  const inp = document.getElementById('netoM2Input');
+  const auto = document.getElementById('netoM2Auto');
+  const hint = document.getElementById('netoM2Hint');
+  if(!inp||!auto) return;
+  // Ако потребителят не е редактирал — обновяваме автоматично от стаята
+  if(netoM2Manual === null){
+    inp.value = wallsNet > 0 ? wallsNet.toFixed(2) : '';
+    auto.textContent = wallsNet > 0 ? fmt(wallsNet) + ' м² нето' : '';
+    if(hint) hint.textContent = wallsNet > 0 ? '↑ от стаята горе' : 'въведи м² ръчно';
+  } else {
+    auto.textContent = wallsNet > 0 ? 'авт: ' + fmt(wallsNet) + ' м²' : '';
+    if(hint) hint.textContent = '↑ ръчна корекция';
+  }
 }
 
 function calcMat(){
-  const {L,W,H,walls,ceil,floor}=getAreas();
+  saveLS();
+  const {L,W,H,walls,wallsNet,ceil,floor}=getAreas();
   const fromMain=document.getElementById('fromMainVal');
   if(L>0&&W>0&&H>0) fromMain.textContent=fmt(L)+' × '+fmt(W)+' × '+fmt(H)+' м';
   else fromMain.textContent='— (въведи размерите горе)';
   const panel=document.getElementById('matResultsPanel');
   if(!activeMat||!panel) return;
-  if(!L||!W||!H){ panel.innerHTML='<div class="mat-empty">[ ВЪВЕДИ РАЗМЕРИТЕ ГОРЕ ]</div>'; return; }
+  // Бетон и гипс изискват стая — боя/шпакловка/лепило работят с ръчно м²
+  const matNeedsRoom = ['beton','gips'];
+  const workM2 = getWorkingM2(wallsNet);
+  if(!L||!W||!H){
+    if(matNeedsRoom.includes(activeMat) || workM2<=0){
+      panel.innerHTML='<div class="mat-empty">[ ВЪВЕДИ РАЗМЕРИТЕ ГОРЕ ]</div>'; return;
+    }
+  }
+  updateNetoM2Field(wallsNet);
 
-  if(activeMat==='boya') renderBoya(walls,ceil,panel);
-  else if(activeMat==='shp') renderShp(walls,ceil,panel);
-  else if(activeMat==='lep') renderLep(walls,floor,panel);
+  if(activeMat==='boya') renderBoya(workM2,ceil,panel);
+  else if(activeMat==='shp') renderShp(workM2,ceil,panel);
+  else if(activeMat==='lep') renderLep(workM2,floor,panel);
   else if(activeMat==='beton') renderBetonPanel(L,W,panel);
   else if(activeMat==='gips') renderGips(L,W,panel);
 }
@@ -816,10 +891,19 @@ function sel(id,label,opts,selVal,onChange){
   const handler=onChange?`onchange="${onChange}"`:'onchange="calcMat()"';
   return `<div><div class="mp-label">${label}</div><select class="mp-select" id="${id}" ${handler} style="width:100%;">${options}</select></div>`;
 }
-function resRow(label,val,unit){
+function resRow(label,val,unit,id){
+  const inputId = id ? 'resInput_'+id : '';
+  const onch = id ? `matState['${id.split('_')[0]}'].result=parseFloat(this.value)||null;saveLS();` : '';
   return `<div style="display:flex;justify-content:space-between;align-items:flex-end;padding:8px 0;border-bottom:1px solid #1e2d47;">
     <div style="font-family:var(--tech);font-size:0.8rem;color:#e2e8f0;letter-spacing:1px;">${label}</div>
-    <div><span style="font-family:var(--tech);font-size:2rem;color:#fbbf24;font-weight:bold;">${val}</span><span style="font-family:var(--tech);font-size:0.75rem;color:#94a3b8;margin-left:6px;">${unit}</span></div>
+    <div style="display:flex;align-items:baseline;gap:6px;">
+      <input ${inputId?`id="${inputId}"`:''} type="number" value="${val}" min="0" step="1"
+        style="font-family:var(--tech);font-size:2rem;color:#fbbf24;font-weight:bold;background:transparent;border:none;border-bottom:1px solid #334155;outline:none;width:90px;text-align:right;padding:0;"
+        onfocus="this.style.borderBottomColor='#fbbf24'"
+        onblur="this.style.borderBottomColor='#334155'"
+        ${onch?`oninput="${onch}"`:'readonly'}>
+      <span style="font-family:var(--tech);font-size:0.75rem;color:#94a3b8;">${unit}</span>
+    </div>
   </div>`;
 }
 function note(txt){ return `<div style="font-family:var(--tech);font-size:0.68rem;color:#64748b;padding-top:8px;">${txt}</div>`; }
@@ -829,11 +913,90 @@ function getS(id,def){ return document.getElementById(id)?.value||def; }
 
 // State per card — persists across re-renders
 const matState = {
-  boya: {norma:'0.144', sloi:'2', pov:'walls'},
-  shp:  {norma:'0.9',   sloi:'2', pov:'walls'},
-  lep:  {norma:'10',    pov:'floor'},
+  boya: {norma:'0.144', sloi:'2', pov:'walls', result:null},
+  shp:  {norma:'0.9',   sloi:'2', pov:'walls', result:null},
+  lep:  {norma:'10',    pov:'floor',            result:null},
   beton:{type:'concrete', thick:'5'}
 };
+
+// ══════════════════════════════════════
+// LOCAL STORAGE
+// ══════════════════════════════════════
+const LS_KEY = 'ivanov_kalk_v1';
+
+function saveLS(){
+  try{
+    const data = {
+      L: document.getElementById('iL').value,
+      W: document.getElementById('iW').value,
+      H: document.getElementById('iH').value,
+      openings: openings,
+      oId: oId,
+      niches: niches,
+      nId: nId,
+      activeMat: activeMat,
+      matState: matState,
+      netoM2Manual: netoM2Manual,
+      gipsRes: window.gipsState ? {
+        resSheets: window.gipsState.resSheets,
+        resCD:     window.gipsState.resCD,
+        resUD:     window.gipsState.resUD,
+        resOrder:  window.gipsState.resOrder
+      } : null
+    };
+    localStorage.setItem(LS_KEY, JSON.stringify(data));
+  } catch(e){}
+}
+
+function loadLS(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw) return;
+    const d = JSON.parse(raw);
+    // Размери
+    if(d.L) document.getElementById('iL').value = d.L;
+    if(d.W) document.getElementById('iW').value = d.W;
+    if(d.H) document.getElementById('iH').value = d.H;
+    // Отвори
+    if(d.openings && d.openings.length){ openings = d.openings; oId = d.oId||d.openings.length; renderOpenings(); }
+    // Ниши
+    if(d.niches && d.niches.length){ niches = d.niches; nId = d.nId||d.niches.length; renderNiches(); }
+    // matState
+    if(d.matState){
+      Object.assign(matState.boya, d.matState.boya||{});
+      Object.assign(matState.shp,  d.matState.shp||{});
+      Object.assign(matState.lep,  d.matState.lep||{});
+      Object.assign(matState.beton,d.matState.beton||{});
+    }
+    // Нето ръчна корекция
+    if(d.netoM2Manual !== null && d.netoM2Manual > 0){
+      netoM2Manual = d.netoM2Manual;
+      const inp = document.getElementById('netoM2Input');
+      if(inp) inp.value = d.netoM2Manual;
+    }
+    // Изчисли
+    go();
+    // Активен материал — след go()
+    if(d.activeMat) selectMat(d.activeMat);
+    // Гипс резултати
+    if(d.gipsRes && window.gipsState){
+      window.gipsState.resSheets = d.gipsRes.resSheets||null;
+      window.gipsState.resCD     = d.gipsRes.resCD||null;
+      window.gipsState.resUD     = d.gipsRes.resUD||null;
+      window.gipsState.resOrder  = d.gipsRes.resOrder||null;
+      var _s=document.getElementById('totalSheets'); if(_s&&d.gipsRes.resSheets) _s.value=d.gipsRes.resSheets;
+      var _c=document.getElementById('totalCD');     if(_c&&d.gipsRes.resCD)     _c.value=d.gipsRes.resCD;
+      var _u=document.getElementById('totalUD');     if(_u&&d.gipsRes.resUD)     _u.value=d.gipsRes.resUD;
+      var _o=document.getElementById('totalOrder');  if(_o&&d.gipsRes.resOrder)  _o.value=d.gipsRes.resOrder;
+    }
+  } catch(e){}
+}
+
+function clearLS(){
+  if(!confirm('Изчисти всички въведени данни?')) return;
+  localStorage.removeItem(LS_KEY);
+  location.href = location.href;
+}
 
 function saveState(card, fields){
   fields.forEach(id=>{
@@ -846,16 +1009,17 @@ function renderBoya(walls,ceil,panel){
   const s=matState.boya;
   const norma=parseFloat(s.norma)||0.144, sloi=parseInt(s.sloi)||2, pov=s.pov||'walls';
   const m2=pov==='walls'?walls:pov==='ceil'?ceil:walls+ceil;
-  const litri=m2*norma*sloi;
+  const litriAuto=m2*norma*sloi;
+  const litri = s.result !== null ? s.result : litriAuto;
   panel.innerHTML=`
     <div style="font-family:var(--tech);font-size:0.82rem;color:#60a5fa;margin-bottom:12px;letter-spacing:2px;font-weight:bold;">🎨 БОЯ — Spirit Mat</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-      ${inp('boyaNorma2','НОРМА л/м²',norma,0.001,0.05,"matState.boya.norma=this.value;calcMat();")}
-      ${sel('boyaSloi2','ПЛАСТА',[['1','1 пласт'],['2','2 пласта'],['3','3 пласта']],s.sloi,"matState.boya.sloi=this.value;calcMat();")}
-      ${sel('boyaPov2','ПОВЪРХНОСТ',[['walls','Стени'],['ceil','Таван'],['all','Стени+Таван']],s.pov,"matState.boya.pov=this.value;calcMat();")}
+      ${inp('boyaNorma2','НОРМА л/м²',norma,0.001,0.05,"matState.boya.norma=this.value;matState.boya.result=null;calcMat();")}
+      ${sel('boyaSloi2','ПЛАСТА',[['1','1 пласт'],['2','2 пласта'],['3','3 пласта']],s.sloi,"matState.boya.sloi=this.value;matState.boya.result=null;calcMat();")}
+      ${sel('boyaPov2','ПОВЪРХНОСТ',[['walls','Стени'],['ceil','Таван'],['all','Стени+Таван']],s.pov,"matState.boya.pov=this.value;matState.boya.result=null;calcMat();")}
     </div>
-    ${resRow('Необходими литри',fmt(litri),'л')}
-    ${note(fmt(m2)+' м² × '+norma+' л/м² × '+sloi+' пласта')}
+    ${resRow('Необходими литри',litri,'л','boya_result')}
+    ${note(fmt(m2)+' м² × '+norma+' л/м² × '+sloi+' пласта = '+fmt(litriAuto)+' л (авт.)')}
   `;
 }
 
@@ -863,16 +1027,17 @@ function renderShp(walls,ceil,panel){
   const s=matState.shp;
   const norma=parseFloat(s.norma)||0.9, sloi=parseInt(s.sloi)||2, pov=s.pov||'walls';
   const m2=pov==='walls'?walls:pov==='ceil'?ceil:walls+ceil;
-  const kg=m2*norma*sloi, baki=Math.ceil(kg/20);
+  const kg=m2*norma*sloi, bakiAuto=Math.ceil(kg/20);
+  const baki = s.result !== null ? s.result : bakiAuto;
   panel.innerHTML=`
     <div style="font-family:var(--tech);font-size:0.82rem;color:#60a5fa;margin-bottom:12px;letter-spacing:2px;font-weight:bold;">🪣 ШПАКЛОВКА — Knauf Super Finish 20кг</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-      ${inp('shpNorma2','НОРМА кг/м²/слой',norma,0.1,0.1,"matState.shp.norma=this.value;calcMat();")}
-      ${sel('shpSloi2','СЛОЕВЕ',[['1','1 слой'],['2','2 слоя'],['3','3 слоя']],s.sloi,"matState.shp.sloi=this.value;calcMat();")}
-      ${sel('shpPov2','ПОВЪРХНОСТ',[['walls','Стени'],['ceil','Таван'],['all','Стени+Таван']],s.pov,"matState.shp.pov=this.value;calcMat();")}
+      ${inp('shpNorma2','НОРМА кг/м²/слой',norma,0.1,0.1,"matState.shp.norma=this.value;matState.shp.result=null;calcMat();")}
+      ${sel('shpSloi2','СЛОЕВЕ',[['1','1 слой'],['2','2 слоя'],['3','3 слоя']],s.sloi,"matState.shp.sloi=this.value;matState.shp.result=null;calcMat();")}
+      ${sel('shpPov2','ПОВЪРХНОСТ',[['walls','Стени'],['ceil','Таван'],['all','Стени+Таван']],s.pov,"matState.shp.pov=this.value;matState.shp.result=null;calcMat();")}
     </div>
-    ${resRow('Необходими баки',baki,'× 20кг')}
-    ${note(fmt(m2)+' м² × '+norma+' кг × '+sloi+' слоя = '+fmt(kg)+' кг')}
+    ${resRow('Необходими баки',baki,'× 20кг','shp_result')}
+    ${note(fmt(m2)+' м² × '+norma+' кг × '+sloi+' слоя = '+fmt(kg)+' кг (авт. '+bakiAuto+' бр)')}
   `;
 }
 
@@ -880,15 +1045,16 @@ function renderLep(walls,floor,panel){
   const s=matState.lep;
   const norma=parseFloat(s.norma)||10, pov=s.pov||'floor';
   const m2=pov==='floor'?floor:pov==='walls'?walls:floor+walls;
-  const kg=m2*norma, chuvali=Math.ceil(kg/25);
+  const kg=m2*norma, chuvaliAuto=Math.ceil(kg/25);
+  const chuvali = s.result !== null ? s.result : chuvaliAuto;
   panel.innerHTML=`
     <div style="font-family:var(--tech);font-size:0.82rem;color:#60a5fa;margin-bottom:12px;letter-spacing:2px;font-weight:bold;">🔲 ЛЕПИЛО — Ceresit CM11 Plus 25кг</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-      ${inp('lepNorma2','НОРМА кг/м²',norma,0.5,1,"matState.lep.norma=this.value;calcMat();")}
-      ${sel('lepPov2','ПОВЪРХНОСТ',[['floor','Под'],['walls','Стени'],['all','Под+Стени']],s.pov,"matState.lep.pov=this.value;calcMat();")}
+      ${inp('lepNorma2','НОРМА кг/м²',norma,0.5,1,"matState.lep.norma=this.value;matState.lep.result=null;calcMat();")}
+      ${sel('lepPov2','ПОВЪРХНОСТ',[['floor','Под'],['walls','Стени'],['all','Под+Стени']],s.pov,"matState.lep.pov=this.value;matState.lep.result=null;calcMat();")}
     </div>
-    ${resRow('Необходими чувала',chuvali,'× 25кг')}
-    ${note(fmt(m2)+' м² × '+norma+' кг/м² = '+fmt(kg)+' кг')}
+    ${resRow('Необходими чувала',chuvali,'× 25кг','lep_result')}
+    ${note(fmt(m2)+' м² × '+norma+' кг/м² = '+fmt(kg)+' кг (авт. '+chuvaliAuto+' бр)')}
   `;
 }
 
@@ -985,7 +1151,7 @@ function renderBetonPanel(L,W,panel){
 function openGipsModal(){
   const {L,W}=getAreas();
   if(!L||!W){alert('Въведи размерите горе!');return;}
-  window.gipsState={ceilingOn:false, selectedWalls:new Set(), bestVariant:null, selectedCeilingVar:null, selectedPartitions:new Set(), partitionLayers:1};
+  window.gipsState={ceilingOn:false, selectedWalls:new Set(), bestVariant:null, selectedCeilingVar:null, selectedPartitions:new Set(), partitionLayers:1, resSheets:null, resCD:null, resUD:null, resOrder:null};
   document.getElementById('gipsModal').style.display='block';
   document.body.style.overflow='hidden';
   setTimeout(function(){initGipsModal();},10);
@@ -1680,7 +1846,12 @@ function updateGipsTotal(){
   var _canShare=_els.filter(function(e){return !e.exactFit&&e.piecesFromOne>=2;}).length;
   const reserves=_mustAlone+Math.ceil(_canShare/2);
 
-  function setEl(id,val){ var e=document.getElementById(id); if(e) e.textContent=val; }
+  function setEl(id,val){
+    var e=document.getElementById(id);
+    if(!e) return;
+    if(e.tagName==='INPUT') e.value=val;
+    else e.textContent=val;
+  }
   setEl('totalSheets', hasSel?sheets:'--');
   setEl('totalSheetsRes', hasSel?'(+'+reserves+' резерв)':'');
   setEl('totalCD', hasSel?cdCount:'--');
@@ -2104,6 +2275,8 @@ function renderPartitionSchema(len,h,layers,panel){
     +'<div style="font-family:'+MONO+';font-size:0.45rem;color:#475569;">+1 резерв</div></div>'
     +'</div>';
 }
+// Зареди запазените данни при стартиране
+loadLS();
 
 </script>
 </body>
