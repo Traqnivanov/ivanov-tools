@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Помощник — Ivanov Remonti</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#C9A84C;--gold-dark:#9A7530;--gold-glow:rgba(201,168,76,0.15);
+  --dark:#0E0D0B;--dark2:#1A1916;--dark3:#252320;--dark4:#2E2C28;
+  --text:#F0EDE6;--text2:#B8B4AC;--muted:#6E6B64;
+  --border:rgba(201,168,76,0.18);--border2:rgba(201,168,76,0.07);
+  --green:#27AE60;--red:#C0392B;--blue:#2980B9;--orange:#E67E22;
+  --radius:12px;--radius-lg:18px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--dark);color:var(--text);min-height:100vh;display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+
+/* HEADER */
+.header{background:linear-gradient(135deg,#0F0E0C,#1C1A12,#221F0E);border-bottom:1px solid var(--border);padding:0 14px;display:flex;align-items:center;justify-content:space-between;height:54px;flex-shrink:0;}
+.header-left{display:flex;align-items:center;gap:10px;}
+.header-logo{font-family:'Playfair Display',serif;font-size:16px;color:var(--gold);}
+.header-status{font-size:10px;color:var(--green);display:flex;align-items:center;gap:5px;}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
+.status-dot.offline{background:var(--red);animation:none;}
+@keyframes pulse{0%{opacity:1;}50%{opacity:.4;}100%{opacity:1;}}
+.header-right{display:flex;gap:6px;align-items:center;}
+.cost-badge{display:flex;flex-direction:column;align-items:flex-end;font-size:9px;color:var(--muted);letter-spacing:.5px;}
+.cost-line{color:var(--gold);font-weight:600;font-size:10px;}
+.header-btn{background:transparent;border:1px solid var(--border);color:var(--text2);padding:6px 10px;border-radius:8px;cursor:pointer;font-size:14px;}
+.header-btn:hover{color:var(--gold);}
+
+/* SIDEBAR */
+.layout{flex:1;display:flex;overflow:hidden;}
+.sidebar{width:260px;background:var(--dark2);border-right:1px solid var(--border2);flex-shrink:0;display:flex;flex-direction:column;}
+.sidebar-top{padding:14px;border-bottom:1px solid var(--border2);}
+.new-chat-btn{width:100%;background:linear-gradient(135deg,var(--gold),var(--gold-dark));color:#0E0D0B;border:none;border-radius:10px;padding:11px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;}
+.sidebar-list{flex:1;overflow-y:auto;padding:8px;}
+.chat-item{padding:10px 12px;border-radius:8px;cursor:pointer;margin-bottom:4px;border:1px solid transparent;transition:all .2s;}
+.chat-item:hover{background:var(--dark3);}
+.chat-item.active{background:var(--gold-glow);border-color:var(--gold);}
+.chat-item-title{font-size:13px;color:var(--text);font-weight:500;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.chat-item-meta{font-size:10px;color:var(--muted);}
+.chat-empty{padding:24px 14px;text-align:center;color:var(--muted);font-size:12px;}
+.sidebar-bottom{padding:12px;border-top:1px solid var(--border2);display:flex;flex-direction:column;gap:6px;}
+.side-action{background:transparent;border:1px solid var(--border2);color:var(--text2);padding:8px 10px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px;text-align:left;display:flex;align-items:center;gap:8px;}
+.side-action:hover{color:var(--gold);border-color:var(--border);}
+.side-action a{color:inherit;text-decoration:none;}
+
+/* MAIN CHAT AREA */
+.chat-area{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.chat-empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;}
+.empty-icon{font-size:54px;margin-bottom:18px;}
+.empty-title{font-family:'Playfair Display',serif;font-size:24px;color:var(--gold);margin-bottom:8px;}
+.empty-sub{font-size:14px;color:var(--text2);max-width:380px;line-height:1.5;margin-bottom:24px;}
+.quick-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;max-width:420px;width:100%;}
+.quick-btn{background:var(--dark2);border:1px solid var(--border);color:var(--text);padding:14px 12px;border-radius:10px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:500;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;}
+.quick-btn:hover{background:var(--gold-glow);border-color:var(--gold);}
+.quick-btn-icon{font-size:22px;}
+
+/* MESSAGES */
+.messages{flex:1;overflow-y:auto;padding:20px 20px 8px 20px;}
+.msg{margin-bottom:18px;display:flex;gap:10px;}
+.msg-avatar{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.msg-user .msg-avatar{background:var(--dark3);}
+.msg-ai .msg-avatar{background:var(--gold-glow);border:1px solid var(--gold);}
+.msg-body{flex:1;min-width:0;}
+.msg-name{font-size:11px;color:var(--gold);font-weight:700;letter-spacing:.5px;margin-bottom:4px;text-transform:uppercase;}
+.msg-content{font-size:14px;color:var(--text);line-height:1.6;}
+.msg-content p{margin-bottom:8px;}
+.msg-content strong{color:var(--gold);}
+.msg-content em{color:var(--text2);}
+.msg-content ul,.msg-content ol{margin:8px 0 8px 22px;}
+.msg-content li{margin-bottom:4px;}
+.msg-meta{font-size:10px;color:var(--muted);margin-top:6px;display:flex;gap:12px;}
+.msg-actions{display:flex;gap:6px;margin-top:8px;opacity:0;transition:opacity .2s;}
+.msg.msg-ai:hover .msg-actions{opacity:1;}
+.msg-act-btn{background:transparent;border:1px solid var(--border2);color:var(--muted);padding:3px 8px;border-radius:6px;cursor:pointer;font-size:11px;font-family:inherit;}
+.msg-act-btn:hover{color:var(--gold);border-color:var(--border);}
+
+.thinking{display:inline-flex;align-items:center;gap:6px;color:var(--text2);font-style:italic;font-size:13px;}
+.dot{width:6px;height:6px;background:var(--gold);border-radius:50%;animation:bounce 1.4s infinite;}
+.dot:nth-child(2){animation-delay:.2s;}
+.dot:nth-child(3){animation-delay:.4s;}
+@keyframes bounce{0%,80%,100%{opacity:.3;transform:scale(.8);}40%{opacity:1;transform:scale(1);}}
+
+/* INPUT */
+.input-area{padding:12px 20px 16px 20px;border-top:1px solid var(--border2);background:var(--dark2);flex-shrink:0;}
+.mode-row{display:flex;gap:6px;margin-bottom:8px;align-items:center;}
+.mode-label{font-size:10px;color:var(--muted);letter-spacing:.5px;margin-right:4px;}
+.mode-btn{background:transparent;border:1px solid var(--border2);color:var(--text2);padding:4px 10px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:11px;}
+.mode-btn.active{background:var(--gold-glow);color:var(--gold);border-color:var(--gold);}
+
+.input-row{display:flex;gap:8px;align-items:flex-end;}
+.input-field{flex:1;background:var(--dark3);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
+.input-textarea{width:100%;background:transparent;border:none;color:var(--text);font-family:inherit;font-size:14px;outline:none;resize:none;line-height:1.5;max-height:150px;}
+.input-textarea::placeholder{color:var(--muted);}
+.send-btn{background:linear-gradient(135deg,var(--gold),var(--gold-dark));color:#0E0D0B;border:none;border-radius:12px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;flex-shrink:0;}
+.send-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--dark2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:26px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;}
+.modal-title{font-family:'Playfair Display',serif;font-size:22px;color:var(--gold);margin-bottom:8px;}
+.modal-sub{font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:18px;}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+.field label{font-size:11px;font-weight:600;color:var(--gold);letter-spacing:.8px;text-transform:uppercase;}
+.field input,.field select,.field textarea{background:var(--dark3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:inherit;font-size:14px;padding:11px 14px;outline:none;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold);}
+.modal-actions{display:flex;gap:10px;margin-top:18px;}
+.modal-btn{flex:1;padding:11px;border-radius:var(--radius);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;border:none;}
+.modal-btn-primary{background:linear-gradient(135deg,var(--gold),var(--gold-dark));color:#0E0D0B;}
+.modal-btn-secondary{background:transparent;border:1px solid var(--border);color:var(--text2);}
+
+.info-box{background:rgba(41,128,185,0.08);border:1px solid rgba(41,128,185,0.3);border-radius:8px;padding:10px 12px;font-size:12px;color:#7AB8E0;line-height:1.5;margin:10px 0;}
+.warning-box{background:rgba(230,126,34,0.08);border:1px solid rgba(230,126,34,0.3);border-radius:8px;padding:10px 12px;font-size:12px;color:#F0B070;line-height:1.5;margin:10px 0;}
+.error-box{background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.3);border-radius:8px;padding:10px 12px;font-size:12px;color:#E07070;line-height:1.5;margin:10px 0;}
+
+/* TOAST */
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--dark3);border:1px solid var(--border);border-radius:var(--radius);padding:10px 18px;font-size:13px;color:var(--text);z-index:999;transition:transform .25s;pointer-events:none;}
+#toast.show{transform:translateX(-50%) translateY(0);}
+#toast.ok{border-color:rgba(39,174,96,.5);color:#5DBE82;}
+#toast.err{border-color:rgba(192,57,43,.5);color:#E07070;}
+
+/* RESPONSIVE - MOBILE */
+@media(max-width:768px){
+  .layout{flex-direction:column;}
+  .sidebar{width:100%;max-height:0;overflow:hidden;border-right:none;border-bottom:1px solid var(--border2);transition:max-height .25s;}
+  .sidebar.open{max-height:50vh;}
+  .sidebar-list{max-height:30vh;}
+  .header-logo{display:none;}
+  .header-btn.menu-toggle{display:flex;}
+  .messages{padding:14px;}
+  .input-area{padding:10px 14px 12px 14px;}
+  .quick-actions{grid-template-columns:1fr;}
+  .cost-badge{font-size:8px;}
+  .cost-line{font-size:9px;}
+}
+@media(min-width:769px){
+  .header-btn.menu-toggle{display:none;}
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <button class="header-btn menu-toggle" onclick="toggleSidebar()">☰</button>
+    <span style="font-size:22px;">🤖</span>
+    <span class="header-logo">AI Помощник</span>
+    <div class="header-status">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Свързан</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="cost-badge">
+      <span class="cost-line" id="todayCost">Днес: $0.00</span>
+      <span id="sessionCost">Сесия: $0.00</span>
+    </div>
+    <button class="header-btn" onclick="openSettings()" title="Настройки">⚙️</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <button class="new-chat-btn" onclick="newChat()">＋ Нов разговор</button>
+    </div>
+    <div class="sidebar-list" id="chatList">
+      <div class="chat-empty">Няма разговори<br>Натисни „Нов разговор"</div>
+    </div>
+    <div class="sidebar-bottom">
+      <a class="side-action" href="naruchnik.html">📖 Наръчник</a>
+      <a class="side-action" href="clients.html">👥 Клиенти</a>
+      <a class="side-action" href="index.html">🏠 Меню</a>
+    </div>
+  </aside>
+
+  <main class="chat-area">
+    <div id="chatMessages" class="messages" style="display:none;"></div>
+
+    <div id="emptyState" class="chat-empty-state">
+      <div class="empty-icon">🤖</div>
+      <div class="empty-title">Здравей, Tery!</div>
+      <div class="empty-sub">
+        Аз съм твоят психологически помощник за клиенти. Знам наръчника наизуст,
+        знам твоите бележки и клиенти. Кажи ми с какво да помогна.
+      </div>
+      <div class="quick-actions">
+        <button class="quick-btn" onclick="quickStart('analyze')">
+          <span class="quick-btn-icon">🔍</span>
+          <span>Анализирай клиент</span>
+        </button>
+        <button class="quick-btn" onclick="quickStart('offer')">
+          <span class="quick-btn-icon">💰</span>
+          <span>Ключови думи за оферта</span>
+        </button>
+        <button class="quick-btn" onclick="quickStart('prep')">
+          <span class="quick-btn-icon">🎯</span>
+          <span>Подготви ме за утре</span>
+        </button>
+        <button class="quick-btn" onclick="quickStart('progress')">
+          <span class="quick-btn-icon">📈</span>
+          <span>Моят прогрес</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="mode-row">
+        <span class="mode-label">РЕЖИМ:</span>
+        <button class="mode-btn" data-mode="short" onclick="setMode('short')">🔵 Кратко</button>
+        <button class="mode-btn active" data-mode="medium" onclick="setMode('medium')">🟡 Средно</button>
+      </div>
+      <div class="input-row">
+        <div class="input-field">
+          <textarea
+            id="inputText"
+            class="input-textarea"
+            rows="1"
+            placeholder="Опиши клиента или попитай нещо..."
+            onkeydown="handleKeyDown(event)"
+            oninput="autoResize(this)"></textarea>
+        </div>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>➤</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- API KEY MODAL -->
+<div class="modal-overlay" id="apiKeyModal">
+  <div class="modal">
+    <div class="modal-title">🔑 API Ключ от Anthropic</div>
+    <div class="modal-sub">
+      За първи път използваш AI помощника. Трябва ти API ключ от Anthropic.
+    </div>
+
+    <div class="info-box">
+      <strong>📋 Как да получиш ключ:</strong><br>
+      1. Отвори <strong>console.anthropic.com</strong><br>
+      2. Регистрирай се (или влез)<br>
+      3. Зареди $5 в Billing<br>
+      4. Settings → API Keys → Create Key<br>
+      5. Копирай ключа (започва с „sk-ant-...")<br>
+      6. Постави го тук долу
+    </div>
+
+    <div class="field">
+      <label>API Ключ</label>
+      <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-...">
+    </div>
+
+    <div class="warning-box">
+      ⚠️ Ключът се пази САМО на това устройство (localStorage).
+      Никой друг няма достъп.
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-secondary" onclick="closeApiModal()">Отказ</button>
+      <button class="modal-btn modal-btn-primary" onclick="saveApiKey()">Запази</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <div class="modal-title">⚙️ Настройки</div>
+
+    <div class="field">
+      <label>API Ключ</label>
+      <input type="password" id="settingsApiKey" placeholder="sk-ant-api03-...">
+    </div>
+
+    <div class="info-box">
+      <strong>📊 Статистика:</strong><br>
+      Днес: <span id="statTodayCost">$0.00</span><br>
+      Общо: <span id="statTotalCost">$0.00</span><br>
+      Разговори: <span id="statChats">0</span>
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-secondary" onclick="closeSettings()">Затвори</button>
+      <button class="modal-btn modal-btn-primary" onclick="saveSettings()">Запази</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- ДАННИ — НАРЪЧНИКЪТ И SYSTEM PROMPT                  -->
+<!-- ═══════════════════════════════════════════════════ -->
+<script>
+
+// Системен промт за AI
+const SYSTEM_PROMPT = `Ти си психологически помощник на Tery (Иванов Ремонти, контрактор в София). Помагаш му с разговори с клиенти преди, по време и след оглед.
+
+## КАК ГОВОРИШ
+- На "ти", приятелски, като колега
+- Кратък параграф (3-5 изречения) по подразбиране
+- Без излишни обяснения, директно по същество
+- На български език
+
+## РЕЖИМИ НА ОТГОВОР
+- "short" = 2-3 кратки изречения, само основното
+- "medium" = 1 параграф (3-5 изречения) — по подразбиране
+- Пълен анализ — само ако Tery го поиска изрично
+
+## ТВОИТЕ ЗАДАЧИ
+1. **Анализ на клиент** — описание → тип + изречение за казване + капан
+2. **Ключови думи за оферта** — 5-7 фрази според типа клиент
+3. **Подготви за оглед** — брифинг преди реална среща
+4. **Анализ на прогрес** — учене от минали клиенти
+
+## АНАЛИЗ НА КЛИЕНТ
+
+КОГА Tery описва нов клиент (или казва "имам клиент...", "утре оглед...") → давай ПЪЛНА СТРАТЕГИЯ със следните секции:
+
+1. **Тип** + икона + кратка причина защо
+2. **Защо е такъв** — конкретните рентген сигнали в описанието (думи, поведение, контекст)
+3. **Какво да гледам** — какво да наблюдаваш в него на огледа (език на тялото, очи, ръце, кола, мебели)
+4. **Как да говоря** — темпо, тон, обръщение (на ти/Вие), кого да гледаш в очите
+5. **Тайминг** — кога да кажа цена, кога да мълча, кога да задавам въпроси
+6. **Как да извлека бюджета** (косвени методи — без да питам директно)
+7. **Какво да кажа** — конкретно изречение, в курсив или кавички
+8. **Капан** — какво да НЕ правя, специфично за този клиент
+
+КОГА Tery пита нещо КОНКРЕТНО (например "какво да му напиша", "имам познат майстор", "колко струва", "какво да направя ако..."):
+- Кратко, по същество (1 параграф, 3-5 изречения)
+- Само отговор на въпроса + бърз капан ако е важно
+- Не повтаряй цялата стратегия
+
+ВИНАГИ:
+- При смесен тип → основен + примес + изречение покриващо двете страни
+- Маркирай ясно червени флагове (черно, без оглед, агресивен)
+- Прилагай местния контекст (Лом=-30%, Лозенец=премиум)
+- Уточнявай ако описанието е неясно (1-2 въпроса първо)
+
+## ИЗВЪН НАРЪЧНИКА
+- Когато няма точно правило в наръчника — импровизирай от принципите
+- Винаги казвай: "Това е моя препоръка, не от наръчника"
+- Спирай на принципите от наръчника, не измисляй нови
+
+## ОФЕРТИ И ЦЕНИ
+По подразбиране:
+- Tery ти казва сума и контекст
+- Ти помагаш как да я представи психологически
+- Прилагаш: рамкиране на цената + местен контекст + кой плаща
+- Даваш конкретно изречение/фрази за оферта-текста
+
+Само когато Tery попита изрично ("много ли е?", "справедливо ли е?", "добра ли е цената?"):
+- Преценяваш цената спрямо пазара
+- Казваш в кой диапазон е (евтино/средно/скъпо)
+- Даваш препоръка дали да остане, да се намали или да се обоснове
+- НЕ казваш конкретна цена ("искай 1200"), даваш диапазон
+
+## FIREBASE ДАННИ
+- Когато Tery попита за минал клиент или историята → анализирай
+- Иначе не предлагай данни от Firebase
+- При анализ на грешка/успех → препоръчвай конкретно подобрение за следващия път
+
+## НИКОГА НЕ ПРАВИШ
+- НЕ обещаваш неща от името на Tery
+- НЕ критикуваш конкуренти
+- НЕ приемаш работа на черно или без договор
+- НЕ решаваш цена вместо Tery
+- НЕ преценяваш цена самостоятелно (само при изричен въпрос)
+
+## ИЗВЪН РАБОТАТА
+- Общи въпроси (време, кафе, лични неща) → отговори кратко:
+  "Това е извън работата ми. За общи въпроси използвай claude.ai. Тук съм за клиенти и оферти."
+
+## ФОРМАТ НА ОТГОВОРИТЕ
+- Кратки параграфи
+- За изречения за казване — в курсив или с прости кавички
+- Капани — отделно изречение, ясно маркирано
+- Без излишно структуриране (header-и, списъци) освен при изричен запис
+
+## НАРЪЧНИКЪТ
+Знаеш целия Мастър Наръчник — 17 части за психология на клиента, рентген, типове, тайминг, възражения, червени флагове и локални специфики. Не цитираш дословно, но прилагаш принципите.
+
+ТИПОВЕ КЛИЕНТИ:
+- 💰 Бюджетен — страх от загуба, не алчност. Първи въпрос "колко струва?"
+- ⚖️ Стандартен — иска предвидимост, процес, гаранция
+- 💎 Премиум — иска партньор, не пита за цена
+- ⏱️ Пресиран — бил изоставен, бърза, иска ангажимент
+- 🛡️ Патил — бил излъган, иска доказателства, лоялен ако спечелиш
+
+СМЕСЕНИ ТИПОВЕ:
+- Бюджетен+Премиум — богат с моментен проблем
+- Стандартен+Патил — нормален с лош опит (най-чест в БГ)
+- Премиум+Пресиран — бизнесмен с авария
+- Стандартен+Бюджетен — под бюджет без страх
+- Премиум+Патил — богат, бил излъган
+
+ЛОКАЛНИ СПЕЦИФИКИ:
+- София премиум (Лозенец, Витоша, Бояна) — пълни цени, европейско ниво
+- София средни (Изгрев, Лагера) — стандартен подход
+- София бюджетни (Люлин, Надежда) — 2 варианта задължително
+- Провинция големи (Пловдив, Варна, Бургас) — -15-25%
+- Провинция малки (Лом, Видин, Кюстендил) — -25-35%
+- Туристически (Банско, Созопол) — често чужденци
+
+ОСНОВНИ ПРАВИЛА:
+- Никога не отричай възражение, винаги "разбирам напълно" + въпрос
+- Никога не отстъпвай "малко повече за същите пари" — или махни нещо или добави срещу заплащане
+- Винаги 2 варианта в оферта (А/Б), никога 1, никога 3
+- Винаги писмена гаранция и фиксирана цена в договор
+- При червен флаг — отказвай учтиво, не работи "за всеки случай"`;
+
+// Бутони за бърз старт
+const QUICK_PROMPTS = {
+  analyze: 'Опиши клиента си и аз ще ти кажа какъв тип е, какво да му кажеш и какъв капан да избегнеш. Какво знаеш за него?',
+  offer: 'За какъв тип клиент е офертата и каква сума? Ще ти дам 5-7 ключови думи и фрази за нея.',
+  prep: 'Кой клиент имаш утре? Опиши го кратко и ще ти дам брифинг — изречения, капани, ключови моменти.',
+  progress: 'За да направим преглед, кажи ми последните 2-3 клиенти — спечелени и загубени. Ще видим какво работи и какво да подобрим.'
+};
+
+</script>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- FIREBASE + AI ЛОГИКА                                 -->
+<!-- ═══════════════════════════════════════════════════ -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, setDoc, getDocs, deleteDoc, collection } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDpgJazYtTHvU-fWuWlAQnbYTLOGcfnkhA",
+  authDomain: "ivanov-tools.firebaseapp.com",
+  projectId: "ivanov-tools",
+  storageBucket: "ivanov-tools.firebasestorage.app",
+  messagingSenderId: "212062400948",
+  appId: "1:212062400948:web:e52380c5096e8dba68c2e1"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ═══════════════════════════════════════════════════════
+// СЪСТОЯНИЕ
+// ═══════════════════════════════════════════════════════
+const STORAGE_KEY_API = 'naruchnik_ai_key';
+const STORAGE_KEY_CHATS = 'naruchnik_ai_chats';
+const STORAGE_KEY_COST = 'naruchnik_ai_cost';
+const STORAGE_KEY_STATS = 'naruchnik_ai_stats';
+const MAX_CHATS = 5;
+
+let chats = [];        // [{id, title, messages, createdAt, updatedAt, cost}]
+let activeChatId = null;
+let currentMode = 'medium';
+let isWaiting = false;
+let firebaseCache = null;  // {notes:[], clients:[], loadedAt:Date}
+
+// Cost tracking
+const PRICING = {
+  // Claude Sonnet 4 pricing per million tokens
+  input: 3.0,
+  inputCached: 0.30,    // 10x cheaper for cached
+  cacheWrite: 3.75,     // First time writing cache
+  output: 15.0
+};
+
+// ═══════════════════════════════════════════════════════
+// СТАРТИРАНЕ
+// ═══════════════════════════════════════════════════════
+function init() {
+  loadChats();
+  loadCosts();
+  updateCostDisplay();
+  renderChatList();
+
+  const key = localStorage.getItem(STORAGE_KEY_API);
+  if (!key) {
+    openApiModal();
+  }
+
+  document.getElementById('apiKeyInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveApiKey();
+  });
+}
+
+function loadChats() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_CHATS);
+    if (raw) chats = JSON.parse(raw);
+  } catch(e) { chats = []; }
+}
+
+function saveChats() {
+  // Trim to MAX_CHATS most recent
+  chats.sort((a,b) => (b.updatedAt||0) - (a.updatedAt||0));
+  if (chats.length > MAX_CHATS) chats = chats.slice(0, MAX_CHATS);
+  try {
+    localStorage.setItem(STORAGE_KEY_CHATS, JSON.stringify(chats));
+  } catch(e) {
+    toast('Памет пълна, изтрий стари разговори', 'err');
+  }
+}
+
+function loadCosts() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_COST);
+    if (raw) {
+      const data = JSON.parse(raw);
+      const today = new Date().toDateString();
+      if (data.date !== today) {
+        data.today = 0;
+        data.date = today;
+      }
+      window._costs = data;
+    } else {
+      window._costs = { today: 0, total: 0, date: new Date().toDateString() };
+    }
+  } catch(e) {
+    window._costs = { today: 0, total: 0, date: new Date().toDateString() };
+  }
+}
+
+function saveCosts() {
+  try {
+    localStorage.setItem(STORAGE_KEY_COST, JSON.stringify(window._costs));
+  } catch(e) {}
+}
+
+function addCost(amount) {
+  window._costs.today += amount;
+  window._costs.total += amount;
+  if (activeChatId) {
+    const chat = chats.find(c => c.id === activeChatId);
+    if (chat) chat.cost = (chat.cost || 0) + amount;
+  }
+  saveCosts();
+  updateCostDisplay();
+}
+
+function updateCostDisplay() {
+  document.getElementById('todayCost').textContent = 'Днес: $' + window._costs.today.toFixed(2);
+  const sessionCost = activeChatId ? (chats.find(c => c.id === activeChatId)?.cost || 0) : 0;
+  document.getElementById('sessionCost').textContent = 'Сесия: $' + sessionCost.toFixed(2);
+}
+
+// ═══════════════════════════════════════════════════════
+// API КЛЮЧ MODAL
+// ═══════════════════════════════════════════════════════
+window.openApiModal = function() {
+  document.getElementById('apiKeyModal').classList.add('open');
+  setTimeout(() => document.getElementById('apiKeyInput').focus(), 100);
+};
+
+window.closeApiModal = function() {
+  document.getElementById('apiKeyModal').classList.remove('open');
+};
+
+window.saveApiKey = function() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key.startsWith('sk-ant-')) {
+    toast('Ключът трябва да започва с „sk-ant-"', 'err');
+    return;
+  }
+  localStorage.setItem(STORAGE_KEY_API, key);
+  closeApiModal();
+  toast('✓ Ключът е запазен', 'ok');
+  updateStatus(true);
+};
+
+window.openSettings = function() {
+  document.getElementById('settingsApiKey').value = localStorage.getItem(STORAGE_KEY_API) || '';
+  document.getElementById('statTodayCost').textContent = '$' + window._costs.today.toFixed(2);
+  document.getElementById('statTotalCost').textContent = '$' + window._costs.total.toFixed(2);
+  document.getElementById('statChats').textContent = chats.length;
+  document.getElementById('settingsModal').classList.add('open');
+};
+
+window.closeSettings = function() {
+  document.getElementById('settingsModal').classList.remove('open');
+};
+
+window.saveSettings = function() {
+  const key = document.getElementById('settingsApiKey').value.trim();
+  if (key && !key.startsWith('sk-ant-')) {
+    toast('Ключът трябва да започва с „sk-ant-"', 'err');
+    return;
+  }
+  if (key) localStorage.setItem(STORAGE_KEY_API, key);
+  closeSettings();
+  toast('✓ Запазено', 'ok');
+};
+
+// ═══════════════════════════════════════════════════════
+// СТАТУС
+// ═══════════════════════════════════════════════════════
+function updateStatus(online) {
+  const dot = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  if (online) {
+    dot.classList.remove('offline');
+    text.textContent = 'Свързан';
+  } else {
+    dot.classList.add('offline');
+    text.textContent = 'Без връзка';
+  }
+}
+
+window.addEventListener('online', () => updateStatus(true));
+window.addEventListener('offline', () => updateStatus(false));
+
+// ═══════════════════════════════════════════════════════
+// SIDEBAR
+// ═══════════════════════════════════════════════════════
+window.toggleSidebar = function() {
+  document.getElementById('sidebar').classList.toggle('open');
+};
+
+function renderChatList() {
+  const list = document.getElementById('chatList');
+  if (chats.length === 0) {
+    list.innerHTML = '<div class="chat-empty">Няма разговори<br>Натисни „Нов разговор"</div>';
+    return;
+  }
+
+  list.innerHTML = chats.map(c => {
+    const date = c.updatedAt ? new Date(c.updatedAt).toLocaleDateString('bg-BG') : '';
+    return `
+      <div class="chat-item ${c.id===activeChatId?'active':''}" onclick="openChat('${c.id}')">
+        <div class="chat-item-title">${escapeHtml(c.title || 'Нов разговор')}</div>
+        <div class="chat-item-meta">${date} · $${(c.cost||0).toFixed(2)}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+window.newChat = function() {
+  activeChatId = null;
+  document.getElementById('chatMessages').style.display = 'none';
+  document.getElementById('emptyState').style.display = 'flex';
+  renderChatList();
+  updateCostDisplay();
+  if (window.innerWidth <= 768) {
+    document.getElementById('sidebar').classList.remove('open');
+  }
+};
+
+window.openChat = function(id) {
+  activeChatId = id;
+  const chat = chats.find(c => c.id === id);
+  if (!chat) return;
+  renderMessages(chat.messages);
+  renderChatList();
+  updateCostDisplay();
+  if (window.innerWidth <= 768) {
+    document.getElementById('sidebar').classList.remove('open');
+  }
+};
+
+function ensureChat() {
+  if (activeChatId) {
+    return chats.find(c => c.id === activeChatId);
+  }
+  const newChat = {
+    id: 'chat_' + Date.now(),
+    title: 'Нов разговор',
+    messages: [],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    cost: 0
+  };
+  chats.unshift(newChat);
+  activeChatId = newChat.id;
+  return newChat;
+}
+
+// ═══════════════════════════════════════════════════════
+// СЪОБЩЕНИЯ
+// ═══════════════════════════════════════════════════════
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text || '';
+  return div.innerHTML;
+}
+
+function formatMessage(text) {
+  // Convert markdown-ish to HTML
+  let html = escapeHtml(text);
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  html = html.replace(/\n\n/g, '</p><p>');
+  html = html.replace(/\n/g, '<br>');
+  html = '<p>' + html + '</p>';
+  return html;
+}
+
+function renderMessages(messages) {
+  const container = document.getElementById('chatMessages');
+  document.getElementById('emptyState').style.display = 'none';
+  container.style.display = 'block';
+
+  container.innerHTML = messages.map((m, i) => {
+    if (m.role === 'user') {
+      return `
+        <div class="msg msg-user">
+          <div class="msg-avatar">🧑</div>
+          <div class="msg-body">
+            <div class="msg-name">ТИ</div>
+            <div class="msg-content">${formatMessage(m.content)}</div>
+          </div>
+        </div>
+      `;
+    } else {
+      return `
+        <div class="msg msg-ai" id="msg-${i}">
+          <div class="msg-avatar">🤖</div>
+          <div class="msg-body">
+            <div class="msg-name">AI</div>
+            <div class="msg-content">${formatMessage(m.content)}</div>
+            ${m.cost ? `<div class="msg-meta">💵 $${m.cost.toFixed(3)}</div>` : ''}
+            <div class="msg-actions">
+              <button class="msg-act-btn" onclick="thumbsDown(${i})">👎 Лош</button>
+              <button class="msg-act-btn" onclick="retryMessage(${i})">🔄 Опитай пак</button>
+              <button class="msg-act-btn" onclick="copyMessage(${i})">📋 Копирай</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  }).join('');
+
+  // Scroll to bottom
+  container.scrollTop = container.scrollHeight;
+}
+
+function showThinking() {
+  const container = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg msg-ai';
+  div.id = 'thinking-msg';
+  div.innerHTML = `
+    <div class="msg-avatar">🤖</div>
+    <div class="msg-body">
+      <div class="msg-name">AI</div>
+      <div class="thinking">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        мисли...
+      </div>
+    </div>
+  `;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function removeThinking() {
+  const el = document.getElementById('thinking-msg');
+  if (el) el.remove();
+}
+
+// ═══════════════════════════════════════════════════════
+// ВХОД ОТ ПОТРЕБИТЕЛЯ
+// ═══════════════════════════════════════════════════════
+window.autoResize = function(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 150) + 'px';
+  document.getElementById('sendBtn').disabled = !el.value.trim();
+};
+
+window.handleKeyDown = function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+};
+
+window.setMode = function(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
+};
+
+window.quickStart = function(type) {
+  const prompt = QUICK_PROMPTS[type];
+  if (!prompt) return;
+
+  const chat = ensureChat();
+  chat.messages.push({ role: 'assistant', content: prompt, cost: 0 });
+  chat.updatedAt = Date.now();
+  saveChats();
+  renderMessages(chat.messages);
+  renderChatList();
+
+  document.getElementById('inputText').focus();
+};
+
+window.sendMessage = async function() {
+  if (isWaiting) return;
+
+  const input = document.getElementById('inputText');
+  const text = input.value.trim();
+  if (!text) return;
+
+  const key = localStorage.getItem(STORAGE_KEY_API);
+  if (!key) {
+    openApiModal();
+    return;
+  }
+
+  // Add to chat
+  const chat = ensureChat();
+  chat.messages.push({ role: 'user', content: text });
+  chat.updatedAt = Date.now();
+
+  // Auto-title from first message
+  if (chat.messages.filter(m => m.role === 'user').length === 1) {
+    chat.title = text.substring(0, 40).trim();
+    if (text.length > 40) chat.title += '...';
+  }
+
+  saveChats();
+  input.value = '';
+  input.style.height = 'auto';
+  document.getElementById('sendBtn').disabled = true;
+  renderMessages(chat.messages);
+  renderChatList();
+
+  // Send to API
+  isWaiting = true;
+  showThinking();
+
+  try {
+    const response = await callClaude(chat.messages, key);
+    removeThinking();
+
+    if (response.error) {
+      handleError(response.error);
+      return;
+    }
+
+    // Add AI response
+    chat.messages.push({
+      role: 'assistant',
+      content: response.text,
+      cost: response.cost
+    });
+    chat.cost = (chat.cost || 0) + response.cost;
+    chat.updatedAt = Date.now();
+    addCost(response.cost);
+    saveChats();
+    renderMessages(chat.messages);
+    renderChatList();
+  } catch (err) {
+    removeThinking();
+    handleError(err.message || 'Неизвестна грешка');
+  } finally {
+    isWaiting = false;
+  }
+};
+
+function handleError(errMsg) {
+  let userMsg = '';
+  if (errMsg.includes('401') || errMsg.includes('authentication') || errMsg.includes('invalid')) {
+    userMsg = '🔑 Ключът е невалиден. Провери го в Settings (⚙️).';
+  } else if (errMsg.includes('429')) {
+    userMsg = '⏱️ Прекалено много заявки. Изчакай 1 минута и опитай пак.';
+  } else if (errMsg.includes('credit') || errMsg.includes('balance') || errMsg.includes('quota')) {
+    userMsg = '💰 Балансът в Anthropic е изчерпан. Зареди още в console.anthropic.com';
+  } else if (errMsg.includes('network') || errMsg.includes('fetch') || errMsg.includes('Failed to fetch')) {
+    userMsg = '📡 Няма връзка. Провери интернета и опитай пак.';
+  } else {
+    userMsg = '⚠️ Грешка: ' + errMsg;
+  }
+
+  const chat = ensureChat();
+  chat.messages.push({ role: 'assistant', content: userMsg, cost: 0, isError: true });
+  chat.updatedAt = Date.now();
+  saveChats();
+  renderMessages(chat.messages);
+  renderChatList();
+}
+
+// ═══════════════════════════════════════════════════════
+// CLAUDE API
+// ═══════════════════════════════════════════════════════
+async function callClaude(messages, apiKey) {
+  // Подготвям системния промт
+  let systemPrompt = SYSTEM_PROMPT;
+  systemPrompt += '\n\nРЕЖИМ НА ОТГОВОР: ' + (currentMode === 'short' ? 'short (2-3 кратки изречения)' : 'medium (1 параграф, 3-5 изречения)');
+
+  // Ако последното съобщение споменава Firebase, зареди данни
+  const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
+  if (lastUserMsg && shouldFetchFirebase(lastUserMsg.content)) {
+    try {
+      const fbData = await fetchFirebaseData();
+      if (fbData) {
+        systemPrompt += '\n\nАКТУАЛНИ ДАННИ ОТ FIREBASE:\n' + fbData;
+      }
+    } catch(e) { /* tolerated */ }
+  }
+
+  // API съобщенията — само user/assistant, без cost/isError
+  const apiMessages = messages
+    .filter(m => !m.isError)
+    .map(m => ({ role: m.role, content: m.content }));
+
+  const body = {
+    model: 'claude-sonnet-4-5-20250929',
+    max_tokens: currentMode === 'short' ? 250 : 600,
+    system: [
+      {
+        type: 'text',
+        text: systemPrompt,
+        cache_control: { type: 'ephemeral' }  // PROMPT CACHING
+      }
+    ],
+    messages: apiMessages
+  };
+
+  let response;
+  try {
+    response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify(body)
+    });
+  } catch(e) {
+    return { error: 'network: ' + e.message };
+  }
+
+  if (!response.ok) {
+    let errorBody = '';
+    try { errorBody = await response.text(); } catch(e) {}
+    return { error: response.status + ': ' + errorBody.substring(0, 200) };
+  }
+
+  const data = await response.json();
+
+  if (data.type === 'error') {
+    return { error: data.error?.message || 'API грешка' };
+  }
+
+  // Compute cost
+  const usage = data.usage || {};
+  const inputTokens = usage.input_tokens || 0;
+  const cacheCreateTokens = usage.cache_creation_input_tokens || 0;
+  const cacheReadTokens = usage.cache_read_input_tokens || 0;
+  const outputTokens = usage.output_tokens || 0;
+
+  const cost = (
+    (inputTokens * PRICING.input) +
+    (cacheCreateTokens * PRICING.cacheWrite) +
+    (cacheReadTokens * PRICING.inputCached) +
+    (outputTokens * PRICING.output)
+  ) / 1000000;
+
+  // Extract text
+  const text = data.content
+    .filter(c => c.type === 'text')
+    .map(c => c.text)
+    .join('\n');
+
+  return { text, cost, usage };
+}
+
+// ═══════════════════════════════════════════════════════
+// FIREBASE INTEGRATION
+// ═══════════════════════════════════════════════════════
+function shouldFetchFirebase(text) {
+  const lower = text.toLowerCase();
+  const triggers = [
+    'клиент', 'бележк', 'минал', 'спомняш', 'помниш', 'история',
+    'преди', 'миналата', 'предишен', 'спечелих', 'загубих', 'прогрес',
+    'анализ', 'преглед', 'оценка'
+  ];
+  return triggers.some(t => lower.includes(t));
+}
+
+async function fetchFirebaseData() {
+  // Cache for 5 minutes to avoid repeated fetches
+  if (firebaseCache && (Date.now() - firebaseCache.loadedAt) < 5 * 60 * 1000) {
+    return formatFirebaseData(firebaseCache);
+  }
+
+  try {
+    const [notesSnap, clientsSnap] = await Promise.all([
+      getDocs(collection(db, 'naruchnik_notes')),
+      getDocs(collection(db, 'clients'))
+    ]);
+
+    const notes = [];
+    notesSnap.forEach(d => notes.push({ id: d.id, ...d.data() }));
+
+    const clients = [];
+    clientsSnap.forEach(d => clients.push({ id: d.id, ...d.data() }));
+
+    firebaseCache = { notes, clients, loadedAt: Date.now() };
+    return formatFirebaseData(firebaseCache);
+  } catch (e) {
+    console.error('Firebase error:', e);
+    return null;
+  }
+}
+
+function formatFirebaseData(data) {
+  let result = '';
+  if (data.notes.length > 0) {
+    result += '\n### БЕЛЕЖКИТЕ НА TERY (' + data.notes.length + '):\n';
+    data.notes.slice(0, 30).forEach(n => {
+      result += `- [${n.category || 'other'}] ${n.title || ''}: ${(n.content || '').substring(0, 200)}\n`;
+    });
+  }
+  if (data.clients.length > 0) {
+    result += '\n### КЛИЕНТИТЕ НА TERY (' + data.clients.length + '):\n';
+    data.clients.slice(0, 20).forEach(c => {
+      result += `- ${c.name || '?'} | ${c.object || '?'} | статус: ${c.status || '?'}\n`;
+    });
+  }
+  return result || null;
+}
+
+// ═══════════════════════════════════════════════════════
+// MSG ACTIONS
+// ═══════════════════════════════════════════════════════
+window.thumbsDown = function(idx) {
+  const chat = chats.find(c => c.id === activeChatId);
+  if (!chat || !chat.messages[idx]) return;
+
+  // Add a system message asking for a different answer
+  chat.messages.push({
+    role: 'user',
+    content: 'Този отговор не ми харесва. Опитай различен подход — друга гледна точка или по-конкретно.'
+  });
+  saveChats();
+  renderMessages(chat.messages);
+  // Auto-send
+  isWaiting = true;
+  showThinking();
+  callClaude(chat.messages, localStorage.getItem(STORAGE_KEY_API)).then(response => {
+    removeThinking();
+    if (response.error) {
+      handleError(response.error);
+      isWaiting = false;
+      return;
+    }
+    chat.messages.push({ role: 'assistant', content: response.text, cost: response.cost });
+    chat.cost = (chat.cost || 0) + response.cost;
+    addCost(response.cost);
+    saveChats();
+    renderMessages(chat.messages);
+    isWaiting = false;
+  }).catch(err => {
+    removeThinking();
+    handleError(err.message);
+    isWaiting = false;
+  });
+};
+
+window.retryMessage = function(idx) {
+  const chat = chats.find(c => c.id === activeChatId);
+  if (!chat || !chat.messages[idx]) return;
+
+  // Remove this AI message and regenerate
+  chat.messages.splice(idx, 1);
+  saveChats();
+  renderMessages(chat.messages);
+
+  isWaiting = true;
+  showThinking();
+  callClaude(chat.messages, localStorage.getItem(STORAGE_KEY_API)).then(response => {
+    removeThinking();
+    if (response.error) {
+      handleError(response.error);
+      isWaiting = false;
+      return;
+    }
+    chat.messages.push({ role: 'assistant', content: response.text, cost: response.cost });
+    chat.cost = (chat.cost || 0) + response.cost;
+    addCost(response.cost);
+    saveChats();
+    renderMessages(chat.messages);
+    isWaiting = false;
+  }).catch(err => {
+    removeThinking();
+    handleError(err.message);
+    isWaiting = false;
+  });
+};
+
+window.copyMessage = function(idx) {
+  const chat = chats.find(c => c.id === activeChatId);
+  if (!chat || !chat.messages[idx]) return;
+  navigator.clipboard.writeText(chat.messages[idx].content).then(() => {
+    toast('✓ Копирано', 'ok');
+  }).catch(() => {
+    toast('Грешка при копиране', 'err');
+  });
+};
+
+// ═══════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════
+window.toast = function(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = type ? `show ${type}` : 'show';
+  setTimeout(() => t.className = '', 2200);
+};
+
+// ═══════════════════════════════════════════════════════
+// СТАРТ
+// ═══════════════════════════════════════════════════════
+init();
+
+</script>
+
+</body>
+</html>
