@@ -1,12 +1,18 @@
-const CACHE = 'ir-office-v2';
+const CACHE = 'ir-office-v3';
 const PRECACHE = [
   '/',
   '/index.html',
   '/calculator.html',
+  '/kalkulator-combined.html',
   '/room.html',
   '/offer.html',
+  '/contract.html',
+  '/clients.html',
+  '/receipts.html',
   '/avansov-otchet.html',
   '/profiles.html',
+  '/naruchnik.html',
+  '/naruchnik-ai.html',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png'
@@ -46,7 +52,6 @@ self.addEventListener('fetch', e => {
   e.respondWith(
     fetch(e.request)
       .then(res => {
-        // Кешира успешен отговор
         if (res.ok) {
           const clone = res.clone();
           caches.open(CACHE).then(cache => cache.put(e.request, clone));
