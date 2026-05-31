@@ -1,4 +1,4 @@
-const CACHE = 'ir-office-v3';
+const CACHE = 'ir-office-v4';
 const PRECACHE = [
   '/',
   '/index.html',
