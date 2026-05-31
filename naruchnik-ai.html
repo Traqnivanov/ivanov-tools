@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="bg">
 <head>
@@ -233,6 +234,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--dark);color:var(--text);m
       <span class="cost-line" id="todayCost">Днес: $0.00</span>
       <span id="sessionCost">Сесия: $0.00</span>
     </div>
+    <button class="header-btn" onclick="openHelp()" title="Помощ">❓</button>
+    <button class="header-btn" onclick="openHelp()" title="Помощ">❓</button>
     <button class="header-btn" onclick="openSettings()" title="Настройки">⚙️</button>
   </div>
 </header>
@@ -265,21 +268,29 @@ body{font-family:'DM Sans',sans-serif;background:var(--dark);color:var(--text);m
         знам твоите бележки и клиенти. Кажи ми с какво да помогна.
       </div>
       <div class="quick-actions">
-        <button class="quick-btn" onclick="quickStart('analyze')">
-          <span class="quick-btn-icon">🔍</span>
-          <span>Анализирай клиент</span>
-        </button>
-        <button class="quick-btn" onclick="quickStart('offer')">
-          <span class="quick-btn-icon">💰</span>
-          <span>Ключови думи за оферта</span>
+        <button class="quick-btn" onclick="quickStart('phone')">
+          <span class="quick-btn-icon">📞</span>
+          <span>Обаждане</span>
         </button>
         <button class="quick-btn" onclick="quickStart('prep')">
-          <span class="quick-btn-icon">🎯</span>
-          <span>Подготви ме за утре</span>
+          <span class="quick-btn-icon">🎒</span>
+          <span>Подготовка</span>
+        </button>
+        <button class="quick-btn" onclick="quickStart('after')">
+          <span class="quick-btn-icon">📋</span>
+          <span>След оглед</span>
+        </button>
+        <button class="quick-btn" onclick="quickStart('offer')">
+          <span class="quick-btn-icon">📨</span>
+          <span>След оферта</span>
+        </button>
+        <button class="quick-btn" onclick="quickStart('quick')">
+          <span class="quick-btn-icon">💬</span>
+          <span>Бърз въпрос</span>
         </button>
         <button class="quick-btn" onclick="quickStart('progress')">
           <span class="quick-btn-icon">📈</span>
-          <span>Моят прогрес</span>
+          <span>Прогрес</span>
         </button>
       </div>
     </div>
@@ -347,6 +358,114 @@ body{font-family:'DM Sans',sans-serif;background:var(--dark);color:var(--text);m
 
     <div class="modal-actions">
       <button class="modal-btn modal-btn-primary" onclick="saveApiKey()" style="width:100%;">Запази ключа →</button>
+    </div>
+  </div>
+</div>
+
+<!-- HELP MODAL -->
+<div class="modal-overlay" id="helpModal">
+  <div class="modal">
+    <div class="modal-title">❓ Помощ</div>
+
+    <div class="info-box">
+      <strong>📞 БУТОНИ В НАЧАЛЕН ЕКРАН</strong><br>
+      📞 <strong>Обаждане</strong> — клиент звъни, още не си го видял<br>
+      🎒 <strong>Подготовка</strong> — утре оглед, какво да гледам<br>
+      📋 <strong>След оглед</strong> — приключи оглед, дай анализ<br>
+      📨 <strong>След оферта</strong> — клиент каза/мълчи след офертата<br>
+      💬 <strong>Бърз въпрос</strong> — питаш свободно, без структура<br>
+      📈 <strong>Прогрес</strong> — анализ на минали клиенти
+    </div>
+
+    <div class="info-box">
+      <strong>⚙️ РЕЖИМИ НА ОТГОВОР</strong><br>
+      🔵 <strong>Кратко</strong> — 2-3 изречения, бърз отговор<br>
+      🟡 <strong>Средно</strong> — подходяща дължина според въпроса
+    </div>
+
+    <div class="info-box">
+      <strong>🎯 БУТОНИ ПОД ОТГОВОР НА AI</strong><br>
+      👎 <strong>Лош</strong> — маркира лош отговор (БЕЗ нов API call)<br>
+      🔄 <strong>Опитай пак</strong> — генерира нов отговор<br>
+      📋 <strong>Копирай</strong> — копира текста на отговора<br>
+      💭 <strong>Изход</strong> — записва как е завършил разговорът (за обучение)
+    </div>
+
+    <div class="info-box">
+      <strong>💰 ЦЕНА</strong><br>
+      Горе вдясно виждаш „Днес" и „Сесия". Натисни за опресняване.<br>
+      Цените се синхронизират между всички устройства.
+    </div>
+
+    <div class="info-box">
+      <strong>📂 РАЗГОВОРИ</strong><br>
+      Лимит: <strong>5</strong> разговора. При 6-ти получаваш предупреждение — изтрий стар ръчно от ✕ бутона.<br>
+      При <strong>15+ съобщения</strong> в чат — препоръчва се нов разговор за по-евтини отговори.
+    </div>
+
+    <div class="info-box">
+      <strong>⌨️ КАК ПИШЕШ</strong><br>
+      • <strong>Един клиент = един чат</strong> — AI помни всичко в чата<br>
+      • <strong>Различен клиент</strong> = натисни „＋ Нов разговор"<br>
+      • <strong>Не е нужно да започваш от бутон</strong> — пиши свободно, AI ще разбере фазата от думите ти
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-primary" onclick="closeHelp()" style="width:100%;">Затвори</button>
+    </div>
+  </div>
+</div>
+
+<!-- HELP MODAL -->
+<div class="modal-overlay" id="helpModal">
+  <div class="modal">
+    <div class="modal-title">❓ Помощ</div>
+
+    <div class="info-box">
+      <strong>📞 БУТОНИ В НАЧАЛЕН ЕКРАН</strong><br>
+      📞 Обаждане — клиент звъни, още не си го видял<br>
+      🎒 Подготовка — утре оглед, какво да гледам<br>
+      📋 След оглед — приключи оглед, дай анализ<br>
+      📨 След оферта — клиент каза/мълчи след офертата<br>
+      💬 Бърз въпрос — питаш свободно, без структура<br>
+      📈 Прогрес — анализ на минали клиенти
+    </div>
+
+    <div class="info-box">
+      <strong>⚙️ РЕЖИМИ НА ОТГОВОР</strong><br>
+      🔵 Кратко — 2-3 изречения, бърз отговор<br>
+      🟡 Средно — подходяща дължина според въпроса
+    </div>
+
+    <div class="info-box">
+      <strong>🎯 БУТОНИ ПОД ОТГОВОР НА AI</strong><br>
+      👎 Лош — маркира лош отговор (БЕЗ нов API call)<br>
+      🔄 Опитай пак — генерира нов отговор за същия въпрос<br>
+      📋 Копирай — копира текста на отговора<br>
+      💭 Изход — записва как е завършил разговорът (за обучение)
+    </div>
+
+    <div class="info-box">
+      <strong>💰 ЦЕНА</strong><br>
+      Горе вдясно: „Днес" и „Сесия".<br>
+      Натисни за опресняване. Синхронизира се автоматично.
+    </div>
+
+    <div class="info-box">
+      <strong>📂 РАЗГОВОРИ</strong><br>
+      Лимит: 5 разговора. При 6-ти — предупреждение, изтрий стар ръчно.<br>
+      При 15+ съобщения в чат — препоръчва се нов разговор за по-евтини отговори.
+    </div>
+
+    <div class="info-box">
+      <strong>⌨️ КАК ПИШЕШ</strong><br>
+      Един клиент = един чат (AI помни всичко в чата).<br>
+      Различен клиент = „＋ Нов разговор".<br>
+      Не е нужно да започваш от бутон — пиши свободно, AI ще разбере фазата.
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-primary" onclick="closeHelp()" style="width:100%;">Затвори</button>
     </div>
   </div>
 </div>
@@ -655,10 +774,12 @@ const FULL_NARUCHNIK_TEXT = "### ЧАСТ I: Основата\nОписание:
 
 // Бутони за бърз старт
 const QUICK_PROMPTS = {
-  analyze: 'Опиши клиента си и аз ще ти кажа какъв тип е, какво да му кажеш и какъв капан да избегнеш. Какво знаеш за него?',
-  offer: 'За какъв тип клиент е офертата и каква сума? Ще ти дам 5-7 ключови думи и фрази за нея.',
-  prep: 'Кой клиент имаш утре? Опиши го кратко и ще ти дам брифинг — изречения, капани, ключови моменти.',
-  progress: 'За да направим преглед, кажи ми последните 2-3 клиенти — спечелени и загубени. Ще видим какво работи и какво да подобрим.'
+  phone:    'Звъни ми клиент. Каза: ',
+  prep:     'Утре имам оглед. Знам: ',
+  after:    'Току-що приключих оглед. ',
+  offer:    'Изпратих офертата. Клиентът: ',
+  quick:    '',
+  progress: 'Анализирай последните ми клиенти.'
 };
 
 </script>
@@ -1013,6 +1134,14 @@ window.saveApiKey = async function() {
   updateStatus(true);
 };
 
+window.openHelp = function() {
+  document.getElementById('helpModal').classList.add('open');
+};
+
+window.closeHelp = function() {
+  document.getElementById('helpModal').classList.remove('open');
+};
+
 window.openSettings = function() {
   document.getElementById('settingsApiKey').value = localStorage.getItem(STORAGE_KEY_API) || '';
   document.getElementById('statTodayCost').textContent = '$' + window._costs.today.toFixed(2);
@@ -1023,6 +1152,14 @@ window.openSettings = function() {
 
 window.closeSettings = function() {
   document.getElementById('settingsModal').classList.remove('open');
+};
+
+window.openHelp = function() {
+  document.getElementById('helpModal').classList.add('open');
+};
+
+window.closeHelp = function() {
+  document.getElementById('helpModal').classList.remove('open');
 };
 
 window.saveSettings = async function() {
@@ -1321,17 +1458,17 @@ window.setMode = function(mode) {
 };
 
 window.quickStart = function(type) {
-  const prompt = QUICK_PROMPTS[type];
-  if (!prompt) return;
+  const starter = QUICK_PROMPTS[type];
+  if (starter === undefined) return;
 
-  const chat = ensureChat();
-  chat.messages.push({ role: 'assistant', content: prompt, cost: 0 });
-  chat.updatedAt = Date.now();
-  saveChats();
-  renderMessages(chat.messages);
-  renderChatList();
-
-  document.getElementById('inputText').focus();
+  const input = document.getElementById('inputText');
+  input.value = starter;
+  input.focus();
+  // Place cursor at end of starter text
+  input.setSelectionRange(starter.length, starter.length);
+  // Trigger autoResize and enable send button
+  autoResize(input);
+  document.getElementById('sendBtn').disabled = !starter.trim();
 };
 
 window.sendMessage = async function() {
