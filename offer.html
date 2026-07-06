@@ -781,7 +781,7 @@ function getOfferData(){
 function saveOffer(){
   const data=getOfferData();
   if(!data.client){toast('Въведете ime на клиент!','error');return;}
-  if(!offerRows.length){toast('Добавете поне една услуга!','error');return;}
+  if(!offerRows.length && (window.manualGrand===null || window.manualGrand===undefined)){toast('Добавете поне една услуга или въведете обща сума!','error');return;}
   const idx=history.findIndex(h=>h.num===data.num);
   if(idx>=0) history[idx]=data; else history.unshift(data);
   const nv=parseInt(data.num);
@@ -806,6 +806,7 @@ function clearOffer(){
 function loadOfferIntoEditor(idx){
   const d=history[idx];
   offerRows=JSON.parse(JSON.stringify(d.rows));
+  window.manualGrand = (d.manualGrand!==null && d.manualGrand!==undefined) ? d.manualGrand : null;
   document.getElementById('offer-num').value=d.num;
   document.getElementById('offer-date').value=d.date;
   document.getElementById('offer-validity').value=d.validity||30;
@@ -815,6 +816,7 @@ function loadOfferIntoEditor(idx){
   document.getElementById('client-address').value=d.address||'';
   document.getElementById('offer-note').value=d.note||'';
   renderRows();
+  recalc();
   showScreen('offer',document.querySelector('.nav-btn'));
   window.scrollTo(0,0);
 }
@@ -1121,6 +1123,7 @@ ${forPdf?`.page{overflow:hidden;}.tbl-wrap{overflow:hidden;max-width:100%;}`:''}
   </div>
 
   <!-- Услуги -->
+  ${data.rows.length>0 ? `
   <div class="section-title"><span>Описание на услугите</span></div>
   <div class="tbl-wrap">
     <table class="dt">
@@ -1138,13 +1141,13 @@ ${forPdf?`.page{overflow:hidden;}.tbl-wrap{overflow:hidden;max-width:100%;}`:''}
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
-  </div>
+  </div>` : ''}
 
   <!-- Общо труд -->
   <div class="totals-wrap">
     <div class="tot-box">
       <div class="tot-row">
-        <span class="tl">Общо труд</span>
+        <span class="tl">${data.rows.length>0?'Общо труд':'Обща сума'}</span>
         <div class="tot-vals"><span class="tot-eur">${grand.toFixed(2)} €</span>${opts.eurOnly?'':'<span class="tot-bgn">('+eur2bgn(grand)+' лв)</span>'}</div>
       </div>
     </div>
@@ -1198,7 +1201,7 @@ ${forPdf?`.page{overflow:hidden;}.tbl-wrap{overflow:hidden;max-width:100%;}`:''}
 // ── PRINT ──
 function printOffer(){
   const data=getOfferData();
-  if(!offerRows.length){toast('Няма услуги!','error');return;}
+  if(!offerRows.length && (window.manualGrand===null || window.manualGrand===undefined)){toast('Няма услуги! Добавете услуга или въведете обща сума.','error');return;}
   const withStamp = document.getElementById('print-with-stamp').checked;
   const angle = withStamp ? STAMP_ANGLES[stampIdx] : null;
   if(withStamp) advStamp();
@@ -1213,7 +1216,7 @@ function generatePDF(){
   console.log('[PDF] Starting generation...');
   const data=getOfferData();
   console.log('[PDF] data.rows.length:', data.rows?.length, 'offerRows.length:', offerRows.length);
-  if(!offerRows.length){toast('Няма услуги!','error');return;}
+  if(!offerRows.length && (window.manualGrand===null || window.manualGrand===undefined)){toast('Няма услуги! Добавете услуга или въведете обща сума.','error');return;}
   const withStamp = document.getElementById('print-with-stamp').checked;
   const angle = withStamp ? STAMP_ANGLES[stampIdx] : null;
   if(withStamp) advStamp();
@@ -1291,7 +1294,8 @@ function renderHistory(){
   document.getElementById('history-count').textContent=history.length;
   if(!history.length){list.innerHTML='<div class="empty-state"><div class="empty-icon">🗂</div><div class="empty-text">Все още няма запазени оферти</div></div>';return;}
   list.innerHTML=history.map((h,i)=>{
-    const grand=h.rows.reduce((s,r)=>s+r.qty*r.price,0);
+    const autoGrand=h.rows.reduce((s,r)=>s+r.qty*r.price,0);
+    const grand=(h.manualGrand!==null && h.manualGrand!==undefined) ? h.manualGrand : autoGrand;
     const cf=(h.clientTitle||'Г-н')+' '+h.client;
     return `<div class="offer-card">
       <div class="offer-card-info">
@@ -1451,10 +1455,12 @@ function getClientHistory(){
         offers: [],
       };
     }
+    const autoTotal = h.rows ? h.rows.reduce((s,r)=>s+r.qty*r.price,0) : 0;
+    const total = (h.manualGrand!==null && h.manualGrand!==undefined) ? h.manualGrand : autoTotal;
     clients[key].offers.push({
       num: h.num,
       date: h.date,
-      total: h.rows ? h.rows.reduce((s,r)=>s+r.qty*r.price,0) : 0,
+      total: total,
     });
   });
   return clients;
