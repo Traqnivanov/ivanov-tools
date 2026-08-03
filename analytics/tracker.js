@@ -1,0 +1,202 @@
+import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
+import{getFirestore,collection,addDoc,serverTimestamp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+import{firebaseConfig}from'./firebase-config.js';
+import{normalizePath,siteFromPath}from'./sites.js';
+
+const VERSION='1.2.0';
+const EXCLUDE_KEY='ivanov_analytics_excluded';
+const DASHBOARD_ORIGIN='https://traqnivanov.github.io';
+const params=new URLSearchParams(location.search);
+const adminAction=params.get('ivanov_device_action');
+
+function getExcluded(){
+  try{return localStorage.getItem(EXCLUDE_KEY)==='1'}catch(e){return false}
+}
+
+function setExcluded(value){
+  try{
+    if(value)localStorage.setItem(EXCLUDE_KEY,'1');
+    else localStorage.removeItem(EXCLUDE_KEY);
+  }catch(e){}
+}
+
+function adminMessage(excluded,action){
+  return{
+    type:'ivanov-analytics-device-status',
+    excluded:Boolean(excluded),
+    action:action||'status'
+  };
+}
+
+function sendStatusToDashboard(excluded,action){
+  try{
+    if(window.opener&&!window.opener.closed){
+      window.opener.postMessage(adminMessage(excluded,action),DASHBOARD_ORIGIN);
+    }
+  }catch(e){}
+}
+
+function renderAdminResult(excluded,action){
+  const isStatus=action==='status';
+  const title=isStatus
+    ?(excluded?'Това устройство е изключено':'Това устройство се отчита')
+    :(excluded?'Устройството е изключено':'Отчитането е включено отново');
+  const text=excluded
+    ?'Посещенията от този браузър вече няма да влизат в Ivanov Analytics.'
+    :'Посещенията от този браузър отново ще се записват в Ivanov Analytics.';
+
+  const show=()=>{
+    document.title=title;
+    document.documentElement.lang='bg';
+    document.body.innerHTML=`
+      <main style="min-height:100vh;display:grid;place-items:center;padding:24px;background:#eef3f8;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#152033">
+        <section style="width:min(520px,100%);background:#fff;border:1px solid #dbe4ee;border-radius:22px;padding:28px;box-shadow:0 18px 50px rgba(20,32,51,.14);text-align:center">
+          <div style="width:58px;height:58px;margin:0 auto 16px;border-radius:50%;display:grid;place-items:center;background:${excluded?'#eaf7ef':'#fff4e5'};font-size:30px">${excluded?'✓':'●'}</div>
+          <h1 style="font-size:1.55rem;margin:0 0 10px">${title}</h1>
+          <p style="line-height:1.55;color:#607086;margin:0 0 14px">${text}</p>
+          <p id="ivanovCloseNote" style="font-size:.88rem;color:#7a899a;margin:0">Връщане към приложението…</p>
+          <button id="ivanovCloseButton" type="button" style="display:none;margin:16px auto 0;border:0;border-radius:11px;padding:11px 16px;background:#111827;color:#fff;font-weight:800">Затвори страницата</button>
+        </section>
+      </main>`;
+
+    sendStatusToDashboard(excluded,action);
+
+    setTimeout(()=>{
+      try{window.close()}catch(e){}
+      setTimeout(()=>{
+        const note=document.getElementById('ivanovCloseNote');
+        const button=document.getElementById('ivanovCloseButton');
+        if(note)note.textContent='Готово. Може да затворите тази страница.';
+        if(button){
+          button.style.display='inline-flex';
+          button.onclick=()=>window.close();
+        }
+      },500);
+    },1300);
+  };
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',show,{once:true});
+  else show();
+}
+
+let excluded=getExcluded();
+
+if(adminAction==='exclude'){
+  setExcluded(true);
+  excluded=true;
+  renderAdminResult(true,'exclude');
+}else if(adminAction==='include'){
+  setExcluded(false);
+  excluded=false;
+  renderAdminResult(false,'include');
+}else if(adminAction==='status'){
+  renderAdminResult(excluded,'status');
+}
+
+if(!adminAction&&!excluded){
+  const app=initializeApp(firebaseConfig,'ivanovTracker');
+  const db=getFirestore(app);
+  const path=normalizePath(location.pathname);
+  const site=siteFromPath(path);
+  const q=new URLSearchParams(location.search);
+  const start=Date.now();
+  let active=0,last=Date.now(),visible=!document.hidden,scrolls=new Set();
+
+  function sid(){
+    let k='ia_session',v=sessionStorage.getItem(k);
+    if(!v){
+      v=crypto.randomUUID?.()||Math.random().toString(36).slice(2);
+      sessionStorage.setItem(k,v);
+    }
+    return v;
+  }
+  const sessionId=sid();
+
+  function device(){
+    let u=navigator.userAgent;
+    return/iPad|Tablet/i.test(u)?'tablet':/Mobi|Android|iPhone/i.test(u)?'mobile':'desktop';
+  }
+  function browser(){
+    let u=navigator.userAgent;
+    return/Edg/i.test(u)?'Edge':/Firefox/i.test(u)?'Firefox':/Chrome/i.test(u)?'Chrome':/Safari/i.test(u)?'Safari':'Other';
+  }
+  function os(){
+    let u=navigator.userAgent;
+    return/Android/i.test(u)?'Android':/iPhone|iPad/i.test(u)?'iOS':/Windows/i.test(u)?'Windows':/Mac OS/i.test(u)?'macOS':'Other';
+  }
+  function ref(){
+    try{return document.referrer?new URL(document.referrer).hostname:''}catch{return''}
+  }
+  function source(){
+    if(q.get('utm_source'))return q.get('utm_source');
+    let r=ref();
+    if(!r)return'direct';
+    if(r.includes('google.'))return'google';
+    if(r.includes('facebook.')||r.includes('fb.'))return'facebook';
+    if(r.includes('instagram.'))return'instagram';
+    return r;
+  }
+
+  async function send(eventType,extra={}){
+    try{
+      await addDoc(collection(db,'analytics_events'),{
+        eventType,site,pagePath:path,pageTitle:document.title.slice(0,160),sessionId,
+        timestamp:serverTimestamp(),trackerVersion:VERSION,source:source(),
+        medium:q.get('utm_medium')||'',campaign:q.get('utm_campaign')||'',
+        content:q.get('utm_content')||'',term:q.get('utm_term')||'',
+        referrerDomain:ref(),device:device(),browser:browser(),os:os(),
+        country:'unknown',...extra
+      });
+    }catch(e){
+      console.warn('Analytics not saved',e.code||e.message);
+    }
+  }
+
+  send('page_view');
+
+  setInterval(()=>{
+    let n=Date.now();
+    if(visible)active+=Math.max(0,Math.round((n-last)/1000));
+    last=n;
+  },10000);
+
+  document.addEventListener('visibilitychange',()=>{
+    visible=!document.hidden;
+    last=Date.now();
+  });
+
+  addEventListener('scroll',()=>{
+    let m=Math.max(1,document.documentElement.scrollHeight-innerHeight);
+    let d=Math.round(scrollY/m*100);
+    [25,50,75,90].forEach(n=>{
+      if(d>=n&&!scrolls.has(n)){
+        scrolls.add(n);
+        send('scroll',{scrollDepth:n});
+      }
+    });
+  },{passive:true});
+
+  document.addEventListener('click',e=>{
+    let a=e.target.closest('a,button');
+    if(!a)return;
+    let h=(a.getAttribute('href')||'').toLowerCase();
+    let t=(a.textContent||'').toLowerCase();
+    if(h.startsWith('tel:'))send('phone_click');
+    else if(h.includes('viber')||t.includes('viber'))send('viber_click');
+    else if(a.matches("[data-track='faq']"))send('faq_open');
+    else if(a.matches("[data-track='gallery']"))send('gallery_open');
+    else if(a.matches("[data-track='prices']"))send('price_open');
+    else if(a.matches("[data-track='contact']"))send('contact_open');
+  });
+
+  document.addEventListener('submit',e=>{
+    if(e.target.matches('form'))send('form_submit',{formId:e.target.id||'form'});
+  },true);
+
+  addEventListener('pagehide',()=>{
+    send('session_end',{
+      activeSeconds:active,
+      totalSeconds:Math.round((Date.now()-start)/1000)
+    });
+  },{once:true});
+}

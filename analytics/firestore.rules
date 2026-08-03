@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner(){return request.auth!=null && request.auth.uid=="uqAZqxwN1wTQSlo2HODMmvHv1nj2";}
+    function validString(v,n){return v is string && v.size()<=n;}
+    function validEvent(){return request.resource.data.keys().hasOnly(["eventType","site","pagePath","pageTitle","sessionId","timestamp","trackerVersion","source","medium","campaign","content","term","referrerDomain","device","browser","os","country","activeSeconds","totalSeconds","scrollDepth","formId"]) && validString(request.resource.data.eventType,40) && validString(request.resource.data.site,30) && validString(request.resource.data.pagePath,240) && validString(request.resource.data.pageTitle,180) && validString(request.resource.data.sessionId,80) && validString(request.resource.data.trackerVersion,20) && validString(request.resource.data.source,180) && validString(request.resource.data.medium,100) && validString(request.resource.data.campaign,180) && validString(request.resource.data.content,180) && validString(request.resource.data.term,180) && validString(request.resource.data.referrerDomain,180) && validString(request.resource.data.device,30) && validString(request.resource.data.browser,60) && validString(request.resource.data.os,60) && validString(request.resource.data.country,30) && request.resource.data.timestamp==request.time;}
+    match /analytics_events/{id}{allow create:if validEvent();allow read,update,delete:if isOwner();}
+    match /{document=**}{allow read,write:if isOwner();}
+  }
+}
