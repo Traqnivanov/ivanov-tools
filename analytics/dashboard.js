@@ -1,8 +1,8 @@
 import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import{getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut,setPersistence,browserLocalPersistence}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import{getFirestore,collection,getDocs,query,where,orderBy,limit,Timestamp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
-import{firebaseConfig,OWNER_UID}from'./firebase-config.js?v=20260818-2';
-import{TRACKED_PAGES,normalizePath,pageLabel,pageUrl}from'./sites.js?v=20260818-2';
+import{firebaseConfig,OWNER_UID}from'./firebase-config.js?v=20260818-3';
+import{TRACKED_PAGES,normalizePath,pageLabel,pageUrl}from'./sites.js?v=20260818-3';
 
 const app=initializeApp(firebaseConfig);
 const auth=getAuth(app);
@@ -302,20 +302,31 @@ function pages(items,previousItems){
   if(selectedPage)return pageDetails(items,previousItems,selectedPage);
   const site=$('#siteFilter').value;
   const visiblePages=TRACKED_PAGES.filter(page=>site==='all'||page.site===site);
-  const rows=visiblePages.map(page=>{
+  const periodName=$('#periodFilter').selectedOptions[0]?.textContent||'избрания период';
+  const pageData=visiblePages.map(page=>{
     const pageEvents=items.filter(event=>event.pagePath===page.path);
     const value=stats(pageEvents);
     const last=by(pageEvents,'page_view').sort((a,b)=>b.date-a.date)[0];
-    return`<tr>
+    return{page,value,last};
+  });
+  const rows=pageData.map(({page,value,last})=>`<tr>
       <td><strong>${esc(page.label)}</strong><div class="row-sub">${esc(page.path)}</div></td>
       <td>${last?dateTime(last.date):'Няма посещение'}</td>
       <td>${value.sessions}</td><td>${value.pages}</td><td>${value.engaged}</td>
       <td>${value.actions}</td><td>${value.conversion}</td>
       <td class="row-actions"><button class="action-secondary compact" data-page="${esc(page.path)}">Статистика</button><a class="action-secondary compact" href="${pageUrl(page.path)}" target="_blank" rel="noopener">Отвори</a></td>
-    </tr>`;
-  });
+    </tr>`);
+  const mobileRows=pageData.map(({page,value,last})=>`<article class="page-mobile-card">
+    <div class="page-mobile-heading"><div><strong>${esc(page.label)}</strong><div class="row-sub">${esc(page.path)}</div></div>
+      <div class="page-period-counter"><strong>${value.pages}</strong><span>отваряния · ${esc(periodName)}</span></div>
+    </div>
+    <div class="page-last-open">Последно: ${last?dateTime(last.date):'няма посещение за периода'}</div>
+    <div class="page-mobile-metrics"><span><b>${value.sessions}</b> сесии</span><span><b>${value.engaged}</b> ангажирани</span><span><b>${value.actions}</b> действия</span><span><b>${value.conversion}</b> конверсия</span></div>
+    <div class="page-mobile-actions"><button class="action-primary" data-page="${esc(page.path)}">Статистика · ${value.pages}</button><a class="action-secondary" href="${pageUrl(page.path)}" target="_blank" rel="noopener">Отвори</a></div>
+  </article>`);
   return head('Всички страници',`${visiblePages.length} следени страници. Отвори всяка поотделно за пълна статистика.`)+
-    `<div class="card">${table(['Страница','Последно отваряне','Сесии','Отваряния','Ангажирани','Действия','Конверсия',''],rows)}</div>`;
+    `<div class="card pages-desktop">${table(['Страница','Последно отваряне','Сесии','Отваряния','Ангажирани','Действия','Конверсия',''],rows)}</div>
+    <div class="pages-mobile">${mobileRows.join('')}</div>`;
 }
 
 function pageDetails(items,previousItems,path){
