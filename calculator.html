@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="bg">
 <head>
+<style>html.ir-auth-pending body{visibility:hidden}html.ir-auth-pending::before{content:"Проверка на защитения достъп…";position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;background:#0a0f1a;color:#cbd5e1;font:16px system-ui;visibility:visible}</style>
+<script>document.documentElement.classList.add("ir-auth-pending");</script>
+<script type="module" src="./auth-guard.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Калкулатор ГК + Шпакловка</title>
@@ -251,7 +254,7 @@ tr.overridden td.col-pkg .n { color:#f59e0b; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 <script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { initializeApp, getApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getFirestore, doc, setDoc, getDoc, getDocs, collection, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 const firebaseConfig = {
   apiKey: "AIzaSyDpgJazYtTHvU-fWuWlAQnbYTLOGcfnkhA",
@@ -261,8 +264,9 @@ const firebaseConfig = {
   messagingSenderId: "212062400948",
   appId: "1:212062400948:web:e52380c5096e8dba68c2e1"
 };
-const app = initializeApp(firebaseConfig);
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db = getFirestore(app);
+await window.ivanovToolsAuthReady;
 window._db = db;
 window._fs = { doc, setDoc, getDoc, getDocs, collection, deleteDoc };
 window._fbReady = true;
