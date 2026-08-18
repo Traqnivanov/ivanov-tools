@@ -3,7 +3,7 @@ import{getFirestore,collection,addDoc,serverTimestamp}from'https://www.gstatic.c
 import{firebaseConfig}from'./firebase-config.js';
 import{normalizePath,siteFromPath}from'./sites.js';
 
-const VERSION='1.2.0';
+const VERSION='2.0.0';
 const EXCLUDE_KEY='ivanov_analytics_excluded';
 const DASHBOARD_ORIGIN='https://traqnivanov.github.io';
 const params=new URLSearchParams(location.search);
@@ -100,7 +100,7 @@ if(!adminAction&&!excluded){
   const site=siteFromPath(path);
   const q=new URLSearchParams(location.search);
   const start=Date.now();
-  let active=0,last=Date.now(),visible=!document.hidden,scrolls=new Set();
+  let active=0,last=Date.now(),visible=!document.hidden,scrolls=new Set(),engagements=new Set();
 
   function sid(){
     let k='ia_session',v=sessionStorage.getItem(k);
@@ -127,23 +127,39 @@ if(!adminAction&&!excluded){
   function ref(){
     try{return document.referrer?new URL(document.referrer).hostname:''}catch{return''}
   }
-  function source(){
-    if(q.get('utm_source'))return q.get('utm_source');
+  function detectedSource(){
+    if(q.get('utm_source'))return q.get('utm_source').slice(0,180);
     let r=ref();
     if(!r)return'direct';
+    if(r==='ivanov-remonti.com'||r.endsWith('.ivanov-remonti.com'))return'direct';
     if(r.includes('google.'))return'google';
     if(r.includes('facebook.')||r.includes('fb.'))return'facebook';
     if(r.includes('instagram.'))return'instagram';
     return r;
   }
+  function attribution(){
+    const key='ia_attribution_v2';
+    try{
+      const saved=sessionStorage.getItem(key);
+      if(saved)return JSON.parse(saved);
+    }catch(e){}
+    const value={
+      source:detectedSource(),medium:(q.get('utm_medium')||'').slice(0,100),
+      campaign:(q.get('utm_campaign')||'').slice(0,180),content:(q.get('utm_content')||'').slice(0,180),
+      term:(q.get('utm_term')||'').slice(0,180)
+    };
+    try{sessionStorage.setItem(key,JSON.stringify(value))}catch(e){}
+    return value;
+  }
+  const firstTouch=attribution();
 
   async function send(eventType,extra={}){
     try{
       await addDoc(collection(db,'analytics_events'),{
         eventType,site,pagePath:path,pageTitle:document.title.slice(0,160),sessionId,
-        timestamp:serverTimestamp(),trackerVersion:VERSION,source:source(),
-        medium:q.get('utm_medium')||'',campaign:q.get('utm_campaign')||'',
-        content:q.get('utm_content')||'',term:q.get('utm_term')||'',
+        timestamp:serverTimestamp(),trackerVersion:VERSION,source:firstTouch.source,
+        medium:firstTouch.medium,campaign:firstTouch.campaign,
+        content:firstTouch.content,term:firstTouch.term,
         referrerDomain:ref(),device:device(),browser:browser(),os:os(),
         country:'unknown',...extra
       });
@@ -154,15 +170,24 @@ if(!adminAction&&!excluded){
 
   send('page_view');
 
+  function updateActive(){
+    const now=Date.now();
+    if(visible)active+=Math.max(0,(now-last)/1000);
+    last=now;
+  }
   setInterval(()=>{
-    let n=Date.now();
-    if(visible)active+=Math.max(0,Math.round((n-last)/1000));
-    last=n;
-  },10000);
+    updateActive();
+    [15,30,60,120,300].forEach(seconds=>{
+      if(active>=seconds&&!engagements.has(seconds)){
+        engagements.add(seconds);
+        send('engagement',{activeSeconds:seconds});
+      }
+    });
+  },5000);
 
   document.addEventListener('visibilitychange',()=>{
+    updateActive();
     visible=!document.hidden;
-    last=Date.now();
   });
 
   addEventListener('scroll',()=>{
@@ -194,8 +219,9 @@ if(!adminAction&&!excluded){
   },true);
 
   addEventListener('pagehide',()=>{
+    updateActive();
     send('session_end',{
-      activeSeconds:active,
+      activeSeconds:Math.round(active),
       totalSeconds:Math.round((Date.now()-start)/1000)
     });
   },{once:true});
