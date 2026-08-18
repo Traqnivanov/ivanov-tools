@@ -1,8 +1,8 @@
 import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import{getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut,setPersistence,browserLocalPersistence}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import{getFirestore,collection,getDocs,query,where,orderBy,limit,Timestamp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
-import{firebaseConfig,OWNER_UID}from'./firebase-config.js';
-import{TRACKED_PAGES,normalizePath,pageLabel,pageUrl}from'./sites.js';
+import{firebaseConfig,OWNER_UID}from'./firebase-config.js?v=20260818-2';
+import{TRACKED_PAGES,normalizePath,pageLabel,pageUrl}from'./sites.js?v=20260818-2';
 
 const app=initializeApp(firebaseConfig);
 const auth=getAuth(app);
