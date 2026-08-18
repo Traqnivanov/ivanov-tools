@@ -2,3 +2,5 @@ export const PAGE_LABELS={"/":"Начална София","/za-men":"За мен
 export function normalizePath(pathname="/"){let p=(pathname||"/").split("?")[0].split("#")[0];p=p.replace(/\/index\.html$/i,"").replace(/\.html$/i,"");if(p.length>1)p=p.replace(/\/+$/,"");return p||"/"}
 export function siteFromPath(pathname){const p=normalizePath(pathname);if(p.startsWith('/lom'))return'lom';if(p.startsWith('/montana'))return'montana';if(p.startsWith('/en/'))return'lom-en';if(p.startsWith('/de/'))return'lom-de';return'sofia'}
 export function pageLabel(pathname){const p=normalizePath(pathname);return PAGE_LABELS[p]||p}
+export const TRACKED_PAGES=Object.entries(PAGE_LABELS).map(([path,label])=>({path,label,site:siteFromPath(path)}));
+export function pageUrl(pathname){const p=normalizePath(pathname);return`https://ivanov-remonti.com${p==='/'?'/':p}`}
