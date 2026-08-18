@@ -2,6 +2,9 @@
 <!DOCTYPE html>
 <html lang="bg">
 <head>
+<style>html.ir-auth-pending body{visibility:hidden}html.ir-auth-pending::before{content:"Проверка на защитения достъп…";position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;background:#0a0f1a;color:#cbd5e1;font:16px system-ui;visibility:visible}</style>
+<script>document.documentElement.classList.add("ir-auth-pending");</script>
+<script type="module" src="./auth-guard.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ivanov Remonti — Офис</title>
@@ -164,24 +167,6 @@ body {
 
 <div class="bg"></div>
 
-<!-- LOGIN -->
-<div id="loginScreen">
-    <div class="login-brand">
-        <div class="login-logo-text">IVANOV <span>REMONTI</span></div>
-        <div class="login-tagline">Строителни услуги · Офис</div>
-        <div class="login-sub">Въведете парола за достъп</div>
-    </div>
-    <div class="login-box">
-        <div class="login-field-label">🔒 Парола</div>
-        <input type="password" class="login-input" id="loginInput"
-               placeholder="••••••••"
-               onkeydown="if(event.key==='Enter') doLogin()">
-        <button class="login-btn" onclick="doLogin()">Влез →</button>
-        <div class="login-error" id="loginError">Грешна парола. Опитай отново.</div>
-    </div>
-    <div class="login-footer">ivanov-remonti.com · 0877 810 418</div>
-</div>
-
 <!-- MAIN APP -->
 <div id="mainApp">
     <div class="logo">
@@ -258,30 +243,6 @@ body {
 </div>
 
 <script>
-const PASSWORD = 'ivanov2025';
-const SESSION_KEY = 'ir_site_auth';
-
-function doLogin() {
-    const val = document.getElementById('loginInput').value;
-    if (val === PASSWORD) {
-        localStorage.setItem(SESSION_KEY, '1');
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('mainApp').classList.add('visible');
-    } else {
-        document.getElementById('loginError').classList.add('show');
-        document.getElementById('loginInput').value = '';
-        document.getElementById('loginInput').focus();
-        setTimeout(() => document.getElementById('loginError').classList.remove('show'), 3000);
-    }
-}
-
-if (localStorage.getItem(SESSION_KEY) === '1') {
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('mainApp').classList.add('visible');
-} else {
-    setTimeout(() => document.getElementById('loginInput').focus(), 100);
-}
-
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js')
