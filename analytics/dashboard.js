@@ -1,8 +1,8 @@
 import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import{getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut,setPersistence,browserLocalPersistence}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import{getFirestore,collection,getDocs,query,where,orderBy,limit,Timestamp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
-import{firebaseConfig,OWNER_UID}from'./firebase-config.js?v=20260818-3';
-import{TRACKED_PAGES,normalizePath,pageLabel,pageUrl}from'./sites.js?v=20260818-3';
+import{firebaseConfig,OWNER_UID}from'./firebase-config.js?v=20260818-4';
+import{TRACKED_PAGES,normalizePath,pageLabel,pageUrl}from'./sites.js?v=20260818-4';
 
 const app=initializeApp(firebaseConfig);
 const auth=getAuth(app);
@@ -432,15 +432,23 @@ function sources(items){
 }
 
 function system(items){
-  const rows=TRACKED_PAGES.map(page=>{
+  const periodName=$('#periodFilter').selectedOptions[0]?.textContent||'избрания период';
+  const pageData=TRACKED_PAGES.map(page=>{
     const pageEvents=items.filter(event=>event.pagePath===page.path);
     const last=[...pageEvents].sort((a,b)=>b.date-a.date)[0];
-    return`<tr><td>${esc(page.label)}</td><td>${last?dateTime(last.date):'Няма данни в периода'}</td><td>${esc(last?.trackerVersion||'—')}</td><td><button class="action-secondary compact" data-page="${esc(page.path)}">Статистика</button></td></tr>`;
+    return{page,last,openings:by(pageEvents,'page_view').length};
   });
+  const rows=pageData.map(({page,last,openings})=>`<tr><td>${esc(page.label)}</td><td>${last?dateTime(last.date):'Няма данни в периода'}</td><td>${esc(last?.trackerVersion||'—')}</td><td class="system-count">${openings}</td><td><button class="action-secondary compact" data-page="${esc(page.path)}">Статистика</button></td></tr>`);
+  const mobileRows=pageData.map(({page,last,openings})=>`<article class="system-page-card">
+    <div><strong>${esc(page.label)}</strong><div class="row-sub">${esc(page.path)}</div></div>
+    <div class="system-page-meta"><span>Последно: ${last?dateTime(last.date):'няма данни'}</span><span>Tracker: ${esc(last?.trackerVersion||'—')}</span></div>
+    <div class="system-page-action"><div class="system-period-count"><strong>${openings}</strong><span>отваряния · ${esc(periodName)}</span></div><button class="action-secondary" data-page="${esc(page.path)}">Статистика</button></div>
+  </article>`);
   return head('Система и настройки','Техническата информация е събрана тук, без да се смесва с бизнес резултатите.')+
-    `<div class="card"><h2>Следени страници</h2><p class="card-note">„Няма данни“ не доказва повреда — може просто да няма посещение. Това не е автоматичен uptime монитор.</p>
-      ${table(['Страница','Последно събитие в периода','Tracker версия',''],rows)}
+    `<div class="card system-pages-desktop"><h2>Следени страници</h2><p class="card-note">„Няма данни“ не доказва повреда — може просто да няма посещение. Това не е автоматичен uptime монитор.</p>
+      ${table(['Страница','Последно събитие в периода','Tracker версия',`Отваряния · ${esc(periodName)}`,'' ],rows)}
     </div>
+    <div class="system-pages-mobile"><h2>Следени страници</h2>${mobileRows.join('')}</div>
     <div class="grid-2">
       <div class="card"><h2>Моите устройства</h2><p>Изключването се прави отделно за всеки телефон, компютър и браузър.</p>
         <div id="deviceStatusBox" class="device-status unknown"><strong>Статус:</strong> <span id="deviceStatusText">Натисни „Провери статуса“.</span></div>
