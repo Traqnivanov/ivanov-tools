@@ -1,7 +1,7 @@
 import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import{getFirestore,collection,addDoc,serverTimestamp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-lite.js';
-import{firebaseConfig}from'./firebase-config.js';
-import{normalizePath,siteFromPath}from'./sites.js';
+import{firebaseConfig}from'./firebase-config.js?v=20260818-2';
+import{normalizePath,siteFromPath}from'./sites.js?v=20260818-2';
 
 const VERSION='2.0.0';
 const EXCLUDE_KEY='ivanov_analytics_excluded';
