@@ -1,21 +1,22 @@
-const CACHE = 'ir-office-v4';
+const CACHE = 'ir-office-v5-auth';
 const PRECACHE = [
-  '/',
-  '/index.html',
-  '/calculator.html',
-  '/kalkulator-combined.html',
-  '/room.html',
-  '/offer.html',
-  '/contract.html',
-  '/clients.html',
-  '/receipts.html',
-  '/avansov-otchet.html',
-  '/profiles.html',
-  '/naruchnik.html',
-  '/naruchnik-ai.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png'
+  './',
+  './index.html',
+  './auth-guard.js',
+  './calculator.html',
+  './kalkulator-combined.html',
+  './room.html',
+  './offer.html',
+  './contract.html',
+  './clients.html',
+  './receipts.html',
+  './avansov-otchet.html',
+  './profiles.html',
+  './naruchnik.html',
+  './naruchnik-ai.html',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 // Инсталация — кешира всички файлове предварително

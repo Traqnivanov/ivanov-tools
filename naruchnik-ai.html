@@ -2,6 +2,9 @@
 <!DOCTYPE html>
 <html lang="bg">
 <head>
+<style>html.ir-auth-pending body{visibility:hidden}html.ir-auth-pending::before{content:"Проверка на защитения достъп…";position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;background:#0a0f1a;color:#cbd5e1;font:16px system-ui;visibility:visible}</style>
+<script>document.documentElement.classList.add("ir-auth-pending");</script>
+<script type="module" src="./auth-guard.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI Помощник — Ivanov Remonti</title>
@@ -199,23 +202,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--dark);color:var(--text);m
 </head>
 <body>
 
-<!-- LOGIN SCREEN -->
-<div id="loginScreen">
-    <div class="login-brand">
-        <div class="login-logo-text">IVANOV <span>REMONTI</span></div>
-        <div class="login-tagline">AI Помощник · Достъп</div>
-        <div class="login-sub">Въведете парола за достъп</div>
-    </div>
-    <div class="login-box">
-        <div class="login-field-label">🔒 Парола</div>
-        <input type="password" class="login-input" id="loginInput"
-               placeholder="••••••••"
-               onkeydown="if(event.key==='Enter') doLogin()">
-        <button class="login-btn" onclick="doLogin()">Влез →</button>
-        <div class="login-error" id="loginError">Грешна парола. Опитай отново.</div>
-    </div>
-</div>
-
 <!-- MAIN APP -->
 <div id="appContainer" style="display:none;flex-direction:column;height:100vh;overflow:hidden;">
 
@@ -353,7 +339,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--dark);color:var(--text);m
     </div>
 
     <div class="warning-box">
-      ⚠️ Ключът се пази в Firebase (синхронизация между устройства) и в localStorage. Никой друг не може да го прочете без паролата ivanov2025.
+      ⚠️ Ключът се пази в Firebase (синхронизация между устройства) и в localStorage. Данните във Firebase са достъпни само след защитения вход.
     </div>
 
     <div class="modal-actions">
@@ -788,7 +774,7 @@ const QUICK_PROMPTS = {
 <!-- FIREBASE + AI ЛОГИКА                                 -->
 <!-- ═══════════════════════════════════════════════════ -->
 <script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { initializeApp, getApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getFirestore, doc, setDoc, getDocs, deleteDoc, collection } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const firebaseConfig = {
@@ -800,8 +786,9 @@ const firebaseConfig = {
   appId: "1:212062400948:web:e52380c5096e8dba68c2e1"
 };
 
-const app = initializeApp(firebaseConfig);
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db = getFirestore(app);
+await window.ivanovToolsAuthReady;
 
 // ═══════════════════════════════════════════════════════
 // СЪСТОЯНИЕ
@@ -830,41 +817,19 @@ const PRICING = {
 // ═══════════════════════════════════════════════════════
 // СТАРТИРАНЕ
 // ═══════════════════════════════════════════════════════
-// LOGIN — парола за достъп (синхронизирана с index.html)
-const LOGIN_PASSWORD = 'ivanov2025';
-const SESSION_KEY = 'ir_site_auth';
+// Запазва съвместимостта със съществуващия запис на API ключа.
+// Реалният достъп вече се контролира от Firebase Authentication и OWNER_UID.
+const API_KEY_STORAGE_MASK = 'ivanov2025';
+let appStarted = false;
 
-window.doLogin = function() {
-  const val = document.getElementById('loginInput').value;
-  if (val === LOGIN_PASSWORD) {
-    localStorage.setItem(SESSION_KEY, '1');
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('appContainer').style.display = 'flex';
-    if (window.innerWidth <= 768) {
-      document.getElementById('bottomNav').style.display = 'flex';
-    }
-    initApp();
-  } else {
-    const err = document.getElementById('loginError');
-    err.classList.add('show');
-    document.getElementById('loginInput').value = '';
-    document.getElementById('loginInput').focus();
-    setTimeout(() => err.classList.remove('show'), 3000);
-  }
-};
-
-// При зареждане — провери дали вече е логнат
 function checkLogin() {
-  if (localStorage.getItem(SESSION_KEY) === '1') {
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('appContainer').style.display = 'flex';
-    if (window.innerWidth <= 768) {
-      document.getElementById('bottomNav').style.display = 'flex';
-    }
+  const start = () => {
+    if (appStarted) return;
+    appStarted = true;
     initApp();
-  } else {
-    setTimeout(() => document.getElementById('loginInput').focus(), 100);
-  }
+  };
+  if (window.ivanovToolsUser) start();
+  else window.addEventListener('ivanov-auth-ready', start, { once: true });
 }
 
 async function initApp() {
@@ -1077,7 +1042,7 @@ function decryptKey(encoded, password) {
 
 async function saveApiKeyToFirebase(key) {
   try {
-    const encrypted = encryptKey(key, LOGIN_PASSWORD);
+    const encrypted = encryptKey(key, API_KEY_STORAGE_MASK);
     await setDoc(doc(db, 'naruchnik_ai_settings', 'config'), {
       apiKeyEncrypted: encrypted,
       updatedAt: new Date().toISOString()
@@ -1097,7 +1062,7 @@ async function loadApiKeyFromFirebase() {
       const data = d.data();
       // Първо опитай криптираната версия
       if (data.apiKeyEncrypted) {
-        const decrypted = decryptKey(data.apiKeyEncrypted, LOGIN_PASSWORD);
+        const decrypted = decryptKey(data.apiKeyEncrypted, API_KEY_STORAGE_MASK);
         if (decrypted && decrypted.startsWith('sk-ant-')) {
           key = decrypted;
         }
