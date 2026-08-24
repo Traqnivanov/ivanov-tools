@@ -3,11 +3,16 @@ import{getFirestore,collection,addDoc,serverTimestamp}from'https://www.gstatic.c
 import{firebaseConfig}from'./firebase-config.js?v=20260818-5';
 import{normalizePath,siteFromPath}from'./sites.js?v=20260818-5';
 
-const VERSION='2.1.2';
+const VERSION='2.1.3';
 const EXCLUDE_KEY='ivanov_analytics_excluded';
 const DASHBOARD_ORIGIN='https://traqnivanov.github.io';
 const params=new URLSearchParams(location.search);
 const adminAction=params.get('ivanov_device_action');
+
+function isObviousBot(){
+  const u=navigator.userAgent||'';
+  return /bot|crawler|spider|slurp|bingpreview|facebookexternalhit|whatsapp|telegrambot|headlesschrome|lighthouse/i.test(u);
+}
 
 function getExcluded(){
   try{return localStorage.getItem(EXCLUDE_KEY)==='1'}catch(e){return false}
@@ -93,7 +98,7 @@ if(adminAction==='exclude'){
   renderAdminResult(excluded,'status');
 }
 
-if(!adminAction&&!excluded){
+if(!adminAction&&!excluded&&!isObviousBot()){
   const app=initializeApp(firebaseConfig,'ivanovTracker');
   const db=getFirestore(app);
   const path=normalizePath(location.pathname);
