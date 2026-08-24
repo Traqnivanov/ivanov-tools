@@ -247,12 +247,24 @@ function table(headers,rows,empty='Няма данни за избрания п�
   return`<div class="table-wrap"><table><thead><tr>${headers.map(header=>`<th>${header}</th>`).join('')}</tr></thead><tbody>${rows.length?rows.join(''):`<tr><td colspan="${headers.length}" class="empty">${empty}</td></tr>`}</tbody></table></div>`;
 }
 
+function decorateTables(){
+  document.querySelectorAll('.table-wrap table').forEach(table=>{
+    const headers=[...table.querySelectorAll('thead th')].map(cell=>cell.textContent.trim());
+    table.querySelectorAll('tbody tr').forEach(row=>{
+      [...row.children].forEach((cell,index)=>{
+        if(cell.matches('td'))cell.dataset.label=headers[index]||'';
+      });
+    });
+  });
+}
+
 function render(){
   const data=filtered();
   const previous=filtered(previousEvents);
   const renderers={summary,pages,results,sources,system};
   $('#view').innerHTML=renderers[current](data,previous);
   requestAnimationFrame(()=>{
+    decorateTables();
     drawChart();
     bindDynamicControls();
     bindDeviceControls();
