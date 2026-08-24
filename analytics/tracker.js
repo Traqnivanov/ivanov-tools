@@ -3,7 +3,7 @@ import{getFirestore,collection,addDoc,serverTimestamp}from'https://www.gstatic.c
 import{firebaseConfig}from'./firebase-config.js?v=20260818-5';
 import{normalizePath,siteFromPath}from'./sites.js?v=20260818-5';
 
-const VERSION='2.1.0';
+const VERSION='2.1.1';
 const EXCLUDE_KEY='ivanov_analytics_excluded';
 const DASHBOARD_ORIGIN='https://traqnivanov.github.io';
 const params=new URLSearchParams(location.search);
@@ -219,7 +219,7 @@ if(!adminAction&&!excluded){
   document.addEventListener('click',e=>{
     const el=e.target instanceof Element?e.target:null;
     if(!el)return;
-    const action=el.closest('a,button,.faq-q,.yt-lite');
+    const action=el.closest("a,button,.faq-q,.yt-lite,.gallery-thumb,.lom-gallery-btn,.preview-item,.masonry-item,.lomgal-item,.svc-thumb,.lom-svc-thumb");
     if(!action)return;
     const a=action.closest('a,button')||action;
     let h=(a.getAttribute?.('href')||'').toLowerCase();
@@ -227,7 +227,7 @@ if(!adminAction&&!excluded){
     if(h.startsWith('tel:'))send('phone_click');
     else if(h.includes('viber')||t.includes('viber'))send('viber_click');
     else if(action.closest('.yt-lite'))sendOnce('video_play');
-    else if(action.closest(".gallery-thumb,.lom-gallery-btn,[onclick*='openGalleryLb'],[onclick*='openGallery']"))sendOnce('gallery_open');
+    else if(action.closest(".gallery-thumb,.lom-gallery-btn,.preview-item,.masonry-item,.lomgal-item,.svc-thumb,.lom-svc-thumb,[onclick*='openGalleryLb'],[onclick*='openGallery'],[onclick*='openFullGallery'],[onclick*='openLightboxGal'],[onclick*='openLb']"))sendOnce('gallery_open');
     else if(action.closest(".faq-q,[data-track='faq']"))sendOnce('faq_open');
     else if(a.matches("[data-track='prices']")||h.includes('#prices')||h.includes('#pricing')||/^(цени|ценоразпис)$/.test(t))sendOnce('price_open');
     else if(a.matches("[data-track='contact']")||h.includes('#contact'))sendOnce('contact_open');
