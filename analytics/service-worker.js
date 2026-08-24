@@ -1,9 +1,9 @@
-const CACHE_NAME = "ivanov-analytics-v8-page-order";
+const CACHE_NAME = "ivanov-analytics-v9-geo";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css?v=20260818-5",
-  "./dashboard.js?v=20260818-5",
+  "./dashboard.js?v=20260824-geo",
   "./firebase-config.js?v=20260818-5",
   "./sites.js?v=20260818-5",
   "./manifest.webmanifest",
