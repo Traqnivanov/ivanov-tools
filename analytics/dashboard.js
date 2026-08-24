@@ -201,8 +201,15 @@ function stats(items){
   const sessions=uniq(items,'sessionId');
   const phone=by(items,'phone_click').length;
   const viber=by(items,'viber_click').length;
-  const forms=by(items,'form_submit').length;
-  const actions=phone+viber+forms;
+  const formAttempts=by(items,'form_submit').length;
+  const formSuccess=by(items,'form_success').length;
+  const businessTypes=new Set(['phone_click','viber_click','form_success']);
+  const interestTypes=new Set(['gallery_open','video_play','faq_open','price_open','contact_open']);
+  const businessEvents=items.filter(event=>businessTypes.has(event.eventType));
+  const interestEvents=items.filter(event=>interestTypes.has(event.eventType));
+  const businessSessions=new Set(businessEvents.map(event=>event.sessionId).filter(Boolean));
+  const interestSessions=new Set(interestEvents.map(event=>event.sessionId).filter(Boolean));
+  const actions=businessEvents.length;
   const engagedSessions=new Set();
   items.forEach(event=>{
     if(
@@ -214,9 +221,10 @@ function stats(items){
   const endings=by(items,'session_end').map(event=>+event.activeSeconds||0).filter(value=>value>=0);
   const average=endings.length?endings.reduce((sum,value)=>sum+value,0)/endings.length:0;
   return{
-    sessions,pages:pageViews.length,phone,viber,forms,actions,
+    sessions,pages:pageViews.length,phone,viber,formAttempts,formSuccess,actions,
+    businessSessions:businessSessions.size,interest:interestEvents.length,interestSessions:interestSessions.size,
     engaged:engagedSessions.size,average,
-    conversion:percent(actions,sessions),
+    conversion:percent(businessSessions.size,sessions),
     engagementRate:percent(engagedSessions.size,sessions)
   };
 }
@@ -257,10 +265,10 @@ function summary(items,previousItems){
   chartEvents=by(items,'page_view');
   const strongest=TRACKED_PAGES
     .map(page=>({page,pageStats:stats(items.filter(event=>event.pagePath===page.path))}))
-    .filter(row=>row.pageStats.pages||row.pageStats.actions)
-    .sort((a,b)=>b.pageStats.actions-a.pageStats.actions||b.pageStats.pages-a.pageStats.pages)
+    .filter(row=>row.pageStats.pages||row.pageStats.actions||row.pageStats.interest)
+    .sort((a,b)=>b.pageStats.businessSessions-a.pageStats.businessSessions||b.pageStats.interestSessions-a.pageStats.interestSessions||b.pageStats.pages-a.pageStats.pages)
     .slice(0,8)
-    .map(row=>`<tr><td><button class="link-button" data-page="${esc(row.page.path)}">${esc(row.page.label)}</button></td><td>${row.pageStats.pages}</td><td>${row.pageStats.actions}</td><td>${row.pageStats.conversion}</td></tr>`);
+    .map(row=>`<tr><td><button class="link-button" data-page="${esc(row.page.path)}">${esc(row.page.label)}</button></td><td>${row.pageStats.sessions}</td><td>${row.pageStats.interestSessions}</td><td>${row.pageStats.businessSessions}</td><td>${row.pageStats.conversion}</td></tr>`);
   const sourceRows=sourceGroups(items).slice(0,8).map(row=>`<tr><td>${esc(row.source)}</td><td>${row.stats.sessions}</td><td>${row.stats.actions}</td><td>${row.stats.conversion}</td></tr>`);
   const siteRows=group(items,event=>event.site||'other').map(([site,siteEvents])=>{
     const value=stats(siteEvents);
@@ -269,17 +277,32 @@ function summary(items,previousItems){
   const mobile=uniq(by(items,'page_view').filter(event=>event.device==='mobile'),'sessionId');
   const browserRows=group(by(items,'page_view'),event=>event.browser||'Неизвестно')
     .map(([browser,browserEvents])=>`<tr><td>${esc(browser)}</td><td>${uniq(browserEvents,'sessionId')}</td></tr>`);
-  return head('Обобщение','Най-важното за трафика и реалните действия.')+
+  const osRows=group(by(items,'page_view'),event=>event.os||'Неизвестно')
+    .map(([os,osEvents])=>`<tr><td>${esc(os)}</td><td>${uniq(osEvents,'sessionId')}</td></tr>`);
+  const hourBuckets=[
+    {label:'00–06',from:0,to:6},{label:'06–09',from:6,to:9},{label:'09–12',from:9,to:12},
+    {label:'12–15',from:12,to:15},{label:'15–18',from:15,to:18},{label:'18–21',from:18,to:21},{label:'21–24',from:21,to:24}
+  ];
+  const localHour=date=>+new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Sofia',hour:'2-digit',hourCycle:'h23'}).format(date);
+  const businessTypes=new Set(['phone_click','viber_click','form_success']);
+  const hourRows=hourBuckets.map(bucket=>{
+    const visits=by(items,'page_view').filter(event=>{const hour=localHour(event.date);return hour>=bucket.from&&hour<bucket.to});
+    const actions=items.filter(event=>businessTypes.has(event.eventType)&&(()=>{const hour=localHour(event.date);return hour>=bucket.from&&hour<bucket.to})());
+    return`<tr><td>${bucket.label}</td><td>${uniq(visits,'sessionId')}</td><td>${uniq(actions,'sessionId')}</td></tr>`;
+  });
+  return head('Обобщение','Най-важното за трафика и реалните действия.','<div class="heading-actions"><button id="exportJsonBtn" class="action-secondary" type="button">Експорт JSON</button></div>')+
     `<div class="cards">
       ${metric('Сесии',currentStats.sessions,delta(currentStats.sessions,oldStats.sessions))}
       ${metric('Отворени страници',currentStats.pages,delta(currentStats.pages,oldStats.pages))}
       ${metric('Ангажирани посещения',currentStats.engaged,currentStats.engagementRate)}
-      ${metric('Общо действия',currentStats.actions,delta(currentStats.actions,oldStats.actions))}
+      ${metric('Проявили интерес',currentStats.interestSessions)}
+      ${metric('Клиентски действия',currentStats.actions,delta(currentStats.actions,oldStats.actions))}
       ${metric('Кликове за обаждане',currentStats.phone)}
       ${metric('Viber',currentStats.viber)}
-      ${metric('Опити за форма',currentStats.forms)}
-      ${metric('Конверсия',currentStats.conversion)}
+      ${metric('Успешни форми',currentStats.formSuccess)}
+      ${metric('Конверсия',currentStats.conversion,'уникални сесии с клиентско действие')}
     </div>
+    <div class="card section-gap"><h2>Най-силни страници</h2>${table(['Страница','Сесии','Интерес','Клиентски сесии','Конверсия'],strongest)}</div>
     <div class="grid-2">
       <div class="card"><h2>Посещения по дни</h2><div class="chart-wrap"><canvas id="mainChart"></canvas></div></div>
       <div class="card"><h2>Източници</h2>${table(['Източник','Сесии','Действия','Конверсия'],sourceRows)}</div>
@@ -292,10 +315,15 @@ function summary(items,previousItems){
           <div><strong>${currentStats.sessions?(currentStats.pages/currentStats.sessions).toFixed(2):0}</strong><span>страници / сесия</span></div>
           <div><strong>${time(currentStats.average)}</strong><span>средно отчетено време</span></div>
         </div>
-        ${table(['Браузър','Сесии'],browserRows)}
+        <div class="grid-2">
+          <div>${table(['Браузър','Сесии'],browserRows)}</div>
+          <div>${table(['ОС','Сесии'],osRows)}</div>
+        </div>
       </div>
     </div>
-    <div class="card section-gap"><h2>Най-силни страници</h2>${table(['Страница','Отваряния','Действия','Конверсия'],strongest)}</div>`;
+    <div class="card section-gap"><h2>По часове</h2><p class="card-note">Часовете са по Europe/Sofia. „Клиентски сесии“ = телефон, Viber или успешно изпратена форма.</p>
+      ${table(['Час','Сесии','Клиентски сесии'],hourRows)}
+    </div>`;
 }
 
 function pages(items,previousItems){
@@ -355,10 +383,10 @@ function pageDetails(items,previousItems,path){
       ${metric('Сесии',value.sessions,delta(value.sessions,oldValue.sessions))}
       ${metric('Отваряния',value.pages,delta(value.pages,oldValue.pages))}
       ${metric('Ангажирани',value.engaged,value.engagementRate)}
-      ${metric('Действия',value.actions,value.conversion)}
+      ${metric('Клиентски действия',value.actions,value.conversion)}
       ${metric('Кликове за обаждане',value.phone)}
       ${metric('Viber',value.viber)}
-      ${metric('Опити за форма',value.forms)}
+      ${metric('Успешни форми',value.formSuccess)}
       ${metric('Средно отчетено време',time(value.average),'ориентировъчно за старите посещения')}
     </div>
     <div class="grid-2">
@@ -381,7 +409,7 @@ function sessionDetails(items){
     const opened=(ordered.find(event=>event.eventType==='page_view')||ordered[0]).date;
     const active=Math.max(0,...ordered.filter(event=>['engagement','session_end'].includes(event.eventType)).map(event=>+event.activeSeconds||0));
     const scroll=Math.max(0,...ordered.filter(event=>event.eventType==='scroll').map(event=>+event.scrollDepth||0));
-    const actionEvents=ordered.filter(event=>['phone_click','viber_click','form_submit'].includes(event.eventType));
+    const actionEvents=ordered.filter(event=>['phone_click','viber_click','form_success','gallery_open','video_play','faq_open','price_open','contact_open'].includes(event.eventType));
     return{
       opened,
       source:ordered[0].sessionSource||'direct',
@@ -394,19 +422,20 @@ function sessionDetails(items){
 
 function results(items){
   const value=stats(items);
-  const rows=items.filter(event=>['phone_click','viber_click','form_submit'].includes(event.eventType))
+  const businessTypes=['phone_click','viber_click','form_success'];
+  const rows=items.filter(event=>businessTypes.includes(event.eventType))
     .sort((a,b)=>b.date-a.date)
     .map(event=>`<tr><td>${dateTime(event.date)}</td><td>${esc(label(event.eventType))}</td><td><button class="link-button" data-page="${esc(event.pagePath)}">${esc(pageLabel(event.pagePath))}</button></td><td>${esc(event.sessionSource||'direct')}</td><td>${esc(event.device||'')}</td><td>${esc(event.campaign||'—')}</td></tr>`);
-  return head('Резултати','Всички действия с потенциал за клиент. Кликът за обаждане не доказва проведен разговор.')+
+  return head('Резултати','Реални клиентски действия. Кликът за обаждане не доказва проведен разговор.')+
     `<div class="cards">
       ${metric('Кликове за обаждане',value.phone)}
       ${metric('Viber',value.viber)}
-      ${metric('Опити за форма',value.forms,'отчита submit, не потвърдено изпращане')}
-      ${metric('Конверсия',value.conversion)}
+      ${metric('Успешни форми',value.formSuccess)}
+      ${metric('Опити за форма',value.formAttempts,'submit опити, включително неуспешни')}
+      ${metric('Конверсия',value.conversion,'уникални сесии с клиентско действие')}
     </div>
     <div class="card section-gap">${table(['Дата','Действие','Страница','Източник','Устройство','Кампания'],rows)}</div>`;
 }
-
 function sourceGroups(items){
   return group(by(items,'page_view'),event=>event.sessionSource||'direct')
     .map(([source,pageViews])=>{
@@ -469,7 +498,33 @@ function system(items){
     </div>`;
 }
 
+function exportJson(){
+  const data=filtered().map(event=>{
+    const clean={...event,date:event.date?.toISOString?.()||null};
+    delete clean.timestamp;
+    return clean;
+  });
+  const payload={
+    exportedAt:new Date().toISOString(),
+    period:$('#periodFilter').selectedOptions[0]?.textContent||'',
+    site:$('#siteFilter').value,
+    eventCount:data.length,
+    events:data
+  };
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');
+  link.href=url;
+  link.download=`ivanov-analytics-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
 function bindDynamicControls(){
+  const exportButton=$('#exportJsonBtn');
+  if(exportButton)exportButton.onclick=exportJson;
   document.querySelectorAll('[data-page]').forEach(button=>button.onclick=()=>{
     selectedPage=normalizePath(button.dataset.page);
     current='pages';
@@ -548,8 +603,10 @@ function label(type){
     phone_click:'Клик за обаждане',
     viber_click:'Viber',
     form_submit:'Опит за форма',
+    form_success:'Успешна форма',
     faq_open:'FAQ',
     gallery_open:'Галерия',
+    video_play:'Видео',
     price_open:'Цени',
     contact_open:'Контакти'
   })[type]||type;
