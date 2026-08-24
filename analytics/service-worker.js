@@ -1,9 +1,9 @@
-const CACHE_NAME = "ivanov-analytics-v9-geo";
+const CACHE_NAME = "ivanov-analytics-v10-ads";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css?v=20260818-5",
-  "./dashboard.js?v=20260824-geo",
+  "./dashboard.js?v=20260824-ads",
   "./firebase-config.js?v=20260818-5",
   "./sites.js?v=20260818-5",
   "./manifest.webmanifest",
