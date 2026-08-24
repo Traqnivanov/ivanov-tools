@@ -3,7 +3,8 @@ import{getFirestore,collection,addDoc,serverTimestamp}from'https://www.gstatic.c
 import{firebaseConfig}from'./firebase-config.js?v=20260818-5';
 import{normalizePath,siteFromPath}from'./sites.js?v=20260818-5';
 
-const VERSION='2.1.4';
+const VERSION='2.1.5';
+const GEO_ENDPOINT='https://ivanov-geo.traqnivanov1.workers.dev/';
 const EXCLUDE_KEY='ivanov_analytics_excluded';
 const DASHBOARD_ORIGIN='https://traqnivanov.github.io';
 const params=new URLSearchParams(location.search);
@@ -117,6 +118,33 @@ if(!adminAction&&!excluded&&!isObviousBot()){
   }
   const sessionId=sid();
 
+  async function loadGeoOnce(){
+    const key='ia_geo_v1';
+    try{
+      if(sessionStorage.getItem(key))return;
+      sessionStorage.setItem(key,'pending');
+    }catch(e){}
+
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),2000);
+    try{
+      const response=await fetch(GEO_ENDPOINT,{
+        method:'GET',mode:'cors',cache:'no-store',credentials:'omit',
+        referrerPolicy:'no-referrer',signal:controller.signal
+      });
+      if(!response.ok)throw Error('geo_http_'+response.status);
+      const data=await response.json();
+      const city=typeof data.city==='string'&&data.city?data.city.slice(0,120):'unknown';
+      const country=typeof data.country==='string'&&data.country?data.country.slice(0,30):'unknown';
+      try{sessionStorage.setItem(key,JSON.stringify({city,country}))}catch(e){}
+      send('session_geo',{city,country});
+    }catch(e){
+      try{sessionStorage.setItem(key,'failed')}catch(_){}
+    }finally{
+      clearTimeout(timer);
+    }
+  }
+
   function device(){
     let u=navigator.userAgent;
     return/iPad|Tablet/i.test(u)?'tablet':/Mobi|Android|iPhone/i.test(u)?'mobile':'desktop';
@@ -183,6 +211,7 @@ if(!adminAction&&!excluded&&!isObviousBot()){
   }
 
   send('page_view');
+  loadGeoOnce();
 
   function updateActive(){
     const now=Date.now();
