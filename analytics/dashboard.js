@@ -479,16 +479,32 @@ function sourceGroups(items){
 
 function sources(items){
   const rows=sourceGroups(items).map(row=>`<tr><td>${esc(row.source)}</td><td>${row.stats.sessions}</td><td>${row.stats.pages}</td><td>${row.stats.engaged}</td><td>${row.stats.actions}</td><td>${row.stats.conversion}</td></tr>`);
-  const campaignRows=group(by(items,'page_view').filter(event=>event.campaign),event=>event.campaign)
-    .map(([campaign,pageViews])=>{
-      const sessionIds=new Set(pageViews.map(event=>event.sessionId));
+  const pageViews=by(items,'page_view');
+  const googleAdsViews=pageViews.filter(event=>String(event.source||'').toLowerCase()==='google'&&String(event.medium||'').toLowerCase()==='cpc');
+  const googleAdsSessionIds=new Set(googleAdsViews.map(event=>event.sessionId).filter(Boolean));
+  const googleAdsRows=group(googleAdsViews,event=>`${event.campaign||'—'}\u0001${event.term||'—'}\u0001${event.content||'—'}`)
+    .map(([key,views])=>{
+      const [campaign,term,content]=key.split('\u0001');
+      const sessionIds=new Set(views.map(event=>event.sessionId).filter(Boolean));
+      const adEvents=items.filter(event=>sessionIds.has(event.sessionId));
+      return{campaign,term,content,value:stats(adEvents)};
+    })
+    .sort((a,b)=>b.value.businessSessions-a.value.businessSessions||b.value.sessions-a.value.sessions)
+    .map(row=>`<tr><td>${esc(row.campaign)}</td><td>${esc(row.term)}</td><td>${esc(row.content)}</td><td>${row.value.sessions}</td><td>${row.value.businessSessions}</td><td>${row.value.conversion}</td></tr>`);
+  const otherCampaignRows=group(pageViews.filter(event=>event.campaign&&!googleAdsSessionIds.has(event.sessionId)),event=>event.campaign)
+    .map(([campaign,views])=>{
+      const sessionIds=new Set(views.map(event=>event.sessionId));
       const campaignEvents=items.filter(event=>sessionIds.has(event.sessionId));
       const value=stats(campaignEvents);
       return`<tr><td>${esc(campaign)}</td><td>${value.sessions}</td><td>${value.actions}</td><td>${value.conversion}</td></tr>`;
     });
+  const otherCampaignBlock=otherCampaignRows.length
+    ?`<div class="card section-gap"><h2>Други UTM кампании</h2><p class="card-note">Кампании извън платените Google Ads посещения.</p>${table(['Кампания','Сесии','Действия','Конверсия'],otherCampaignRows)}</div>`
+    :'';
   return head('Източници','Първоначалният източник се пази за цялата сесия; вътрешните преминавания не се броят отделно.')+
     `<div class="card">${table(['Източник','Сесии','Страници','Ангажирани','Действия','Конверсия'],rows)}</div>
-    <div class="card section-gap"><h2>Кампании</h2>${table(['Кампания','Сесии','Действия','Конверсия'],campaignRows,'Няма UTM кампании за избрания период.')}</div>`;
+    <div class="card section-gap"><h2>Google Ads</h2><p class="card-note">Само платени посещения от Google Ads. Кампания и реклама са ID стойности от Google Ads; ключовата дума е тази, по която е дошло посещението.</p>${table(['Кампания (ID)','Ключова дума','Реклама (ID)','Сесии','Клиентски сесии','Конверсия'],googleAdsRows,'Още няма Google Ads посещение с новите UTM параметри за избрания период.')}</div>
+    ${otherCampaignBlock}`;
 }
 
 function system(items){
