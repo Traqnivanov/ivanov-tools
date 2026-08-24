@@ -15,6 +15,17 @@
 .card{padding:15px}
 .metric-value{font-size:1.9rem}
 .chart-wrap{height:230px}
+.table-wrap{overflow:visible}
+.table-wrap table{display:block;min-width:0}
+.table-wrap thead{display:none}
+.table-wrap tbody{display:grid;gap:10px}
+.table-wrap tr{display:block;border:1px solid var(--border);border-radius:12px;padding:7px 9px;background:#fff}
+.table-wrap td{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:9px 3px;border-bottom:1px solid #edf1f5;text-align:right;white-space:normal}
+.table-wrap td:last-child{border-bottom:0}
+.table-wrap td::before{content:attr(data-label);flex:0 0 42%;color:var(--muted);font-size:.7rem;font-weight:800;text-transform:uppercase;text-align:left}
+.table-wrap td.empty{display:block;text-align:center}
+.table-wrap td.empty::before{display:none}
+.table-wrap .row-actions{justify-content:flex-end;flex-wrap:wrap}
 }@media(max-width:460px){.cards{grid-template-columns:1fr}}
 
 .settings-action{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
