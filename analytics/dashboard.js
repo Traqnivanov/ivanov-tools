@@ -165,7 +165,14 @@ function normalizeAttribution(items){
     const external=pageViews.find(event=>event.source&&!SELF_SOURCE.test(event.source));
     const first=external||pageViews[0]||ordered[0];
     const source=first?.source&&!SELF_SOURCE.test(first.source)?first.source:'direct';
-    sessionEvents.forEach(event=>event.sessionSource=source||'direct');
+    const geo=ordered.find(event=>event.eventType==='session_geo'&&event.country&&event.country!=='unknown');
+    const sessionCity=geo?.city||'unknown';
+    const sessionCountry=geo?.country||'unknown';
+    sessionEvents.forEach(event=>{
+      event.sessionSource=source||'direct';
+      event.sessionCity=sessionCity;
+      event.sessionCountry=sessionCountry;
+    });
   });
   return items;
 }
@@ -291,6 +298,15 @@ function summary(items,previousItems){
     .map(([browser,browserEvents])=>`<tr><td>${esc(browser)}</td><td>${uniq(browserEvents,'sessionId')}</td></tr>`);
   const osRows=group(by(items,'page_view'),event=>event.os||'Неизвестно')
     .map(([os,osEvents])=>`<tr><td>${esc(os)}</td><td>${uniq(osEvents,'sessionId')}</td></tr>`);
+  const geoSessionViews=by(items,'page_view').filter(event=>event.sessionCountry&&event.sessionCountry!=='unknown');
+  const geoRows=group(geoSessionViews,event=>`${event.sessionCity||'unknown'}|${event.sessionCountry||'unknown'}`)
+    .map(([key,geoEvents])=>{
+      const [city,country]=key.split('|');
+      return{city,country,sessions:uniq(geoEvents,'sessionId')};
+    })
+    .sort((a,b)=>b.sessions-a.sessions)
+    .slice(0,20)
+    .map(row=>`<tr><td>${esc(row.city==='unknown'?'Неизвестен град':row.city)}</td><td>${esc(row.country)}</td><td>${row.sessions}</td></tr>`);
   const hourBuckets=[
     {label:'00–06',from:0,to:6},{label:'06–09',from:6,to:9},{label:'09–12',from:9,to:12},
     {label:'12–15',from:12,to:15},{label:'15–18',from:15,to:18},{label:'18–21',from:18,to:21},{label:'21–24',from:21,to:24}
@@ -335,6 +351,9 @@ function summary(items,previousItems){
     </div>
     <div class="card section-gap"><h2>По часове</h2><p class="card-note">Часовете са по Europe/Sofia. „Клиентски сесии“ = телефон, Viber или успешно изпратена форма.</p>
       ${table(['Час','Сесии','Клиентски сесии'],hourRows)}
+    </div>
+    <div class="card section-gap"><h2>Град и държава</h2><p class="card-note">Приблизително местоположение от Cloudflare. Записват се само град и държава, веднъж на сесия.</p>
+      ${table(['Град','Държава','Сесии'],geoRows,'Няма налични geo данни за избрания период.')}
     </div>`;
 }
 
@@ -505,8 +524,8 @@ function system(items){
       </div>
     </div>
     <div class="grid-2">
-      <div class="card"><h2>Поверителност</h2><p>Не се записват име, телефонен номер, текст от форма, пълен IP адрес или постоянен fingerprint.</p><p>Сесиите са временни и анонимни.</p></div>
-      <div class="card"><h2>Запазена техническа статистика</h2><p>Устройство, браузър, операционна система, скрол, активно време, източник и UTM параметри.</p><p>Държава не се показва, защото tracker-ът в момента няма надежден начин да я определи.</p></div>
+      <div class="card"><h2>Поверителност</h2><p>Не се записват име, телефонен номер, текст от форма, пълен IP адрес, координати, пощенски код, ISP или постоянен fingerprint.</p><p>Сесиите са временни и анонимни. Geo заявката връща само приблизителен град и държава.</p></div>
+      <div class="card"><h2>Запазена техническа статистика</h2><p>Устройство, браузър, операционна система, скрол, активно време, източник и UTM параметри.</p><p>При налични данни се пазят приблизителен град и държава чрез едно отделно geo събитие на сесия.</p></div>
     </div>`;
 }
 
@@ -620,7 +639,8 @@ function label(type){
     gallery_open:'Галерия',
     video_play:'Видео',
     price_open:'Цени',
-    contact_open:'Контакти'
+    contact_open:'Контакти',
+    session_geo:'Град / държава'
   })[type]||type;
 }
 
