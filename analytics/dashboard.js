@@ -278,6 +278,44 @@ function render(){
   });
 }
 
+function mediaInsights(items){
+  const mediaEvents=items.filter(event=>event.eventType==='gallery_open'||event.eventType==='video_play');
+  const gallerySessions=uniq(mediaEvents.filter(event=>event.eventType==='gallery_open'),'sessionId');
+  const videoSessions=uniq(mediaEvents.filter(event=>event.eventType==='video_play'),'sessionId');
+  const uniqueEvents=[...new Map(mediaEvents
+    .sort((a,b)=>b.date-a.date)
+    .map(event=>[`${event.sessionId||event.id}|${event.eventType}|${event.pagePath}`,event])).values()];
+  const rows=uniqueEvents.slice(0,100).map(event=>{
+    const source=event.sessionSource||event.source||'direct';
+    const isAds=String(source).toLowerCase()==='google'&&String(event.medium||'').toLowerCase()==='cpc';
+    const city=event.sessionCity&&event.sessionCity!=='unknown'?event.sessionCity:'—';
+    return`<tr>
+      <td>${dateTime(event.date)}</td>
+      <td>${esc(label(event.eventType))}</td>
+      <td><button class="link-button" data-page="${esc(event.pagePath)}">${esc(pageLabel(event.pagePath))}</button></td>
+      <td>${esc(source)}</td>
+      <td>${isAds?esc(event.campaign||'—'):'—'}</td>
+      <td>${isAds?esc(event.term||'—'):'—'}</td>
+      <td>${isAds?esc(event.content||'—'):'—'}</td>
+      <td>${esc(event.device||'—')}</td>
+      <td>${esc(city)}</td>
+    </tr>`;
+  });
+  return{gallerySessions,videoSessions,rows};
+}
+
+function mediaBlock(items,title='Снимки и видео'){
+  const media=mediaInsights(items);
+  return`<div class="card section-gap"><h2>${esc(title)}</h2>
+    <p class="card-note">Показва уникални сесии, в които е отворена галерия или е пуснато видео. Източникът е за всички посещения; Ads колоните се попълват само при Google Ads.</p>
+    <div class="small-metrics">
+      <div><strong>${media.gallerySessions}</strong><span>сесии с галерия</span></div>
+      <div><strong>${media.videoSessions}</strong><span>сесии с видео</span></div>
+    </div>
+    ${table(['Дата','Действие','Страница','Източник','Ads кампания','Ключова дума','Реклама','Устройство','Град'],media.rows,'Няма отваряне на снимки или пускане на видео за избрания период.')}
+  </div>`;
+}
+
 function summary(items,previousItems){
   const currentStats=stats(items);
   const oldStats=stats(previousItems);
@@ -330,6 +368,7 @@ function summary(items,previousItems){
       ${metric('Успешни форми',currentStats.formSuccess)}
       ${metric('Конверсия',currentStats.conversion,'уникални сесии с клиентско действие')}
     </div>
+    ${mediaBlock(items)}
     <div class="card section-gap"><h2>Най-силни страници</h2>${table(['Страница','Сесии','Интерес','Клиентски сесии','Конверсия'],strongest)}</div>
     <div class="grid-2">
       <div class="card"><h2>Посещения по дни</h2><div class="chart-wrap"><canvas id="mainChart"></canvas></div></div>
@@ -420,6 +459,7 @@ function pageDetails(items,previousItems,path){
       ${metric('Успешни форми',value.formSuccess)}
       ${metric('Средно отчетено време',time(value.average),'ориентировъчно за старите посещения')}
     </div>
+    ${mediaBlock(pageEvents,'Снимки и видео на тази страница')}
     <div class="grid-2">
       <div class="card"><h2>Отваряния по дни</h2><div class="chart-wrap"><canvas id="mainChart"></canvas></div></div>
       <div class="card"><h2>Източници</h2>${table(['Източник','Сесии','Действия','Конверсия'],sourceRows)}</div>
