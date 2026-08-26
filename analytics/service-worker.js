@@ -1,4 +1,4 @@
-const CACHE_NAME = "ivanov-analytics-v18-channels2";
+const CACHE_NAME = "ivanov-analytics-v19-ads1";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -6,10 +6,12 @@ const APP_SHELL = [
   "./summary-final.css?v=20260826-final",
   "./navigation.css?v=20260826-channels1",
   "./summary-channels.css?v=20260826-channels2",
+  "./ads-live.css?v=20260826-ads1",
   "./dashboard.js?v=20260825-media",
   "./summary-final.js?v=20260826-final",
   "./navigation.js?v=20260826-channels1",
   "./summary-channels.js?v=20260826-channels2",
+  "./ads-live.js?v=20260826-ads1",
   "./firebase-config.js?v=20260818-5",
   "./sites.js?v=20260818-5",
   "./manifest.webmanifest",
@@ -23,9 +25,7 @@ self.addEventListener("install", event => {
 });
 
 self.addEventListener("activate", event => {
-  event.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
-  );
+  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))));
   self.clients.claim();
 });
 
@@ -34,13 +34,5 @@ self.addEventListener("fetch", event => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-  event.respondWith(
-    fetch(req)
-      .then(res => {
-        const copy = res.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
-        return res;
-      })
-      .catch(() => caches.match(req).then(cached => cached || caches.match("./index.html")))
-  );
+  event.respondWith(fetch(req).then(res => {const copy=res.clone();caches.open(CACHE_NAME).then(cache => cache.put(req,copy));return res}).catch(() => caches.match(req).then(cached => cached || caches.match("./index.html"))));
 });
