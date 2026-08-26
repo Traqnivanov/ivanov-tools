@@ -1,13 +1,15 @@
-const CACHE_NAME = "ivanov-analytics-v17-channels1";
+const CACHE_NAME = "ivanov-analytics-v18-channels2";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css?v=20260818-5",
   "./summary-final.css?v=20260826-final",
   "./navigation.css?v=20260826-channels1",
+  "./summary-channels.css?v=20260826-channels2",
   "./dashboard.js?v=20260825-media",
   "./summary-final.js?v=20260826-final",
   "./navigation.js?v=20260826-channels1",
+  "./summary-channels.js?v=20260826-channels2",
   "./firebase-config.js?v=20260818-5",
   "./sites.js?v=20260818-5",
   "./manifest.webmanifest",
@@ -22,9 +24,7 @@ self.addEventListener("install", event => {
 
 self.addEventListener("activate", event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
   );
   self.clients.claim();
 });
