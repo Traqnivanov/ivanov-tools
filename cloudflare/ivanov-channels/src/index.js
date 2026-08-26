@@ -5,6 +5,7 @@ import {
   storeGoogleRefreshToken,
   discoverGoogleProfiles,
 } from './google.js';
+import { syncConnectedGoogleChannels } from './sync.js';
 
 const GOOGLE_PROVIDERS = new Set(['google_business', 'search_console']);
 
@@ -50,11 +51,15 @@ async function consumeState(env, provider, state) {
   return Boolean(row && row.provider === provider && Date.parse(row.expires_at) > Date.now());
 }
 
-function callbackHtml(env, ok, message) {
-  const safeMessage = String(message || '').replace(/[&<>"']/g, char => ({
+function escapeHtml(value) {
+  return String(value || '').replace(/[&<>"']/g, char => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
   })[char]);
-  const safeUrl = String(env.DASHBOARD_URL || '').replace(/"/g, '&quot;');
+}
+
+function callbackHtml(env, ok, message) {
+  const safeMessage = escapeHtml(message);
+  const safeUrl = escapeHtml(env.DASHBOARD_URL || '');
   const status = ok ? 'Свързването е успешно.' : 'Свързването не завърши.';
   return new Response(`<!doctype html><html lang="bg"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Ivanov Analytics</title><body style="font-family:system-ui;padding:32px;max-width:620px;margin:auto"><h1>${status}</h1><p>${safeMessage}</p>${safeUrl ? `<p><a href="${safeUrl}">Назад към Ivanov Analytics</a></p>` : ''}</body></html>`, {
     status: ok ? 200 : 400,
@@ -95,10 +100,10 @@ async function finishGoogleOAuth(request, env, provider) {
     const token = await exchangeGoogleCode(env, provider, code);
     await storeGoogleRefreshToken(env, provider, token);
     const profiles = await discoverGoogleProfiles(env, provider);
-    return callbackHtml(env, true, `Намерени профили/сайтове: ${profiles.length}.`);
+    return callbackHtml(env, true, `Намерени профили/сайтове: ${profiles.length}. Данните ще се синхронизират автоматично.`);
   } catch (error) {
     console.error('OAuth callback failed', provider, error);
-    return callbackHtml(env, false, 'Разрешението е получено, но backend синхронизацията не успя.');
+    return callbackHtml(env, false, 'Разрешението е получено, но backend подготовката не успя.');
   }
 }
 
@@ -122,6 +127,21 @@ async function channelData(env, url) {
   return { data: rows.results || [], status: 200 };
 }
 
+async function rankingData(env, url) {
+  const provider = url.searchParams.get('provider');
+  const profileKey = url.searchParams.get('profileKey');
+  const dimension = url.searchParams.get('dimension');
+  if (!provider || !profileKey || !dimension) return { error: 'provider_profileKey_dimension_required', status: 400 };
+  const rows = await env.DB.prepare(`
+    SELECT provider, profile_key, period_start, period_end, dimension, dimension_value, clicks, impressions, ctr, position, metadata_json, updated_at
+    FROM channel_rankings
+    WHERE provider=? AND profile_key=? AND dimension=?
+    ORDER BY period_end DESC, clicks DESC
+    LIMIT 250
+  `).bind(provider, profileKey, dimension).all();
+  return { data: rows.results || [], status: 200 };
+}
+
 async function handleFetch(request, env) {
   const origin = request.headers.get('Origin');
   const origins = allowedOrigins(env);
@@ -137,9 +157,7 @@ async function handleFetch(request, env) {
   }
 
   const url = new URL(request.url);
-  if (request.method === 'GET' && url.pathname === '/health') {
-    return json(env, { ok: true, service: 'ivanov-channels' }, 200, origin);
-  }
+  if (request.method === 'GET' && url.pathname === '/health') return json(env, { ok: true, service: 'ivanov-channels' }, 200, origin);
 
   const callbackMatch = url.pathname.match(/^\/oauth\/callback\/(google_business|search_console)$/);
   if (request.method === 'GET' && callbackMatch) return finishGoogleOAuth(request, env, callbackMatch[1]);
@@ -157,8 +175,20 @@ async function handleFetch(request, env) {
     const auth = await ownerOrResponse(request, env, origin);
     if (auth.response) return auth.response;
     const result = await channelData(env, url);
-    if (result.error) return json(env, { error: result.error }, result.status, origin);
-    return json(env, { data: result.data }, 200, origin);
+    return result.error ? json(env, { error: result.error }, result.status, origin) : json(env, { data: result.data }, 200, origin);
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/rankings') {
+    const auth = await ownerOrResponse(request, env, origin);
+    if (auth.response) return auth.response;
+    const result = await rankingData(env, url);
+    return result.error ? json(env, { error: result.error }, result.status, origin) : json(env, { data: result.data }, 200, origin);
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/sync') {
+    const auth = await ownerOrResponse(request, env, origin);
+    if (auth.response) return auth.response;
+    return json(env, { results: await syncConnectedGoogleChannels(env) }, 200, origin);
   }
 
   return json(env, { error: 'not_found' }, 404, origin);
@@ -178,6 +208,7 @@ export default {
   },
   async scheduled(controller, env) {
     await cleanup(env);
-    console.log('ivanov-channels scheduled maintenance', controller.cron);
+    const results = await syncConnectedGoogleChannels(env);
+    console.log('ivanov-channels scheduled sync', controller.cron, results);
   },
 };
