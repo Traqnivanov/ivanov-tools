@@ -18,15 +18,44 @@ function currentArea(){
   return'Всички';
 }
 
-function profileCards(type,area){
+function metricPlaceholder(label,help=''){
+  return`<div class="channel-metric"><span>${label}</span><strong>—</strong>${help?`<small>${help}</small>`:''}</div>`;
+}
+
+function businessProfileCard(city){
+  return`<article class="card channel-card business-profile-card">
+    <div class="channel-card-head"><div><span class="channel-eyebrow">Google Business</span><h2>${city}</h2></div><span class="channel-state pending">Не е свързано</span></div>
+    <p class="card-note">Официалните показатели от Business Profile за избрания период.</p>
+    <div class="business-kpis">
+      ${metricPlaceholder('Показвания','Search + Maps')}
+      ${metricPlaceholder('Обаждания')}
+      ${metricPlaceholder('Към сайта')}
+      ${metricPlaceholder('Упътвания')}
+    </div>
+    <div class="business-secondary">
+      <span>Search / Maps</span><span>Desktop / Mobile</span><span>Сравнение с предишен период</span>
+    </div>
+  </article>`;
+}
+
+function businessStructure(area){
+  if(area==='Монтана'){
+    return`<div class="channel-grid"><article class="card channel-card"><div class="channel-card-head"><h2>Монтана</h2><span class="channel-state muted">Няма профил</span></div><div class="channel-status">Няма свързан Google Business профил за Монтана. Това е очаквано и не се показват измислени стойности.</div></article></div>`;
+  }
   const cities=area==='Всички'?['Лом','София']:[area];
-  if((type==='business'||type==='facebook')&&area==='Монтана'){
-    return`<article class="card channel-card"><h2>Монтана</h2><div class="channel-status">Няма свързан ${type==='business'?'Google Business профил':'Facebook страница'} за Монтана. Това не е грешка — модулът остава празен, докато няма реален източник.</div></article>`;
+  const compare=area==='Всички'?`<section class="card business-compare"><div class="channel-card-head"><div><span class="channel-eyebrow">Сравнение</span><h2>Лом срещу София</h2></div></div><p class="card-note">След свързването тук ще се вижда кой профил носи повече реални действия, без да смесваме различни метрики.</p><div class="business-compare-grid"><div><span>Повече обаждания</span><strong>—</strong></div><div><span>Повече кликове към сайта</span><strong>—</strong></div><div><span>Повече упътвания</span><strong>—</strong></div></div></section>`:'';
+  return`<div class="channel-grid">${cities.map(businessProfileCard).join('')}</div>${compare}<section class="card business-detail-preview"><div class="channel-card-head"><div><span class="channel-eyebrow">Подробности</span><h2>Какво ще се вижда при отваряне на профил</h2></div></div><div class="business-detail-grid"><div><strong>Динамика</strong><span>Показвания и действия по дни</span></div><div><strong>Search и Maps</strong><span>Къде е видян профилът</span></div><div><strong>Действия</strong><span>Телефон, сайт и упътвания</span></div><div><strong>Период</strong><span>Сравнение с предишен равен период</span></div></div></section>`;
+}
+
+function genericProfileCards(type,area){
+  const cities=area==='Всички'?['Лом','София']:[area];
+  if(type==='facebook'&&area==='Монтана'){
+    return`<article class="card channel-card"><h2>Монтана</h2><div class="channel-status">Няма свързана Facebook страница за Монтана. Това не е грешка — модулът остава празен, докато няма реален източник.</div></article>`;
   }
   return cities.map(city=>{
-    if(city==='Монтана'&&(type==='business'||type==='facebook'))return'';
-    const name=type==='business'?`Google Business — ${city}`:type==='facebook'?`Ivanov Remonti ${city}`:city;
-    const chips=type==='business'?['Показвания','Обаждания','Към сайта','Упътвания']:type==='facebook'?['Reach','Взаимодействия','Кликове','Публикации']:type==='search'?['Кликове','Показвания','CTR','Позиция']:['Ads сесии','Интерес','Клиентски сесии','Конверсия'];
+    if(city==='Монтана'&&type==='facebook')return'';
+    const name=type==='facebook'?`Ivanov Remonti ${city}`:city;
+    const chips=type==='facebook'?['Reach','Взаимодействия','Кликове','Публикации']:type==='search'?['Кликове','Показвания','CTR','Позиция']:['Ads сесии','Интерес','Клиентски сесии','Конверсия'];
     return`<article class="card channel-card"><h2>${name}</h2><p class="card-note">Структурата е готова. Реалните стойности ще се покажат след официалното свързване на източника.</p><div class="channel-next">${chips.map(x=>`<span>${x}</span>`).join('')}</div><div class="channel-status">Не е свързано още</div></article>`;
   }).join('');
 }
@@ -37,7 +66,10 @@ function renderExternal(type){
   externalView=type;
   const area=currentArea();
   document.querySelectorAll('.nav button').forEach(button=>button.classList.toggle('active',button.dataset.externalView===type));
-  view.innerHTML=`<div data-external-shell="${type}"><div class="view-heading"><div><h1>${config.title}</h1><p class="subtitle">${config.subtitle}</p></div><span class="channel-badge">Филтър: ${area}</span></div><div class="channel-shell"><div class="channel-grid">${profileCards(type,area)}</div><section class="card channel-card"><h2>Как ще работи</h2><p class="card-note">Този раздел ще показва само официалните данни от съответната платформа и ясна връзка към резултата на сайта. Няма да дублира подробните панели на Google или Meta.</p><div class="channel-status">Следващият етап е свързване на източника. Пароли не се записват в Ivanov Analytics; използва се официално разрешение към платформата.</div></section></div></div>`;
+  const body=type==='business'
+    ?businessStructure(area)
+    :`<div class="channel-grid">${genericProfileCards(type,area)}</div><section class="card channel-card"><h2>Как ще работи</h2><p class="card-note">Този раздел ще показва само официалните данни от съответната платформа и ясна връзка към резултата на сайта. Няма да дублира подробните панели на Google или Meta.</p><div class="channel-status">Следващият етап е свързване на източника. Пароли не се записват в Ivanov Analytics; използва се официално разрешение към платформата.</div></section>`;
+  view.innerHTML=`<div data-external-shell="${type}"><div class="view-heading"><div><h1>${config.title}</h1><p class="subtitle">${config.subtitle}</p></div><span class="channel-badge">Филтър: ${area}</span></div><div class="channel-shell">${body}</div></div>`;
   sidebar?.classList.remove('open');
   syncMobileActive('channels');
 }

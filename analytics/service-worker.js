@@ -1,13 +1,13 @@
-const CACHE_NAME = "ivanov-analytics-v14-nav1";
+const CACHE_NAME = "ivanov-analytics-v15-business1";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css?v=20260818-5",
   "./summary-final.css?v=20260826-final",
-  "./navigation.css?v=20260826-nav1",
+  "./navigation.css?v=20260826-business1",
   "./dashboard.js?v=20260825-media",
   "./summary-final.js?v=20260826-final",
-  "./navigation.js?v=20260826-nav1",
+  "./navigation.js?v=20260826-business1",
   "./firebase-config.js?v=20260818-5",
   "./sites.js?v=20260818-5",
   "./manifest.webmanifest",
