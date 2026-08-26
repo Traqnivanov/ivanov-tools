@@ -1,5 +1,5 @@
-const CERTS_URL = 'https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com';
-let certCache = { expiresAt: 0, certs: null };
+const JWKS_URL = 'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';
+let keyCache = { expiresAt: 0, keys: null };
 
 function base64UrlDecode(value) {
   const padded = value.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - value.length % 4) % 4);
@@ -10,30 +10,26 @@ function jsonPart(value) {
   return JSON.parse(new TextDecoder().decode(base64UrlDecode(value)));
 }
 
-function pemToDer(pem) {
-  const body = pem.replace(/-----BEGIN CERTIFICATE-----|-----END CERTIFICATE-----|\s/g, '');
-  return Uint8Array.from(atob(body), char => char.charCodeAt(0));
-}
-
-async function publicCerts() {
+async function publicKeys() {
   const now = Date.now();
-  if (certCache.certs && certCache.expiresAt > now) return certCache.certs;
-  const response = await fetch(CERTS_URL, { cf: { cacheTtl: 3600, cacheEverything: true } });
-  if (!response.ok) throw new Error(`firebase_certs_${response.status}`);
+  if (keyCache.keys && keyCache.expiresAt > now) return keyCache.keys;
+  const response = await fetch(JWKS_URL, { cf: { cacheTtl: 3600, cacheEverything: true } });
+  if (!response.ok) throw new Error(`firebase_jwks_${response.status}`);
   const cacheControl = response.headers.get('Cache-Control') || '';
   const maxAge = Number(cacheControl.match(/max-age=(\d+)/)?.[1] || 3600);
-  const certs = await response.json();
-  certCache = { certs, expiresAt: now + Math.max(300, maxAge - 60) * 1000 };
-  return certs;
+  const body = await response.json();
+  const keys = new Map((body.keys || []).map(key => [key.kid, key]));
+  keyCache = { keys, expiresAt: now + Math.max(300, maxAge - 60) * 1000 };
+  return keys;
 }
 
 async function verifySignature(token, header) {
-  const certs = await publicCerts();
-  const pem = certs[header.kid];
-  if (!pem) return false;
+  const keys = await publicKeys();
+  const jwk = keys.get(header.kid);
+  if (!jwk) return false;
   const key = await crypto.subtle.importKey(
-    'spki',
-    pemToDer(pem),
+    'jwk',
+    jwk,
     { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
     false,
     ['verify'],
@@ -59,12 +55,12 @@ export async function requireOwner(request, env) {
     if (header.alg !== 'RS256' || !header.kid) throw new Error('invalid_header');
     if (!await verifySignature(token, header)) throw new Error('invalid_signature');
     const now = Math.floor(Date.now() / 1000);
-    if (payload.exp <= now || payload.iat > now + 300) throw new Error('expired_or_future_token');
+    if (!payload.sub || payload.exp <= now || payload.iat > now || payload.auth_time > now) throw new Error('invalid_claim_time');
     if (payload.aud !== env.FIREBASE_PROJECT_ID) throw new Error('wrong_audience');
     if (payload.iss !== `https://securetoken.google.com/${env.FIREBASE_PROJECT_ID}`) throw new Error('wrong_issuer');
     if (payload.sub !== env.OWNER_UID) return { ok: false, status: 403, error: 'owner_only' };
     return { ok: true, uid: payload.sub, payload };
-  } catch (error) {
+  } catch {
     return { ok: false, status: 401, error: 'invalid_token' };
   }
 }
