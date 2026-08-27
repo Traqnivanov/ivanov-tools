@@ -1,7 +1,7 @@
 import { getApps } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
+import { CHANNEL_WORKER_BASE } from './channel-config.js?v=20260827-stage1f';
 
-const WORKER_BASE = 'https://ivanov-channels.traqnivanov1.workers.dev';
 let statusCache = null;
 let statusPromise = null;
 
@@ -17,7 +17,7 @@ async function ownerFetch(path, options = {}) {
   const headers = new Headers(options.headers || {});
   headers.set('Authorization', `Bearer ${token}`);
   if (options.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
-  const response = await fetch(`${WORKER_BASE}${path}`, { ...options, headers });
+  const response = await fetch(`${CHANNEL_WORKER_BASE}${path}`, { ...options, headers });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
   return body;
