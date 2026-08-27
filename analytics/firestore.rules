@@ -1,10 +1,112 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isOwner(){return request.auth!=null && request.auth.uid=="uqAZqxwN1wTQSlo2HODMmvHv1nj2";}
-    function validString(v,n){return v is string && v.size()<=n;}
-    function validEvent(){return request.resource.data.keys().hasOnly(["eventType","site","pagePath","pageTitle","sessionId","timestamp","trackerVersion","source","medium","campaign","content","term","referrerDomain","device","browser","os","country","city","activeSeconds","totalSeconds","scrollDepth","formId"]) && validString(request.resource.data.eventType,40) && validString(request.resource.data.site,30) && validString(request.resource.data.pagePath,240) && validString(request.resource.data.pageTitle,180) && validString(request.resource.data.sessionId,80) && validString(request.resource.data.trackerVersion,20) && validString(request.resource.data.source,180) && validString(request.resource.data.medium,100) && validString(request.resource.data.campaign,180) && validString(request.resource.data.content,180) && validString(request.resource.data.term,180) && validString(request.resource.data.referrerDomain,180) && validString(request.resource.data.device,30) && validString(request.resource.data.browser,60) && validString(request.resource.data.os,60) && validString(request.resource.data.country,30) && (!("city" in request.resource.data) || validString(request.resource.data.city,120)) && request.resource.data.timestamp==request.time;}
-    match /analytics_events/{id}{allow create:if validEvent();allow read,update,delete:if isOwner();}
-    match /{document=**}{allow read,write:if isOwner();}
+    function isOwner() {
+      return request.auth != null
+        && request.auth.uid == "uqAZqxwN1wTQSlo2HODMmvHv1nj2";
+    }
+
+    function validString(v, n) {
+      return v is string && v.size() <= n;
+    }
+
+    function validEventType(v) {
+      return v in [
+        "page_view",
+        "session_geo",
+        "engagement",
+        "scroll",
+        "phone_click",
+        "viber_click",
+        "form_submit",
+        "form_success",
+        "gallery_open",
+        "video_play",
+        "faq_open",
+        "price_open",
+        "contact_open",
+        "session_end"
+      ];
+    }
+
+    function validSite(v) {
+      return v in ["sofia", "lom", "montana", "lom-en", "lom-de"];
+    }
+
+    function validDevice(v) {
+      return v in ["desktop", "mobile", "tablet"];
+    }
+
+    function validOptionalFields() {
+      return (!("city" in request.resource.data) || validString(request.resource.data.city, 120))
+        && (!("activeSeconds" in request.resource.data)
+          || (request.resource.data.activeSeconds is number
+            && request.resource.data.activeSeconds >= 0
+            && request.resource.data.activeSeconds <= 86400))
+        && (!("totalSeconds" in request.resource.data)
+          || (request.resource.data.totalSeconds is number
+            && request.resource.data.totalSeconds >= 0
+            && request.resource.data.totalSeconds <= 86400))
+        && (!("scrollDepth" in request.resource.data)
+          || request.resource.data.scrollDepth in [25, 50, 75, 90])
+        && (!("formId" in request.resource.data)
+          || validString(request.resource.data.formId, 100));
+    }
+
+    function validEvent() {
+      return request.resource.data.keys().hasOnly([
+          "eventType",
+          "site",
+          "pagePath",
+          "pageTitle",
+          "sessionId",
+          "timestamp",
+          "trackerVersion",
+          "source",
+          "medium",
+          "campaign",
+          "content",
+          "term",
+          "referrerDomain",
+          "device",
+          "browser",
+          "os",
+          "country",
+          "city",
+          "activeSeconds",
+          "totalSeconds",
+          "scrollDepth",
+          "formId"
+        ])
+        && validEventType(request.resource.data.eventType)
+        && validSite(request.resource.data.site)
+        && validString(request.resource.data.pagePath, 240)
+        && request.resource.data.pagePath.matches('^/.*')
+        && validString(request.resource.data.pageTitle, 180)
+        && validString(request.resource.data.sessionId, 80)
+        && request.resource.data.sessionId.size() >= 8
+        && validString(request.resource.data.trackerVersion, 20)
+        && validString(request.resource.data.source, 180)
+        && validString(request.resource.data.medium, 100)
+        && validString(request.resource.data.campaign, 180)
+        && validString(request.resource.data.content, 180)
+        && validString(request.resource.data.term, 180)
+        && validString(request.resource.data.referrerDomain, 180)
+        && validDevice(request.resource.data.device)
+        && validString(request.resource.data.browser, 60)
+        && validString(request.resource.data.os, 60)
+        && validString(request.resource.data.country, 30)
+        && request.resource.data.timestamp == request.time
+        && validOptionalFields();
+    }
+
+    match /analytics_events/{id} {
+      allow create: if validEvent();
+      allow read, update, delete: if isOwner();
+    }
+
+    match /{document=**} {
+      allow read, write: if isOwner();
+    }
   }
 }
