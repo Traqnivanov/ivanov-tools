@@ -6,21 +6,7 @@ const BUSINESS=new Set(['phone_click','viber_click','form_success']);
 const INTEREST=new Set(['gallery_open','video_play','faq_open','price_open','contact_open']);
 let runId=0;
 
-function currentRange(){
-  const now=new Date(),start=new Date(now),end=new Date(now);end.setHours(23,59,59,999);
-  const period=document.querySelector('#periodFilter')?.value||'7d';
-  if(period==='today')start.setHours(0,0,0,0);
-  if(period==='yesterday'){start.setDate(start.getDate()-1);start.setHours(0,0,0,0);end.setDate(end.getDate()-1)}
-  if(period==='7d'){start.setDate(start.getDate()-6);start.setHours(0,0,0,0)}
-  if(period==='30d'){start.setDate(start.getDate()-29);start.setHours(0,0,0,0)}
-  if(period==='month'){start.setDate(1);start.setHours(0,0,0,0)}
-  if(period==='custom'){
-    const from=document.querySelector('#dateFrom')?.value,to=document.querySelector('#dateTo')?.value;
-    if(from)start.setTime(new Date(from+'T00:00:00').getTime());
-    if(to)end.setTime(new Date(to+'T23:59:59.999').getTime());
-  }
-  return{start,end};
-}
+function currentRange(){return window.IvanovPeriods.rangeFromControls()}
 
 async function cachedEvents(){
   const db=getFirestore(getApp()),r=currentRange();
