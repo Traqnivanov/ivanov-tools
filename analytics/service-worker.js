@@ -1,4 +1,4 @@
-const CACHE_NAME = "ivanov-analytics-v19-ads1";
+const CACHE_NAME = "ivanov-analytics-v20-channels-live1";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -7,11 +7,13 @@ const APP_SHELL = [
   "./navigation.css?v=20260826-channels1",
   "./summary-channels.css?v=20260826-channels2",
   "./ads-live.css?v=20260826-ads1",
+  "./channels-live.css?v=20260827-channels-live1",
   "./dashboard.js?v=20260825-media",
   "./summary-final.js?v=20260826-final",
   "./navigation.js?v=20260826-channels1",
   "./summary-channels.js?v=20260826-channels2",
   "./ads-live.js?v=20260826-ads1",
+  "./channels-live.js?v=20260827-channels-live1",
   "./firebase-config.js?v=20260818-5",
   "./sites.js?v=20260818-5",
   "./manifest.webmanifest",
