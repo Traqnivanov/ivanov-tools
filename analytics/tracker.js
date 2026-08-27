@@ -3,7 +3,7 @@ import{getFirestore,collection,addDoc,serverTimestamp}from'https://www.gstatic.c
 import{firebaseConfig}from'./firebase-config.js?v=20260818-5';
 import{normalizePath,siteFromPath}from'./sites.js?v=20260818-5';
 
-const VERSION='2.1.5';
+const VERSION='2.1.6';
 const GEO_ENDPOINT='https://ivanov-geo.traqnivanov1.workers.dev/';
 const EXCLUDE_KEY='ivanov_analytics_excluded';
 const DASHBOARD_ORIGIN='https://traqnivanov.github.io';
@@ -162,6 +162,7 @@ if(!adminAction&&!excluded&&!isObviousBot()){
   }
   function detectedSource(){
     if(q.get('utm_source'))return q.get('utm_source').slice(0,180);
+    if(q.get('gclid'))return'google';
     let r=ref();
     if(!r)return'direct';
     if(r==='ivanov-remonti.com'||r.endsWith('.ivanov-remonti.com'))return'direct';
@@ -177,7 +178,7 @@ if(!adminAction&&!excluded&&!isObviousBot()){
       if(saved)return JSON.parse(saved);
     }catch(e){}
     const value={
-      source:detectedSource(),medium:(q.get('utm_medium')||'').slice(0,100),
+      source:detectedSource(),medium:(q.get('utm_medium')||(q.get('gclid')?'cpc':'')).slice(0,100),
       campaign:(q.get('utm_campaign')||'').slice(0,180),content:(q.get('utm_content')||'').slice(0,180),
       term:(q.get('utm_term')||'').slice(0,180)
     };
