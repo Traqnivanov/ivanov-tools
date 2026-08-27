@@ -1,7 +1,7 @@
 import { getApps } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
+import { CHANNEL_WORKER_BASE } from './channel-config.js?v=20260827-stage1f';
 
-const WORKER_BASE='https://ivanov-channels.traqnivanov1.workers.dev';
 const SYNC_KEY='ivanov_search_console_site_sync_day_v3';
 let renderToken=0;
 let syncPromise=null;
@@ -9,7 +9,7 @@ let loadSequence=0;
 let syncedToday='';
 
 function user(){const app=getApps()[0];return app?getAuth(app).currentUser:null}
-async function ownerFetch(path,options={}){const current=user();if(!current)throw new Error('Няма активен вход.');const token=await current.getIdToken();const headers=new Headers(options.headers||{});headers.set('Authorization',`Bearer ${token}`);const response=await fetch(`${WORKER_BASE}${path}`,{...options,headers});const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||`HTTP ${response.status}`);return body}
+async function ownerFetch(path,options={}){const current=user();if(!current)throw new Error('Няма активен вход.');const token=await current.getIdToken();const headers=new Headers(options.headers||{});headers.set('Authorization',`Bearer ${token}`);const response=await fetch(`${CHANNEL_WORKER_BASE}${path}`,{...options,headers});const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||`HTTP ${response.status}`);return body}
 
 function range(){const r=window.IvanovPeriods.rangeFromControls();return{from:r.from,to:r.to}}
 
