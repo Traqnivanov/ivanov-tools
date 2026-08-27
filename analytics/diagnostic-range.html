@@ -1,9 +1,0 @@
-<!doctype html><html lang="bg"><head><meta charset="utf-8"><title>Range Diagnostic</title></head><body><pre id="out">loading</pre><script type="module">
-import{initializeApp,getApps}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
-import{getAuth,onAuthStateChanged}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
-import{getFirestore,collection,getDocs,query,where,orderBy,limit,Timestamp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
-import{firebaseConfig,OWNER_UID}from'./firebase-config.js?v=20260818-5';
-const app=getApps()[0]||initializeApp(firebaseConfig);const auth=getAuth(app),db=getFirestore(app),out=document.querySelector('#out');
-function range(){const now=new Date(),start=new Date(now),end=new Date(now);end.setHours(23,59,59,999);start.setDate(start.getDate()-6);start.setHours(0,0,0,0);return{start,end}}
-onAuthStateChanged(auth,async user=>{if(!user){out.textContent='NO_AUTH';return}if(user.uid!==OWNER_UID){out.textContent='WRONG_USER';return}try{const r=range();const q=query(collection(db,'analytics_events'),where('timestamp','>=',Timestamp.fromDate(r.start)),where('timestamp','<=',Timestamp.fromDate(r.end)),orderBy('timestamp','desc'),limit(10000));const snap=await getDocs(q);const docs=snap.docs.map(d=>d.data());const sessions=new Set(docs.map(x=>x.sessionId).filter(Boolean));const pageViews=docs.filter(x=>x.eventType==='page_view');out.textContent=JSON.stringify({now:new Date().toISOString(),from:r.start.toISOString(),to:r.end.toISOString(),docs:docs.length,sessions:sessions.size,pageViews:pageViews.length,sites:[...new Set(docs.map(x=>x.site).filter(Boolean))],latest:snap.docs.slice(0,5).map(d=>{const x=d.data();return{timestamp:x.timestamp?.toDate?.()?.toISOString?.(),eventType:x.eventType,site:x.site,pagePath:x.pagePath,trackerVersion:x.trackerVersion}})},null,2)}catch(e){out.textContent='ERROR '+(e.code||'')+' '+e.message}});
-</script></body></html>
