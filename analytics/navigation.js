@@ -14,7 +14,9 @@ function currentArea(){
   const value=siteFilter?.value||'all';
   if(value==='sofia')return'София';
   if(value==='montana')return'Монтана';
-  if(value==='lom'||value==='lom-en'||value==='lom-de')return'Лом';
+  if(value==='lom')return'Лом';
+  if(value==='lom-en')return'Лом EN';
+  if(value==='lom-de')return'Лом DE';
   return'Всички';
 }
 
