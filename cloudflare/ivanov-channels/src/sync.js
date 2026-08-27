@@ -10,6 +10,18 @@ const BUSINESS_METRICS = [
   'BUSINESS_DIRECTION_REQUESTS',
 ];
 
+const SOFIA_PAGE_FILTERS = [
+  { dimension: 'page', operator: 'notContains', expression: '/lom/' },
+  { dimension: 'page', operator: 'notContains', expression: '/montana/' },
+  { dimension: 'page', operator: 'notContains', expression: '/en/' },
+  { dimension: 'page', operator: 'notContains', expression: '/de/' },
+  { dimension: 'page', operator: 'notContains', expression: '/narachnik/' },
+];
+
+const LOM_PAGE_FILTERS = [
+  { dimension: 'page', operator: 'contains', expression: '/lom/' },
+];
+
 function isoDay(date) {
   return date.toISOString().slice(0, 10);
 }
@@ -34,15 +46,37 @@ async function connectedProfiles(env, provider) {
   return rows.results || [];
 }
 
-async function upsertDaily(env, provider, profileKey, day, metric, value, metadata = {}) {
-  await env.DB.prepare(`
+function dailyUpsertStatement(env, provider, profileKey, day, metric, value, metadata = {}) {
+  return env.DB.prepare(`
     INSERT INTO channel_daily(provider, profile_key, day, metric, value, metadata_json, updated_at)
     VALUES(?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(provider, profile_key, day, metric) DO UPDATE SET
       value=excluded.value,
       metadata_json=excluded.metadata_json,
       updated_at=excluded.updated_at
-  `).bind(provider, profileKey, day, metric, Number(value) || 0, JSON.stringify(metadata), new Date().toISOString()).run();
+  `).bind(provider, profileKey, day, metric, Number(value) || 0, JSON.stringify(metadata), new Date().toISOString());
+}
+
+async function upsertDaily(env, provider, profileKey, day, metric, value, metadata = {}) {
+  await dailyUpsertStatement(env, provider, profileKey, day, metric, value, metadata).run();
+}
+
+async function batchDailyRows(env, provider, profileKey, rows, metadata = {}) {
+  const statements = [];
+  let points = 0;
+  for (const row of rows || []) {
+    const day = row.keys?.[0];
+    if (!day) continue;
+    statements.push(
+      dailyUpsertStatement(env, provider, profileKey, day, 'CLICKS', row.clicks || 0, metadata),
+      dailyUpsertStatement(env, provider, profileKey, day, 'IMPRESSIONS', row.impressions || 0, metadata),
+      dailyUpsertStatement(env, provider, profileKey, day, 'CTR', row.ctr || 0, metadata),
+      dailyUpsertStatement(env, provider, profileKey, day, 'POSITION', row.position || 0, metadata),
+    );
+    points += 4;
+  }
+  if (statements.length) await env.DB.batch(statements);
+  return points;
 }
 
 function businessPerformanceUrl(locationName, start, end) {
@@ -93,18 +127,34 @@ export async function syncGoogleBusiness(env, days = 7) {
 }
 
 async function replaceRankings(env, profileKey, start, end, dimension, rows) {
-  await env.DB.prepare(
+  const deleteStatement = env.DB.prepare(
     'DELETE FROM channel_rankings WHERE provider=? AND profile_key=? AND period_start=? AND period_end=? AND dimension=?',
-  ).bind('search_console', profileKey, start, end, dimension).run();
+  ).bind('search_console', profileKey, start, end, dimension);
+
   const now = new Date().toISOString();
-  for (const row of rows.slice(0, 250)) {
+  const insertTemplate = env.DB.prepare(`
+    INSERT INTO channel_rankings(provider, profile_key, period_start, period_end, dimension, dimension_value, clicks, impressions, ctr, position, metadata_json, updated_at)
+    VALUES('search_console', ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', ?)
+  `);
+
+  const statements = [deleteStatement];
+  for (const row of (rows || []).slice(0, 250)) {
     const value = row.keys?.[0];
     if (!value) continue;
-    await env.DB.prepare(`
-      INSERT INTO channel_rankings(provider, profile_key, period_start, period_end, dimension, dimension_value, clicks, impressions, ctr, position, metadata_json, updated_at)
-      VALUES('search_console', ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', ?)
-    `).bind(profileKey, start, end, dimension, value, Number(row.clicks || 0), Number(row.impressions || 0), Number(row.ctr || 0), Number(row.position || 0), now).run();
+    statements.push(insertTemplate.bind(
+      profileKey,
+      start,
+      end,
+      dimension,
+      value,
+      Number(row.clicks || 0),
+      Number(row.impressions || 0),
+      Number(row.ctr || 0),
+      Number(row.position || 0),
+      now,
+    ));
   }
+  await env.DB.batch(statements);
 }
 
 async function upsertDerivedSearchProfile(env, profileKey, externalId, label, city, sourceProfileKey) {
@@ -122,13 +172,13 @@ async function upsertDerivedSearchProfile(env, profileKey, externalId, label, ci
   `).bind(profileKey, externalId, label, city, JSON.stringify({ derived: true, sourceProfileKey }), now).run();
 }
 
-async function searchConsoleFilteredQuery(accessToken, siteUrl, startDate, endDate, dimensions = [], pageOperator = null) {
+async function searchConsoleFilteredQuery(accessToken, siteUrl, startDate, endDate, dimensions = [], pageFilters = [], rowLimit = 250) {
   const url = `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`;
-  const body = { startDate, endDate, dimensions, rowLimit: 25000 };
-  if (pageOperator) {
+  const body = { startDate, endDate, dimensions, rowLimit };
+  if (pageFilters.length) {
     body.dimensionFilterGroups = [{
       groupType: 'and',
-      filters: [{ dimension: 'page', operator: pageOperator, expression: '/lom/' }],
+      filters: pageFilters,
     }];
   }
   const response = await fetch(url, {
@@ -156,27 +206,30 @@ function rootIvanovProfile(profiles) {
     || null;
 }
 
-async function syncDerivedCityProfile(env, accessToken, sourceProfile, city, pageOperator, dailyRange, rankingRange) {
+async function syncDerivedCityProfile(env, accessToken, sourceProfile, city, pageFilters, dailyRange, rankingRange) {
   const slug = city === 'Лом' ? 'lom' : 'sofia';
   const profileKey = `sc-city:${slug}`;
   await upsertDerivedSearchProfile(env, profileKey, sourceProfile.external_id, `Ivanov Remonti ${city}`, city, sourceProfile.profile_key);
 
-  let points = 0;
-  const daily = await searchConsoleFilteredQuery(accessToken, sourceProfile.external_id, dailyRange.start, dailyRange.end, ['date'], pageOperator);
-  for (const row of daily.rows || []) {
-    const day = row.keys?.[0];
-    if (!day) continue;
-    await upsertDaily(env, 'search_console', profileKey, day, 'CLICKS', row.clicks || 0, { city, derived: true });
-    await upsertDaily(env, 'search_console', profileKey, day, 'IMPRESSIONS', row.impressions || 0, { city, derived: true });
-    await upsertDaily(env, 'search_console', profileKey, day, 'CTR', row.ctr || 0, { city, derived: true });
-    await upsertDaily(env, 'search_console', profileKey, day, 'POSITION', row.position || 0, { city, derived: true });
-    points += 4;
-  }
+  const daily = await searchConsoleFilteredQuery(
+    accessToken,
+    sourceProfile.external_id,
+    dailyRange.start,
+    dailyRange.end,
+    ['date'],
+    pageFilters,
+    100,
+  );
+  const points = await batchDailyRows(env, 'search_console', profileKey, daily.rows || [], { city, derived: true });
 
-  const queries = await searchConsoleFilteredQuery(accessToken, sourceProfile.external_id, rankingRange.start, rankingRange.end, ['query'], pageOperator);
-  const pages = await searchConsoleFilteredQuery(accessToken, sourceProfile.external_id, rankingRange.start, rankingRange.end, ['page'], pageOperator);
-  await replaceRankings(env, profileKey, rankingRange.start, rankingRange.end, 'query', queries.rows || []);
-  await replaceRankings(env, profileKey, rankingRange.start, rankingRange.end, 'page', pages.rows || []);
+  const [queries, pages] = await Promise.all([
+    searchConsoleFilteredQuery(accessToken, sourceProfile.external_id, rankingRange.start, rankingRange.end, ['query'], pageFilters, 250),
+    searchConsoleFilteredQuery(accessToken, sourceProfile.external_id, rankingRange.start, rankingRange.end, ['page'], pageFilters, 250),
+  ]);
+  await Promise.all([
+    replaceRankings(env, profileKey, rankingRange.start, rankingRange.end, 'query', queries.rows || []),
+    replaceRankings(env, profileKey, rankingRange.start, rankingRange.end, 'page', pages.rows || []),
+  ]);
   return points;
 }
 
@@ -187,28 +240,29 @@ export async function syncSearchConsole(env, days = 10) {
   const dailyRange = backfillRange(days);
   const rankingRange = backfillRange(28);
   let points = 0;
+
   for (const profile of sourceProfiles) {
     const daily = await searchConsoleQuery(env, profile.external_id, dailyRange.start, dailyRange.end, ['date']);
-    for (const row of daily.rows || []) {
-      const day = row.keys?.[0];
-      if (!day) continue;
-      await upsertDaily(env, 'search_console', profile.profile_key, day, 'CLICKS', row.clicks || 0);
-      await upsertDaily(env, 'search_console', profile.profile_key, day, 'IMPRESSIONS', row.impressions || 0);
-      await upsertDaily(env, 'search_console', profile.profile_key, day, 'CTR', row.ctr || 0);
-      await upsertDaily(env, 'search_console', profile.profile_key, day, 'POSITION', row.position || 0);
-      points += 4;
-    }
-    const queries = await searchConsoleQuery(env, profile.external_id, rankingRange.start, rankingRange.end, ['query']);
-    const pages = await searchConsoleQuery(env, profile.external_id, rankingRange.start, rankingRange.end, ['page']);
-    await replaceRankings(env, profile.profile_key, rankingRange.start, rankingRange.end, 'query', queries.rows || []);
-    await replaceRankings(env, profile.profile_key, rankingRange.start, rankingRange.end, 'page', pages.rows || []);
+    points += await batchDailyRows(env, 'search_console', profile.profile_key, daily.rows || []);
+
+    const [queries, pages] = await Promise.all([
+      searchConsoleQuery(env, profile.external_id, rankingRange.start, rankingRange.end, ['query']),
+      searchConsoleQuery(env, profile.external_id, rankingRange.start, rankingRange.end, ['page']),
+    ]);
+    await Promise.all([
+      replaceRankings(env, profile.profile_key, rankingRange.start, rankingRange.end, 'query', queries.rows || []),
+      replaceRankings(env, profile.profile_key, rankingRange.start, rankingRange.end, 'page', pages.rows || []),
+    ]);
   }
 
   const root = rootIvanovProfile(sourceProfiles);
   if (root) {
     const accessToken = await googleAccessToken(env, 'search_console');
-    points += await syncDerivedCityProfile(env, accessToken, root, 'Лом', 'contains', dailyRange, rankingRange);
-    points += await syncDerivedCityProfile(env, accessToken, root, 'София', 'notContains', dailyRange, rankingRange);
+    const [lomPoints, sofiaPoints] = await Promise.all([
+      syncDerivedCityProfile(env, accessToken, root, 'Лом', LOM_PAGE_FILTERS, dailyRange, rankingRange),
+      syncDerivedCityProfile(env, accessToken, root, 'София', SOFIA_PAGE_FILTERS, dailyRange, rankingRange),
+    ]);
+    points += lomPoints + sofiaPoints;
   }
 
   return { provider: 'search_console', profiles: sourceProfiles.length, derivedProfiles: root ? 2 : 0, points };
