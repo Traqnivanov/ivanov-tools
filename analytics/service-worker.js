@@ -1,4 +1,4 @@
-const CACHE_NAME = "ivanov-analytics-v25-summary-livefix3";
+const CACHE_NAME = "ivanov-analytics-v26-sitepartition1";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -13,10 +13,10 @@ const APP_SHELL = [
   "./summary-loader.js?v=20260827-livefix3",
   "./summary-final.js?v=20260827-livefix3",
   "./navigation.js?v=20260826-channels1",
-  "./summary-channels.js?v=20260827-summary-live1",
+  "./summary-channels.js?v=20260827-sitepartition1",
   "./ads-live.js?v=20260826-ads1",
-  "./channels-live.js?v=20260827-summary-live1",
-  "./search-console-live.js?v=20260827-search-city2",
+  "./channels-live.js?v=20260827-sitepartition1",
+  "./search-console-live.js?v=20260827-sitepartition1",
   "./firebase-config.js?v=20260818-5",
   "./sites.js?v=20260818-5",
   "./manifest.webmanifest",

@@ -13,7 +13,11 @@ function liveStatusFor(key,status){
   const provider=key==='business'?'google_business':key==='search'?'search_console':null;
   if(!provider)return null;
   const connection=(status.connections||[]).find(item=>item.provider===provider);
-  const profiles=(status.profiles||[]).filter(item=>item.provider===provider);
+  let profiles=(status.profiles||[]).filter(item=>item.provider===provider);
+  if(provider==='search_console'){
+    const siteProfiles=profiles.filter(item=>String(item.profile_key||'').startsWith('sc-city:'));
+    if(siteProfiles.length>=5)profiles=siteProfiles;
+  }
   if(!connection)return 'Свързването предстои';
   if(profiles.length)return `Свързано · ${profiles.length} профила`;
   return key==='business'?'Разрешено · чака API':'Разрешено';
