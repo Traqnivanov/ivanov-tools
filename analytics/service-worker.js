@@ -1,4 +1,4 @@
-const CACHE_NAME = "ivanov-analytics-v29-filterrefresh3";
+const CACHE_NAME = "ivanov-analytics-v30-stage1a";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -14,7 +14,7 @@ const APP_SHELL = [
   "./summary-final.js?v=20260827-livefix3",
   "./navigation.js?v=20260827-filterrefresh2",
   "./summary-channels.js?v=20260827-sitepartition1",
-  "./ads-live.js?v=20260826-ads1",
+  "./ads-live.js?v=20260827-stage1a",
   "./channels-live.js?v=20260827-sitepartition1",
   "./search-console-live.js?v=20260827-filterrefresh2",
   "./firebase-config.js?v=20260818-5",
@@ -39,5 +39,23 @@ self.addEventListener("fetch", event => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-  event.respondWith(fetch(req).then(res => {const copy=res.clone();caches.open(CACHE_NAME).then(cache => cache.put(req,copy));return res}).catch(() => caches.match(req).then(cached => cached || caches.match("./index.html"))));
+
+  event.respondWith((async () => {
+    try {
+      const res = await fetch(req);
+      if (res.ok) {
+        const copy = res.clone();
+        event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.put(req, copy)));
+      }
+      return res;
+    } catch (error) {
+      const cached = await caches.match(req);
+      if (cached) return cached;
+      if (req.mode === "navigate" || req.destination === "document") {
+        const shell = await caches.match("./index.html");
+        if (shell) return shell;
+      }
+      throw error;
+    }
+  })());
 });
