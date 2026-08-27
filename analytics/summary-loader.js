@@ -1,5 +1,4 @@
-import{getApps}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
-import{getApp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
+import{getApps,getApp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import{getFirestore,collection,getDocs,query,where,orderBy,limit,Timestamp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 
 const view=document.querySelector('#view');
