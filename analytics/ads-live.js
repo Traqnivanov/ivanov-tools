@@ -1,5 +1,5 @@
 import{getApp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
-import{getFirestore,collection,getDocsFromCache,query,where,orderBy,limit,Timestamp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+import{getFirestore,collection,getDocs,getDocsFromCache,query,where,orderBy,limit,Timestamp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 
 const view=document.querySelector('#view');
 const BUSINESS=new Set(['phone_click','viber_click','form_success']);
@@ -25,7 +25,9 @@ function currentRange(){
 async function cachedEvents(){
   const db=getFirestore(getApp()),r=currentRange();
   const q=query(collection(db,'analytics_events'),where('timestamp','>=',Timestamp.fromDate(r.start)),where('timestamp','<=',Timestamp.fromDate(r.end)),orderBy('timestamp','desc'),limit(10000));
-  const snap=await getDocsFromCache(q);
+  let snap=null;
+  try{snap=await getDocsFromCache(q)}catch(_){}
+  if(!snap||snap.empty)snap=await getDocs(q);
   return snap.docs.map(doc=>({id:doc.id,...doc.data(),date:doc.data().timestamp?.toDate?.()||new Date()}));
 }
 
@@ -44,7 +46,7 @@ function siteFiltered(sessions){
   return site==='all'?sessions:sessions.filter(session=>session.events.some(event=>event.site===site));
 }
 
-function esc(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
+function esc(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[char]))}
 function pct(value,total){return total?`${(value/total*100).toFixed(1)}%`:'0%'}
 
 function campaignRows(sessions){
@@ -73,10 +75,19 @@ function renderData(sessions){
   old?.replaceWith(list);
 }
 
+function renderError(error){
+  const shell=view?.querySelector('[data-external-shell="ads"]');if(!shell)return;
+  const status=shell.querySelector('.ads-overview .channel-state');if(status){status.textContent='Грешка при зареждане';status.classList.remove('live');status.classList.add('pending')}
+  const campaignCard=shell.querySelector('.channel-grid .channel-card:first-child');
+  const old=campaignCard?.querySelector('.channel-status,.ads-live-list');
+  if(old){const node=document.createElement('p');node.className='channel-status';node.textContent='Ads данните не могат да се заредят в момента. Опитай „Обнови“.';old.replaceWith(node)}
+  console.warn('Ads tracker data unavailable.',error);
+}
+
 async function enhance(){
   if(!view?.querySelector('[data-external-shell="ads"]'))return;
   const id=++runId;
-  try{const sessions=siteFiltered(groupSessions(await cachedEvents()));if(id!==runId)return;renderData(sessions)}catch(error){console.warn('Ads tracker cache data unavailable.',error)}
+  try{const sessions=siteFiltered(groupSessions(await cachedEvents()));if(id!==runId)return;renderData(sessions)}catch(error){if(id!==runId)return;renderError(error)}
 }
 
 if(view){new MutationObserver(enhance).observe(view,{childList:true,subtree:true});enhance()}
