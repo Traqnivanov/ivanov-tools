@@ -31,8 +31,10 @@ async function importLiveSummary(){
   if(!response.ok)throw new Error(`summary_source_${response.status}`);
   let source=await response.text();
   const before=source;
+  source=source.replace(/function currentRange\(\)\{[\s\S]*?return\{start,end\};\n\}/,"function currentRange(){return window.IvanovPeriods.rangeFromControls()}");
+  source=source.replace(/function previousRange\(r\)\{[^\n]*\}/,"function previousRange(r){return window.IvanovPeriods.previousRange(r)}");
   source=source.replace(/async function cachedEvents\(r\)\{[\s\S]*?\n\}/,"async function cachedEvents(r){return window.__ivanovSummaryLiveEvents(r)}");
-  if(source===before)throw new Error('summary_live_patch_not_applied');
+  if(source===before||!source.includes('window.IvanovPeriods.rangeFromControls()')||!source.includes('window.IvanovPeriods.previousRange(r)'))throw new Error('summary_live_patch_not_applied');
   const url=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));
   try{await import(url)}finally{URL.revokeObjectURL(url)}
 }
