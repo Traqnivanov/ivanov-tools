@@ -54,8 +54,40 @@ CREATE TABLE IF NOT EXISTS channel_rankings (
   PRIMARY KEY (provider, profile_key, period_start, period_end, dimension, dimension_value)
 );
 
+CREATE TABLE IF NOT EXISTS analytics_events (
+  id TEXT PRIMARY KEY,
+  event_type TEXT NOT NULL,
+  site TEXT NOT NULL,
+  page_path TEXT NOT NULL,
+  page_title TEXT NOT NULL,
+  session_id TEXT NOT NULL,
+  received_at TEXT NOT NULL,
+  tracker_version TEXT NOT NULL,
+  source TEXT NOT NULL DEFAULT '',
+  medium TEXT NOT NULL DEFAULT '',
+  campaign TEXT NOT NULL DEFAULT '',
+  content TEXT NOT NULL DEFAULT '',
+  term TEXT NOT NULL DEFAULT '',
+  referrer_domain TEXT NOT NULL DEFAULT '',
+  device TEXT NOT NULL,
+  browser TEXT NOT NULL,
+  os TEXT NOT NULL,
+  country TEXT NOT NULL DEFAULT 'unknown',
+  city TEXT,
+  active_seconds REAL,
+  total_seconds REAL,
+  scroll_depth INTEGER,
+  form_id TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_channel_daily_lookup
   ON channel_daily(provider, profile_key, day);
 
 CREATE INDEX IF NOT EXISTS idx_rankings_lookup
   ON channel_rankings(provider, profile_key, period_start, period_end, dimension);
+
+CREATE INDEX IF NOT EXISTS idx_analytics_events_time
+  ON analytics_events(received_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_analytics_events_session
+  ON analytics_events(session_id, received_at ASC);
