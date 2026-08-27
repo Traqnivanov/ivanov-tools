@@ -84,7 +84,6 @@ service cloud.firestore {
         && request.resource.data.pagePath.matches('^/.*')
         && validString(request.resource.data.pageTitle, 180)
         && validString(request.resource.data.sessionId, 80)
-        && request.resource.data.sessionId.size() >= 8
         && validString(request.resource.data.trackerVersion, 20)
         && validString(request.resource.data.source, 180)
         && validString(request.resource.data.medium, 100)
