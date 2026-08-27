@@ -59,7 +59,7 @@ function escapeHtml(value) {
 
 function callbackHtml(env, ok, message) {
   const safeMessage = escapeHtml(message);
-  const safeUrl = escapeHtml(env.DASHBOARD_URL || '');
+  const safeUrl = escapeHtml(env.DASHBOARD_URL || 'https://traqnivanov.github.io/ivanov-tools/analytics/');
   const status = ok ? 'Свързването е успешно.' : 'Свързването не завърши.';
   return new Response(`<!doctype html><html lang="bg"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Ivanov Analytics</title><body style="font-family:system-ui;padding:32px;max-width:620px;margin:auto"><h1>${status}</h1><p>${safeMessage}</p>${safeUrl ? `<p><a href="${safeUrl}">Назад към Ivanov Analytics</a></p>` : ''}</body></html>`, {
     status: ok ? 200 : 400,
@@ -88,6 +88,20 @@ async function startOAuth(request, env, provider, origin) {
   return json(env, { authorizationUrl: googleAuthorizationUrl(env, provider, state) }, 200, origin);
 }
 
+function oauthPreparationMessage(provider, error) {
+  const code = String(error?.message || error || 'unknown_error');
+  if (provider === 'google_business' && code === 'google_api_403') {
+    return 'Google разрешението е записано, но Business Profile API отказва достъп (403). Провери/изчакай одобрението за Google Business Profile API access.';
+  }
+  if (provider === 'google_business' && code === 'google_api_404') {
+    return 'Google разрешението е записано, но Business Profile API не намери очаквания ресурс (404).';
+  }
+  if (provider === 'search_console' && code === 'google_api_403') {
+    return 'Google разрешението е записано, но Search Console API отказва достъп до сайтовете (403). Провери достъпа на избрания Google акаунт.';
+  }
+  return `Google разрешението е записано, но подготовката спря с: ${code}.`;
+}
+
 async function finishGoogleOAuth(request, env, provider) {
   const url = new URL(request.url);
   const state = url.searchParams.get('state');
@@ -103,7 +117,7 @@ async function finishGoogleOAuth(request, env, provider) {
     return callbackHtml(env, true, `Намерени профили/сайтове: ${profiles.length}. Данните ще се синхронизират автоматично.`);
   } catch (error) {
     console.error('OAuth callback failed', provider, error);
-    return callbackHtml(env, false, 'Разрешението е получено, но backend подготовката не успя.');
+    return callbackHtml(env, false, oauthPreparationMessage(provider, error));
   }
 }
 
