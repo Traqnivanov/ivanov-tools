@@ -1,4 +1,4 @@
-const CACHE_NAME = "ivanov-analytics-v27-filterrefresh1";
+const CACHE_NAME = "ivanov-analytics-v28-filterrefresh2";
 const APP_SHELL = [
   "./",
   "./index.html",
