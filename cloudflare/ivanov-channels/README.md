@@ -1,12 +1,18 @@
 # Ivanov Channels Worker
 
-Backend foundation for connecting external analytics sources to Ivanov Analytics without exposing OAuth tokens in the browser.
+Backend for connecting external analytics sources to Ivanov Analytics without exposing OAuth tokens in the browser.
 
 ## Why this is separate from `ivanov-geo`
 
 `ivanov-geo` stays small and single-purpose. This Worker handles authenticated owner-only analytics integrations, encrypted OAuth refresh tokens, profile discovery and scheduled data synchronization.
 
-## Implemented in the foundation
+## Production status
+
+The `ivanov-channels` Worker is deployed in production and is connected to the Ivanov Analytics dashboard. The production D1 database/binding and required Worker secrets are configured in Cloudflare. Google Search Console authorization and synchronization are active. Google Business support exists in the Worker, while Meta/Facebook remains future work.
+
+Do not modify or reuse `ivanov-geo` for these integrations.
+
+## Implemented
 
 - owner-only API protection using the existing Firebase Authentication ID token;
 - Firebase claim/signature checks before any sensitive API response;
@@ -15,22 +21,25 @@ Backend foundation for connecting external analytics sources to Ivanov Analytics
 - AES-GCM encryption before refresh tokens are stored in D1;
 - automatic discovery of accessible Google Business locations;
 - automatic discovery of accessible Search Console properties;
-- Google Business daily sync for Search/Maps impressions, call clicks, website clicks and direction requests;
+- Google Business daily sync support for Search/Maps impressions, call clicks, website clicks and direction requests;
 - Search Console daily sync for clicks, impressions, CTR and average position;
 - Search Console top query/page snapshots for drill-down views;
 - owner-only `/api/status`, `/api/data`, `/api/rankings` and manual `/api/sync` endpoints;
 - D1 schema for profiles, daily aggregates and ranked query/page results;
-- Cron-triggered Google synchronization.
+- Cron-triggered Google synchronization;
+- dashboard integration with the production Worker.
 
-## Intentionally not deployed/configured yet
+## Current Search Console partitioning
 
-- production D1 database/binding;
-- production Worker secrets;
-- Google OAuth client credentials and redirect URIs;
-- Meta/Facebook OAuth and synchronization;
-- dashboard calls to this Worker.
+The Worker maintains five derived Search Console profiles for the dashboard:
 
-The repository intentionally contains only `wrangler.example.jsonc`. There is no deploy-ready `wrangler.jsonc` until real Cloudflare resources and secrets exist, preventing accidental deployment with placeholder IDs.
+- `sc-city:sofia`
+- `sc-city:lom`
+- `sc-city:montana`
+- `sc-city:lom-en`
+- `sc-city:lom-de`
+
+The `/narachnik/...` routes are intentionally excluded from those five derived profiles.
 
 ## Required secrets
 
@@ -50,19 +59,15 @@ Business Profile and Search Console are authorized separately:
 
 This avoids requesting unrelated Google access in one large consent screen.
 
-## Production setup when Cloudflare access is available
+## Production maintenance
 
-1. Create a D1 database named `ivanov-channels`.
-2. Apply `schema.sql`.
-3. Copy `wrangler.example.jsonc` to `wrangler.jsonc` and insert the real D1 database ID and Worker/dashboard URLs.
-4. Set required Worker secrets via Cloudflare/Wrangler secure prompts. Never put secret values in GitHub or command history.
-5. Enable the required Google Business Profile APIs and Search Console API.
-6. Create a Google Web application OAuth client with HTTPS redirect URIs exactly matching:
-   - `<PUBLIC_BASE_URL>/oauth/callback/google_business`
-   - `<PUBLIC_BASE_URL>/oauth/callback/search_console`
-7. Deploy the Worker and apply the Cron Trigger.
-8. Add owner-only Connect buttons to Ivanov Analytics.
-9. Authorize Google Business and Search Console separately.
+When changing the Worker:
+
+1. Preserve all existing bindings and secrets unless the change explicitly requires otherwise.
+2. Never modify `ivanov-geo` as part of `ivanov-channels` work.
+3. Apply any D1 schema change only with an explicit migration and rollback plan.
+4. Keep external synchronization in Worker/Cron, not on the public Ivanov Remonti pages.
+5. After deploy, verify owner authentication plus `/api/status`, the affected data endpoint and the dashboard view that consumes it.
 
 ## API outline
 
