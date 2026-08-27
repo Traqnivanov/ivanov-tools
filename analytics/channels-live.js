@@ -42,7 +42,11 @@ async function loadStatus(force = false) {
 
 function providerInfo(status, provider) {
   const connection = (status?.connections || []).find(item => item.provider === provider) || null;
-  const profiles = (status?.profiles || []).filter(item => item.provider === provider);
+  let profiles = (status?.profiles || []).filter(item => item.provider === provider);
+  if (provider === 'search_console') {
+    const siteProfiles = profiles.filter(item => String(item.profile_key || '').startsWith('sc-city:'));
+    if (siteProfiles.length >= 5) profiles = siteProfiles;
+  }
   return { connection, profiles };
 }
 
