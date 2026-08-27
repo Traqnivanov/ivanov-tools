@@ -1,5 +1,4 @@
-import{getApp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
-import{getFirestore,collection,getDocs,getDocsFromCache,query,where,orderBy,limit,Timestamp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+import{fetchAnalyticsEvents}from'./event-source.js?v=20260827-stage3';
 
 const view=document.querySelector('#view');
 const BUSINESS=new Set(['phone_click','viber_click','form_success']);
@@ -9,12 +8,7 @@ let runId=0;
 function currentRange(){return window.IvanovPeriods.rangeFromControls()}
 
 async function cachedEvents(){
-  const db=getFirestore(getApp()),r=currentRange();
-  const q=query(collection(db,'analytics_events'),where('timestamp','>=',Timestamp.fromDate(r.start)),where('timestamp','<=',Timestamp.fromDate(r.end)),orderBy('timestamp','desc'),limit(10000));
-  let snap=null;
-  try{snap=await getDocsFromCache(q)}catch(_){}
-  if(!snap||snap.empty)snap=await getDocs(q);
-  return snap.docs.map(doc=>({id:doc.id,...doc.data(),date:doc.data().timestamp?.toDate?.()||new Date()}));
+  return fetchAnalyticsEvents(currentRange());
 }
 
 function groupSessions(items){
