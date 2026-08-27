@@ -1,9 +1,7 @@
-import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
-import{getFirestore,collection,addDoc,serverTimestamp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-lite.js';
-import{firebaseConfig}from'./firebase-config.js?v=20260818-5';
 import{normalizePath,siteFromPath}from'./sites.js?v=20260818-5';
 
-const VERSION='2.1.6';
+const VERSION='2.1.7';
+const INGEST_ENDPOINT='https://ivanov-channels.traqnivanov1.workers.dev/ingest';
 const GEO_ENDPOINT='https://ivanov-geo.traqnivanov1.workers.dev/';
 const EXCLUDE_KEY='ivanov_analytics_excluded';
 const DASHBOARD_ORIGIN='https://traqnivanov.github.io';
@@ -100,8 +98,6 @@ if(adminAction==='exclude'){
 }
 
 if(!adminAction&&!excluded&&!isObviousBot()){
-  const app=initializeApp(firebaseConfig,'ivanovTracker');
-  const db=getFirestore(app);
   const path=normalizePath(location.pathname);
   const site=siteFromPath(path);
   const q=new URLSearchParams(location.search);
@@ -187,19 +183,34 @@ if(!adminAction&&!excluded&&!isObviousBot()){
   }
   const firstTouch=attribution();
 
-  async function send(eventType,extra={}){
-    try{
-      await addDoc(collection(db,'analytics_events'),{
-        eventType,site,pagePath:path,pageTitle:document.title.slice(0,160),sessionId,
-        timestamp:serverTimestamp(),trackerVersion:VERSION,source:firstTouch.source,
-        medium:firstTouch.medium,campaign:firstTouch.campaign,
-        content:firstTouch.content,term:firstTouch.term,
-        referrerDomain:ref(),device:device(),browser:browser(),os:os(),
-        country:'unknown',...extra
-      });
-    }catch(e){
-      console.warn('Analytics not saved',e.code||e.message);
+  function payload(eventType,extra={}){
+    return{
+      eventType,site,pagePath:path,pageTitle:document.title.slice(0,160),sessionId,
+      trackerVersion:VERSION,source:firstTouch.source,medium:firstTouch.medium,
+      campaign:firstTouch.campaign,content:firstTouch.content,term:firstTouch.term,
+      referrerDomain:ref(),device:device(),browser:browser(),os:os(),country:'unknown',...extra
+    };
+  }
+
+  function transmit(data,{beacon=false}={}){
+    const body=JSON.stringify(data);
+    if(beacon&&navigator.sendBeacon){
+      try{if(navigator.sendBeacon(INGEST_ENDPOINT,body))return Promise.resolve(true)}catch(e){}
     }
+    return fetch(INGEST_ENDPOINT,{
+      method:'POST',mode:'cors',cache:'no-store',credentials:'omit',referrerPolicy:'no-referrer',
+      headers:{'Content-Type':'text/plain;charset=UTF-8'},body,keepalive:beacon
+    }).then(response=>{
+      if(!response.ok)throw Error('ingest_http_'+response.status);
+      return true;
+    }).catch(error=>{
+      console.warn('Analytics not saved',error.message||error);
+      return false;
+    });
+  }
+
+  function send(eventType,extra={}){
+    return transmit(payload(eventType,extra));
   }
 
   function sendOnce(eventType,extra={}){
@@ -278,9 +289,9 @@ if(!adminAction&&!excluded&&!isObviousBot()){
 
   addEventListener('pagehide',()=>{
     updateActive();
-    send('session_end',{
+    transmit(payload('session_end',{
       activeSeconds:Math.round(active),
       totalSeconds:Math.round((Date.now()-start)/1000)
-    });
+    }),{beacon:true});
   },{once:true});
 }
