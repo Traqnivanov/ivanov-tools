@@ -1,8 +1,9 @@
-import{getApp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
+import{getApps,getApp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import{getFirestore,collection,getDocs,query,where,orderBy,limit,Timestamp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 
 const view=document.querySelector('#view');
 let loaded=false;
+let initRetry=0;
 
 async function liveEvents(r){
   const db=getFirestore(getApp());
@@ -38,6 +39,11 @@ async function importLiveSummary(){
 
 function readyForSummary(){
   if(loaded||!view)return;
+  if(!getApps().length){
+    clearTimeout(initRetry);
+    initRetry=setTimeout(readyForSummary,50);
+    return;
+  }
   const heading=view.querySelector('.view-heading h1');
   const isSummary=heading?.textContent?.trim()==='Обобщение';
   const baseReady=isSummary&&!view.textContent.includes('Зареждане...')&&!view.querySelector('[data-summary-final]');
