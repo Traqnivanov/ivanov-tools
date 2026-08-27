@@ -11,7 +11,8 @@
     "FIREBASE_PROJECT_ID": "ivanov-analytics",
     "PUBLIC_BASE_URL": "https://REPLACE_WITH_WORKER_HOST",
     "DASHBOARD_URL": "https://REPLACE_WITH_ANALYTICS_URL",
-    "ALLOWED_ORIGINS": "https://traqnivanov.github.io"
+    "ALLOWED_ORIGINS": "https://traqnivanov.github.io",
+    "PUBLIC_ANALYTICS_ORIGINS": "https://ivanov-remonti.com,https://www.ivanov-remonti.com,https://traqnivanov.github.io"
   },
   "secrets": {
     "required": [
@@ -26,6 +27,16 @@
       "binding": "DB",
       "database_name": "ivanov-channels",
       "database_id": "REPLACE_WITH_D1_DATABASE_ID"
+    }
+  ],
+  "ratelimits": [
+    {
+      "name": "ANALYTICS_RATE_LIMITER",
+      "namespace_id": "2026082701",
+      "simple": {
+        "limit": 60,
+        "period": 60
+      }
     }
   ],
   "triggers": {
