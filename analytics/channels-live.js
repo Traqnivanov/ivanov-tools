@@ -23,12 +23,17 @@ async function ownerFetch(path, options = {}) {
   return body;
 }
 
+function publishStatus(data) {
+  window.dispatchEvent(new CustomEvent('ivanov:channel-status', { detail: data }));
+}
+
 async function loadStatus(force = false) {
   if (!force && statusCache) return statusCache;
   if (!force && statusPromise) return statusPromise;
   statusPromise = ownerFetch('/api/status')
     .then(data => {
       statusCache = data;
+      publishStatus(data);
       return data;
     })
     .finally(() => { statusPromise = null; });
@@ -68,6 +73,7 @@ async function syncChannels(button) {
     statusCache = null;
     const errors = (data.results || []).filter(item => item?.error).map(item => item.error);
     showMessage(button.closest('.channel-live-panel'), errors.length ? `Обновяването завърши с: ${errors.join(', ')}` : 'Данните са обновени.', Boolean(errors.length));
+    try { await loadStatus(true); } catch (_) {}
   } catch (error) {
     showMessage(button.closest('.channel-live-panel'), `Грешка: ${error.message}`, true);
   } finally {
@@ -167,9 +173,12 @@ window.addEventListener('focus', async () => {
 
 const app = getApps()[0];
 if (app) {
-  onAuthStateChanged(getAuth(app), user => {
+  onAuthStateChanged(getAuth(app), async user => {
     statusCache = null;
-    if (user) decorateVisibleShells();
+    if (user) {
+      try { await loadStatus(true); } catch (_) {}
+      decorateVisibleShells();
+    }
   });
 }
 
