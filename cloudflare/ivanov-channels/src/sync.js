@@ -10,16 +10,53 @@ const BUSINESS_METRICS = [
   'BUSINESS_DIRECTION_REQUESTS',
 ];
 
-const SOFIA_PAGE_FILTERS = [
-  { dimension: 'page', operator: 'notContains', expression: '/lom/' },
-  { dimension: 'page', operator: 'notContains', expression: '/montana/' },
-  { dimension: 'page', operator: 'notContains', expression: '/en/' },
-  { dimension: 'page', operator: 'notContains', expression: '/de/' },
-  { dimension: 'page', operator: 'notContains', expression: '/narachnik/' },
-];
-
-const LOM_PAGE_FILTERS = [
-  { dimension: 'page', operator: 'contains', expression: '/lom/' },
+const SEARCH_SITE_PROFILES = [
+  {
+    slug: 'sofia',
+    label: 'София',
+    city: 'София',
+    pageFilters: [
+      { dimension: 'page', operator: 'notContains', expression: '/lom' },
+      { dimension: 'page', operator: 'notContains', expression: '/montana' },
+      { dimension: 'page', operator: 'notContains', expression: '/en/' },
+      { dimension: 'page', operator: 'notContains', expression: '/de/' },
+      { dimension: 'page', operator: 'notContains', expression: '/narachnik' },
+    ],
+  },
+  {
+    slug: 'lom',
+    label: 'Лом',
+    city: 'Лом',
+    pageFilters: [
+      { dimension: 'page', operator: 'contains', expression: '/lom' },
+      { dimension: 'page', operator: 'notContains', expression: '/en/' },
+      { dimension: 'page', operator: 'notContains', expression: '/de/' },
+    ],
+  },
+  {
+    slug: 'montana',
+    label: 'Монтана',
+    city: 'Монтана',
+    pageFilters: [
+      { dimension: 'page', operator: 'contains', expression: '/montana' },
+    ],
+  },
+  {
+    slug: 'lom-en',
+    label: 'Лом EN',
+    city: 'Лом',
+    pageFilters: [
+      { dimension: 'page', operator: 'contains', expression: '/en/' },
+    ],
+  },
+  {
+    slug: 'lom-de',
+    label: 'Лом DE',
+    city: 'Лом',
+    pageFilters: [
+      { dimension: 'page', operator: 'contains', expression: '/de/' },
+    ],
+  },
 ];
 
 function isoDay(date) {
@@ -76,6 +113,28 @@ async function batchDailyRows(env, provider, profileKey, rows, metadata = {}) {
     points += 4;
   }
   if (statements.length) await env.DB.batch(statements);
+  return points;
+}
+
+async function replaceDailyRows(env, provider, profileKey, start, end, rows, metadata = {}) {
+  const statements = [
+    env.DB.prepare(
+      'DELETE FROM channel_daily WHERE provider=? AND profile_key=? AND day>=? AND day<=?',
+    ).bind(provider, profileKey, start, end),
+  ];
+  let points = 0;
+  for (const row of rows || []) {
+    const day = row.keys?.[0];
+    if (!day) continue;
+    statements.push(
+      dailyUpsertStatement(env, provider, profileKey, day, 'CLICKS', row.clicks || 0, metadata),
+      dailyUpsertStatement(env, provider, profileKey, day, 'IMPRESSIONS', row.impressions || 0, metadata),
+      dailyUpsertStatement(env, provider, profileKey, day, 'CTR', row.ctr || 0, metadata),
+      dailyUpsertStatement(env, provider, profileKey, day, 'POSITION', row.position || 0, metadata),
+    );
+    points += 4;
+  }
+  await env.DB.batch(statements);
   return points;
 }
 
@@ -157,7 +216,7 @@ async function replaceRankings(env, profileKey, start, end, dimension, rows) {
   await env.DB.batch(statements);
 }
 
-async function upsertDerivedSearchProfile(env, profileKey, externalId, label, city, sourceProfileKey) {
+async function upsertDerivedSearchProfile(env, profileKey, externalId, label, city, sourceProfileKey, site) {
   const now = new Date().toISOString();
   await env.DB.prepare(`
     INSERT INTO channel_profiles(provider, profile_key, external_id, label, city, status, metadata_json, updated_at)
@@ -169,7 +228,7 @@ async function upsertDerivedSearchProfile(env, profileKey, externalId, label, ci
       status='connected',
       metadata_json=excluded.metadata_json,
       updated_at=excluded.updated_at
-  `).bind(profileKey, externalId, label, city, JSON.stringify({ derived: true, sourceProfileKey }), now).run();
+  `).bind(profileKey, externalId, label, city, JSON.stringify({ derived: true, sourceProfileKey, site }), now).run();
 }
 
 async function searchConsoleFilteredQuery(accessToken, siteUrl, startDate, endDate, dimensions = [], pageFilters = [], rowLimit = 250) {
@@ -206,10 +265,18 @@ function rootIvanovProfile(profiles) {
     || null;
 }
 
-async function syncDerivedCityProfile(env, accessToken, sourceProfile, city, pageFilters, dailyRange, rankingRange) {
-  const slug = city === 'Лом' ? 'lom' : 'sofia';
-  const profileKey = `sc-city:${slug}`;
-  await upsertDerivedSearchProfile(env, profileKey, sourceProfile.external_id, `Ivanov Remonti ${city}`, city, sourceProfile.profile_key);
+async function syncDerivedSiteProfile(env, accessToken, sourceProfile, config, dailyRange, rankingRange) {
+  const profileKey = `sc-city:${config.slug}`;
+  const metadata = { city: config.city, site: config.slug, derived: true };
+  await upsertDerivedSearchProfile(
+    env,
+    profileKey,
+    sourceProfile.external_id,
+    `Ivanov Remonti ${config.label}`,
+    config.city,
+    sourceProfile.profile_key,
+    config.slug,
+  );
 
   const daily = await searchConsoleFilteredQuery(
     accessToken,
@@ -217,14 +284,22 @@ async function syncDerivedCityProfile(env, accessToken, sourceProfile, city, pag
     dailyRange.start,
     dailyRange.end,
     ['date'],
-    pageFilters,
+    config.pageFilters,
     100,
   );
-  const points = await batchDailyRows(env, 'search_console', profileKey, daily.rows || [], { city, derived: true });
+  const points = await replaceDailyRows(
+    env,
+    'search_console',
+    profileKey,
+    dailyRange.start,
+    dailyRange.end,
+    daily.rows || [],
+    metadata,
+  );
 
   const [queries, pages] = await Promise.all([
-    searchConsoleFilteredQuery(accessToken, sourceProfile.external_id, rankingRange.start, rankingRange.end, ['query'], pageFilters, 250),
-    searchConsoleFilteredQuery(accessToken, sourceProfile.external_id, rankingRange.start, rankingRange.end, ['page'], pageFilters, 250),
+    searchConsoleFilteredQuery(accessToken, sourceProfile.external_id, rankingRange.start, rankingRange.end, ['query'], config.pageFilters, 250),
+    searchConsoleFilteredQuery(accessToken, sourceProfile.external_id, rankingRange.start, rankingRange.end, ['page'], config.pageFilters, 250),
   ]);
   await Promise.all([
     replaceRankings(env, profileKey, rankingRange.start, rankingRange.end, 'query', queries.rows || []),
@@ -258,14 +333,17 @@ export async function syncSearchConsole(env, days = 10) {
   const root = rootIvanovProfile(sourceProfiles);
   if (root) {
     const accessToken = await googleAccessToken(env, 'search_console');
-    const [lomPoints, sofiaPoints] = await Promise.all([
-      syncDerivedCityProfile(env, accessToken, root, 'Лом', LOM_PAGE_FILTERS, dailyRange, rankingRange),
-      syncDerivedCityProfile(env, accessToken, root, 'София', SOFIA_PAGE_FILTERS, dailyRange, rankingRange),
-    ]);
-    points += lomPoints + sofiaPoints;
+    for (const config of SEARCH_SITE_PROFILES) {
+      points += await syncDerivedSiteProfile(env, accessToken, root, config, dailyRange, rankingRange);
+    }
   }
 
-  return { provider: 'search_console', profiles: sourceProfiles.length, derivedProfiles: root ? 2 : 0, points };
+  return {
+    provider: 'search_console',
+    profiles: sourceProfiles.length,
+    derivedProfiles: root ? SEARCH_SITE_PROFILES.length : 0,
+    points,
+  };
 }
 
 export async function syncConnectedGoogleChannels(env) {
