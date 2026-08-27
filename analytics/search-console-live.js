@@ -40,4 +40,6 @@ function decorate(){document.querySelectorAll('[data-external-shell="search"]').
 function forceDecorate(delay=120){renderToken++;setTimeout(()=>{document.querySelectorAll('[data-external-shell="search"]').forEach(shell=>{shell.dataset.scLiveLoading='0'});decorate()},delay)}
 
 const observer=new MutationObserver(()=>decorate());observer.observe(document.documentElement,{childList:true,subtree:true});
-['siteFilter','periodFilter','dateFrom','dateTo'].forEach(id=>document.querySelector(`#${id}`)?.addEventListener('change',()=>forceDecorate()));document.querySelector('#refreshBtn')?.addEventListener('click',()=>forceDecorate());window.addEventListener('focus',()=>forceDecorate(80));decorate();
+document.addEventListener('change',event=>{if(['siteFilter','periodFilter','dateFrom','dateTo'].includes(event.target?.id))forceDecorate(180)});
+document.addEventListener('click',event=>{const target=event.target instanceof Element?event.target:null;if(target?.closest('#refreshBtn,[data-external-view="search"],[data-channel="search"]'))forceDecorate(180)});
+window.addEventListener('focus',()=>forceDecorate(80));decorate();
