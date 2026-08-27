@@ -86,43 +86,8 @@ function toggleCustomDates(){
   $('#dateTo').classList.toggle('hidden',!custom);
 }
 
-function range(){
-  const now=new Date();
-  const start=new Date(now);
-  const end=new Date(now);
-  end.setHours(23,59,59,999);
-  const period=$('#periodFilter').value;
-  if(period==='today')start.setHours(0,0,0,0);
-  if(period==='yesterday'){
-    start.setDate(start.getDate()-1);
-    start.setHours(0,0,0,0);
-    end.setDate(end.getDate()-1);
-  }
-  if(period==='7d'){
-    start.setDate(start.getDate()-6);
-    start.setHours(0,0,0,0);
-  }
-  if(period==='30d'){
-    start.setDate(start.getDate()-29);
-    start.setHours(0,0,0,0);
-  }
-  if(period==='month'){
-    start.setDate(1);
-    start.setHours(0,0,0,0);
-  }
-  if(period==='custom'){
-    if($('#dateFrom').value)start.setTime(new Date($('#dateFrom').value+'T00:00:00').getTime());
-    if($('#dateTo').value)end.setTime(new Date($('#dateTo').value+'T23:59:59.999').getTime());
-  }
-  return{start,end};
-}
-
-function previousRange(currentRange){
-  const duration=currentRange.end-currentRange.start+1;
-  const end=new Date(currentRange.start.getTime()-1);
-  const start=new Date(end.getTime()-duration+1);
-  return{start,end};
-}
+function range(){return window.IvanovPeriods.rangeFromControls()}
+function previousRange(currentRange){return window.IvanovPeriods.previousRange(currentRange)}
 
 async function fetchEvents(timeRange){
   const eventQuery=query(
