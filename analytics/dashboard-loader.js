@@ -15,14 +15,24 @@ async function loadDashboard() {
     source = source
       .replace('./firebase-config.js?v=20260818-5', firebaseConfigUrl)
       .replace('./sites.js?v=20260818-5', sitesUrl);
-    const before = source;
+    const beforeEventSource = source;
     source = source.replace(
       /async function fetchEvents\(timeRange\)\{[\s\S]*?\n\}\n\nasync function load/,
       "async function fetchEvents(timeRange){return normalizeAttribution(await window.__ivanovFetchAnalyticsEvents(timeRange));}\n\nasync function load",
     );
-    if (source === before || !source.includes('window.__ivanovFetchAnalyticsEvents(timeRange)')) {
+    if (source === beforeEventSource || !source.includes('window.__ivanovFetchAnalyticsEvents(timeRange)')) {
       throw new Error('dashboard_event_source_patch_not_applied');
     }
+
+    const beforeAverage = source;
+    source = source.replace(
+      "  const endings=by(items,'session_end').map(event=>+event.activeSeconds||0).filter(value=>value>=0);\n  const average=endings.length?endings.reduce((sum,value)=>sum+value,0)/endings.length:0;",
+      "  const activeBySession=new Map();\n  by(items,'session_end').forEach(event=>{\n    const key=event.sessionId||event.id;\n    if(!key)return;\n    activeBySession.set(key,(activeBySession.get(key)||0)+Math.max(0,+event.activeSeconds||0));\n  });\n  const sessionActive=[...activeBySession.values()];\n  const average=sessionActive.length?sessionActive.reduce((sum,value)=>sum+value,0)/sessionActive.length:0;",
+    );
+    if (source === beforeAverage || !source.includes('const activeBySession=new Map();')) {
+      throw new Error('dashboard_session_average_patch_not_applied');
+    }
+
     const blobUrl = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
     try {
       await import(blobUrl);
