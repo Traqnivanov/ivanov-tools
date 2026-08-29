@@ -7,6 +7,7 @@ const SOFIA_PARTS = new Intl.DateTimeFormat('en-CA', {
   hourCycle: 'h23',
 });
 
+const FIRST_COMPLETE_D1_DAY = '2026-08-30';
 const BUSINESS_EVENTS = new Set(['phone_click', 'viber_click', 'form_success']);
 const INTEREST_EVENTS = new Set(['gallery_open', 'video_play', 'faq_open', 'price_open', 'contact_open']);
 const ACTION_EVENTS = new Set([
@@ -247,17 +248,27 @@ export async function refreshAnalyticsSummaries(env) {
   const recentDaily = [];
   for (let daysAgo = 1; daysAgo <= 3; daysAgo++) {
     const day = shiftIsoDay(today, -daysAgo);
+    if (day < FIRST_COMPLETE_D1_DAY) {
+      recentDaily.push({ day, skipped: 'before_complete_d1_coverage' });
+      continue;
+    }
     const nextDay = shiftIsoDay(day, 1);
     const result = await summarizeRange(env, 'analytics_daily_summaries', day, day, nextDay);
     recentDaily.push({ day, ...result });
   }
-  const daily = recentDaily[0];
+  const daily = recentDaily[0] || null;
 
   const month = currentMonthSofia();
   const monthStart = `${month}-01`;
   const [year, monthNumber] = month.split('-').map(Number);
   const nextMonthStart = new Date(Date.UTC(year, monthNumber, 1)).toISOString().slice(0, 10);
-  const monthly = await summarizeRange(env, 'analytics_monthly_summaries', month, monthStart, nextMonthStart);
+  let monthly;
+  if (monthStart < FIRST_COMPLETE_D1_DAY) {
+    monthly = { month, skipped: 'partial_d1_month' };
+  } else {
+    const result = await summarizeRange(env, 'analytics_monthly_summaries', month, monthStart, nextMonthStart);
+    monthly = { month, ...result };
+  }
 
   let previousMonthly = null;
   const dayOfMonth = Number(today.slice(8, 10));
@@ -265,20 +276,24 @@ export async function refreshAnalyticsSummaries(env) {
     const previousMonthLastDay = shiftIsoDay(monthStart, -1);
     const previousMonth = previousMonthLastDay.slice(0, 7);
     const previousMonthStart = `${previousMonth}-01`;
-    const result = await summarizeRange(
-      env,
-      'analytics_monthly_summaries',
-      previousMonth,
-      previousMonthStart,
-      monthStart,
-    );
-    previousMonthly = { month: previousMonth, ...result };
+    if (previousMonthStart < FIRST_COMPLETE_D1_DAY) {
+      previousMonthly = { month: previousMonth, skipped: 'partial_d1_month' };
+    } else {
+      const result = await summarizeRange(
+        env,
+        'analytics_monthly_summaries',
+        previousMonth,
+        previousMonthStart,
+        monthStart,
+      );
+      previousMonthly = { month: previousMonth, ...result };
+    }
   }
 
   return {
     daily,
     recentDaily,
-    monthly: { month, ...monthly },
+    monthly,
     previousMonthly,
   };
 }
