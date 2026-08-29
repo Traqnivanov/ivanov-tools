@@ -1,6 +1,6 @@
 import{normalizePath,siteFromPath}from'./sites.js?v=20260818-5';
 
-const VERSION='2.1.10';
+const VERSION='2.1.11';
 const INGEST_ENDPOINT='https://ivanov-channels.traqnivanov1.workers.dev/ingest';
 const GEO_ENDPOINT='https://ivanov-geo.traqnivanov1.workers.dev/';
 const EXCLUDE_KEY='ivanov_analytics_excluded';
@@ -292,7 +292,10 @@ if(!adminAction&&!excluded&&!isObviousBot()){
 
   function updateActive(){
     const now=Date.now();
-    if(visible)active+=Math.max(0,(now-last)/1000);
+    if(visible){
+      const activeUntil=Math.min(now,lastActivityAt+SESSION_TIMEOUT_MS);
+      if(activeUntil>last)active+=(activeUntil-last)/1000;
+    }
     last=now;
   }
   setInterval(()=>{
