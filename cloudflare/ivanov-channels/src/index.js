@@ -12,6 +12,7 @@ import {
   parseAnalyticsEvent,
   storeAnalyticsEvent,
 } from './analytics.js';
+import { listAnalyticsSummaries, refreshAnalyticsSummaries } from './summaries.js';
 
 const GOOGLE_PROVIDERS = new Set(['google_business', 'search_console']);
 
@@ -233,6 +234,15 @@ async function handleFetch(request, env) {
     return result.error ? json(env, { error: result.error }, result.status, origin) : json(env, { data: result.data }, 200, origin);
   }
 
+  if (request.method === 'GET' && url.pathname === '/api/analytics/summaries') {
+    const auth = await ownerOrResponse(request, env, origin);
+    if (auth.response) return auth.response;
+    const result = await listAnalyticsSummaries(env, url);
+    return result.error
+      ? json(env, { error: result.error }, result.status, origin)
+      : json(env, { configured: result.configured, data: result.data }, 200, origin);
+  }
+
   if (request.method === 'POST' && url.pathname === '/api/sync') {
     const auth = await ownerOrResponse(request, env, origin);
     if (auth.response) return auth.response;
@@ -259,6 +269,7 @@ export default {
   async scheduled(controller, env) {
     await cleanup(env);
     const results = await syncConnectedGoogleChannels(env);
-    console.log('ivanov-channels scheduled sync', controller.cron, results);
+    const summaries = await refreshAnalyticsSummaries(env);
+    console.log('ivanov-channels scheduled sync', controller.cron, { google: results, analyticsSummaries: summaries });
   },
 };
