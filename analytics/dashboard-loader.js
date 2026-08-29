@@ -29,6 +29,12 @@ async function loadDashboard() {
     }
   } catch (error) {
     console.warn('Stage 3 dashboard loader fallback.', error);
+    window.__ivanovDashboardLegacyFallback = {
+      active: true,
+      message: String(error?.message || 'dashboard_loader_failed'),
+      at: new Date().toISOString(),
+    };
+    window.dispatchEvent(new CustomEvent('ivanov:analytics-loader-fallback', { detail: window.__ivanovDashboardLegacyFallback }));
     await import('./dashboard.js?v=20260827-stage1e');
   }
 }
