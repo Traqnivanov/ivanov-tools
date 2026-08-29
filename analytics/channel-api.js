@@ -5,7 +5,9 @@ import { CHANNEL_WORKER_BASE } from './channel-config.js?v=20260827-stage1f';
 const STATUS_CACHE_MS = 5000;
 let statusCache = null;
 let statusCachedAt = 0;
+let statusUid = '';
 let statusPromise = null;
+let statusPromiseUid = '';
 
 export function channelAuthUser() {
   const app = getApps()[0];
@@ -38,19 +40,38 @@ function publishStatus(data) {
 export function invalidateChannelStatus() {
   statusCache = null;
   statusCachedAt = 0;
+  statusUid = '';
+  statusPromise = null;
+  statusPromiseUid = '';
 }
 
 export async function loadChannelStatus({ force = false } = {}) {
-  if (statusPromise) return statusPromise;
+  const user = channelAuthUser();
+  if (!user) {
+    invalidateChannelStatus();
+    throw new Error('Няма активен вход в Ivanov Analytics.');
+  }
+  const uid = user.uid;
   const now = Date.now();
-  if (!force && statusCache && now - statusCachedAt < STATUS_CACHE_MS) return statusCache;
-  statusPromise = channelOwnerFetch('/api/status')
+  if (statusPromise && statusPromiseUid === uid) return statusPromise;
+  if (!force && statusCache && statusUid === uid && now - statusCachedAt < STATUS_CACHE_MS) return statusCache;
+
+  const request = channelOwnerFetch('/api/status')
     .then(data => {
+      if (channelAuthUser()?.uid !== uid) throw new Error('Auth сесията е променена.');
       statusCache = data;
       statusCachedAt = Date.now();
+      statusUid = uid;
       publishStatus(data);
       return data;
     })
-    .finally(() => { statusPromise = null; });
-  return statusPromise;
+    .finally(() => {
+      if (statusPromise === request) {
+        statusPromise = null;
+        statusPromiseUid = '';
+      }
+    });
+  statusPromise = request;
+  statusPromiseUid = uid;
+  return request;
 }
