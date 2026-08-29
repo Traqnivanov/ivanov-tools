@@ -1,5 +1,10 @@
+import { getApps } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
+import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
+import { CHANNEL_WORKER_BASE } from './channel-config.js?v=20260827-stage1f';
+
 const view=document.querySelector('#view');
 let latestChannelStatus=null;
+let statusLoading=false;
 
 const CHANNELS=[
   {key:'business',label:'Google Business',detail:'Лом · София',status:'Свързването предстои'},
@@ -31,6 +36,24 @@ function applyLiveStatuses(root=document){
   });
 }
 
+async function refreshStatus(){
+  if(statusLoading)return;
+  const app=getApps()[0];
+  const user=app?getAuth(app).currentUser:null;
+  if(!user)return;
+  statusLoading=true;
+  try{
+    const token=await user.getIdToken();
+    const response=await fetch(`${CHANNEL_WORKER_BASE}/api/status`,{headers:{Authorization:`Bearer ${token}`},cache:'no-store'});
+    if(!response.ok)return;
+    latestChannelStatus=await response.json();
+    applyLiveStatuses();
+  }catch(_){
+  }finally{
+    statusLoading=false;
+  }
+}
+
 function mount(){
   const shell=view?.querySelector('[data-summary-final]');
   if(!shell||shell.querySelector('[data-summary-channels]'))return;
@@ -40,8 +63,9 @@ function mount(){
   card.innerHTML=`<div class="summary-channel-head"><div><span>Външни канали</span><h2>Още откъде идва бизнесът</h2></div><small>Подробностите са в Канали</small></div><div class="summary-channel-grid">${CHANNELS.map(channel=>`<button type="button" data-summary-channel="${channel.key}"><span><strong>${channel.label}</strong><small>${channel.detail}</small></span><em>${channel.status}</em><b>→</b></button>`).join('')}</div>`;
   shell.appendChild(card);
   applyLiveStatuses(card);
+  refreshStatus();
   card.querySelectorAll('[data-summary-channel]').forEach(button=>button.addEventListener('click',()=>{
-    document.querySelector(`.nav button[data-external-view="${button.dataset.summaryChannel}"]`)?.click();
+    document.querySelector(`.nav [data-external-view="${button.dataset.summaryChannel}"]`)?.click();
   }));
 }
 
@@ -49,6 +73,14 @@ window.addEventListener('ivanov:channel-status',event=>{
   latestChannelStatus=event.detail||null;
   applyLiveStatuses();
 });
+
+window.addEventListener('focus',refreshStatus);
+let attempts=0;
+const authWait=setInterval(()=>{
+  attempts++;
+  refreshStatus();
+  if(latestChannelStatus||attempts>=40)clearInterval(authWait);
+},250);
 
 if(view){
   new MutationObserver(mount).observe(view,{childList:true,subtree:true});
