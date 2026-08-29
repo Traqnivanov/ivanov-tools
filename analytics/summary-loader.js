@@ -1,27 +1,12 @@
-import{getApps,getApp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
-import{getFirestore,collection,getDocs,query,where,orderBy,limit,Timestamp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+import{getApps}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
+import{fetchAnalyticsEvents}from'./event-source.js?v=20260827-stage3';
 
 const view=document.querySelector('#view');
 let loaded=false;
 let initRetry=0;
 
 async function liveEvents(r){
-  const db=getFirestore(getApp());
-  const q=query(
-    collection(db,'analytics_events'),
-    where('timestamp','>=',Timestamp.fromDate(r.start)),
-    where('timestamp','<=',Timestamp.fromDate(r.end)),
-    orderBy('timestamp','desc'),
-    limit(10000)
-  );
-  const snap=await getDocs(q);
-  return snap.docs.map(doc=>{
-    const x=doc.data();
-    let pagePath=String(x.pagePath||'/').split('?')[0].split('#')[0]||'/';
-    if(!pagePath.startsWith('/'))pagePath='/'+pagePath;
-    while(pagePath.includes('//'))pagePath=pagePath.replace('//','/');
-    return{id:doc.id,...x,pagePath,date:x.timestamp?.toDate?.()||new Date()};
-  });
+  return fetchAnalyticsEvents(r);
 }
 
 window.__ivanovSummaryLiveEvents=liveEvents;
