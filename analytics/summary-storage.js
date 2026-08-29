@@ -58,7 +58,7 @@ async function refresh(){
 
 function mount(){
   apply(view||document);
-  refresh();
+  if(!latestStatus)refresh();
 }
 
 function bindAuth(){
