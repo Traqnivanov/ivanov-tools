@@ -15,6 +15,20 @@ function rangeKey(range) {
   return `${range.start.getTime()}:${range.end.getTime()}`;
 }
 
+function publishSourceHealth(firestoreResult, d1Result) {
+  const detail = {
+    firestore: firestoreResult.status === 'fulfilled',
+    d1: d1Result.status === 'fulfilled',
+    partial: firestoreResult.status !== d1Result.status,
+    unavailable: firestoreResult.status === 'rejected' && d1Result.status === 'rejected',
+    firestoreError: firestoreResult.status === 'rejected' ? String(firestoreResult.reason?.message || 'firestore_unavailable') : '',
+    d1Error: d1Result.status === 'rejected' ? String(d1Result.reason?.message || 'd1_unavailable') : '',
+    checkedAt: new Date().toISOString(),
+  };
+  window.__ivanovAnalyticsSourceStatus = detail;
+  window.dispatchEvent(new CustomEvent('ivanov:analytics-source-status', { detail }));
+}
+
 function firestoreEvent(doc) {
   const data = doc.data();
   return {
@@ -79,6 +93,7 @@ async function loadRange(range) {
     fetchFirestoreEvents(range),
     fetchD1Events(range),
   ]);
+  publishSourceHealth(firestoreResult, d1Result);
   const firestore = firestoreResult.status === 'fulfilled' ? firestoreResult.value : [];
   const d1 = d1Result.status === 'fulfilled' ? d1Result.value : [];
   if (!firestore.length && !d1.length && firestoreResult.status === 'rejected' && d1Result.status === 'rejected') {
