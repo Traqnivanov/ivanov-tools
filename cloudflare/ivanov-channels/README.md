@@ -14,7 +14,7 @@ Current production responsibilities:
 - owner-only analytics reads through Firebase Authentication;
 - Google Search Console authorization, profile partitioning and scheduled synchronization;
 - Google Business authorization and Worker support; location access is currently blocked externally by Google Business Profile API approval/quota;
-- daily/monthly D1 analytics summaries refreshed by cron;
+- resilient daily/monthly D1 analytics summaries refreshed by cron;
 - protected channel/status/data/ranking APIs used by the owner dashboard.
 
 Production cron is exactly:
@@ -40,13 +40,19 @@ Production D1 contains:
 - `analytics_daily_summaries`
 - `analytics_monthly_summaries`
 
-The Worker refreshes yesterday's daily summary and the current monthly summary from the scheduled cron. Summary day boundaries use `Europe/Sofia`.
+The Worker recalculates the last 3 completed `Europe/Sofia` days on every cron run. This gives automatic recovery from a missed daily cron without requiring a manual scheduled-handler trigger.
+
+The current monthly summary is refreshed on every cron run. During the first 3 Sofia days of a new month, the Worker also recalculates the just-closed previous month so events recorded after the last cron on the final calendar day are not permanently omitted.
+
+Summary day boundaries use `Europe/Sofia`.
 
 Summary engagement semantics match the dashboard: a session is engaged when it has at least 30 seconds of active time or at least 50% scroll depth.
 
 The protected endpoint is:
 
 `GET /api/analytics/summaries?period=daily|monthly&from=...&to=...&site=...`
+
+Daily/monthly summary rows are period snapshots. Do not blindly sum unique-session counts across multiple summary buckets: one browser session can cross a day or month boundary. Long-range dashboard consumption must preserve exact session semantics before replacing detailed-event KPIs.
 
 No automatic raw-event retention/deletion is enabled. Retention must not be activated without a separate explicit production decision and verification that long-term reporting is safely covered.
 
