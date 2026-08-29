@@ -1,62 +1,73 @@
 # Ivanov Analytics
 
-Качи цялата папка `analytics` в репото `Traqnivanov/ivanov-tools`.
-
-Очакван адрес:
+Production dashboard:
 `https://traqnivanov.github.io/ivanov-tools/analytics/`
 
-## Преди теста
-Във Firebase Console отвори Firestore Database → Rules и публикувай съдържанието на `firestore.rules`.
-Тези правила дават публично само право за създаване на строго проверени аналитични събития. Четенето, редакцията и изтриването са само за твоя UID.
+## Current architecture
 
-## Тест на една страница
-Преди `</body>` добави:
+- Public tracker sends analytics events to Cloudflare Worker `ivanov-channels`.
+- Worker validates and rate-limits public ingest and stores new analytics events in D1.
+- Firestore is owner-only and remains the historical source for older analytics data.
+- Dashboard merges historical Firestore data with newer D1 events.
+- Owner-only Worker APIs expose protected channel, event and summary data.
+- Google/Search integrations are synchronized by backend cron, not by frontend manual sync.
+- Production cron is `17 3 * * *`.
 
-```html
-<script type="module" src="https://traqnivanov.github.io/ivanov-tools/analytics/tracker.js"></script>
-```
+## What is tracked
 
-## Какво отчита
-- отваряния и временни сесии;
-- надеждни прагове за ангажираност: 15, 30, 60, 120 и 300 секунди;
-- скрол 25%, 50%, 75%, 90%;
-- телефон, Viber и изпращане на форма;
-- първоначален източник за цялата сесия, UTM и Google Ads `gclid` attribution;
-- устройство, браузър и операционна система;
-- приблизителен град и държава чрез `ivanov-geo`, без да се записва пълен IP адрес в Analytics.
+- page views and temporary sessions;
+- engagement thresholds and scroll depth;
+- phone, Viber and successful form actions;
+- initial source for the session, UTM and Google Ads attribution;
+- device, browser and operating system;
+- approximate city and country through `ivanov-geo`.
 
-Не записва име, телефон, текст от форма, пълен IP или fingerprint.
+The analytics event store does not record name, phone number, form text, full IP address or persistent fingerprint. IP is used only transiently by the Worker rate limiter and is not stored in analytics data.
 
-## Geo и форми
-Geo заявката се прави веднъж на сесия и връща само приблизителен град и държава. Tracker-ът записва отделно `session_geo` събитие с тези две стойности.
+## Geo and forms
 
-`form_submit` се отчита при submit. За потвърден успешен резултат се използва `ivanov:form-success`, когато формата върне успешен отговор.
+Geo is requested once per session and stored as a separate `session_geo` event containing only approximate city and country.
 
-## Табло
+`form_submit` records a submit attempt. `form_success` is recorded only after the site confirms a successful form result.
 
-Таблото е подредено в пет основни раздела:
+## Dashboard
 
-- „Обобщение“ — бизнес резултати и запазена техническа статистика;
-- „Всички страници“ — всичките 24 следени страници, включително тези без посещения;
-- индивидуално досие на страница — час на отваряне, източник, устройство, ангажираност, скрол и действие;
-- „Резултати“ и „Източници“ — кликове за обаждане, Viber, форми, кампании и конверсия;
-- „Система и настройки“ — tracker версия, последно събитие, поверителност и контрол на собствените устройства.
+Main areas include:
 
-Автоматично изтриване след 90 дни и дневни/месечни обобщения още не са активирани. Таблото го показва изрично, вместо да представя планирани срокове като работеща функционалност.
+- `Обобщение` — business-focused overview;
+- `Всички страници` — tracked pages including pages with zero visits;
+- per-page statistics;
+- `Резултати` and `Източници`;
+- external channel views for Google Business, Search Console and Google Ads tracker attribution;
+- `Система и настройки` — technical and storage status.
 
-## Инсталиране като приложение
+## Daily and monthly summaries
 
-След качване на файловете отвори:
+Stage 5 daily/monthly summary infrastructure is active in production D1:
 
+- `analytics_daily_summaries`
+- `analytics_monthly_summaries`
+
+The Worker refreshes summaries from the scheduled cron. Summary calculations use `Europe/Sofia` day boundaries and are aligned with dashboard engagement semantics before they are used for long-range business reporting.
+
+The dashboard has a protected live status check for the summary system. Until the first scheduled summary rows exist, it reports that the system is active and waiting for the first cron-generated summary rather than pretending data already exists.
+
+## Retention
+
+Automatic 90-day event deletion is **not enabled**.
+
+No retention cleanup should be activated without a separate explicit production decision and verification that required long-term reporting is safely covered by summaries.
+
+## External channels
+
+- Search Console: connected and cron-driven.
+- Google Business: OAuth authorization exists, but Business Profile API location access is currently waiting on Google API approval/quota.
+- Google Ads: dashboard attribution is based on tracker/UTM data; it is not presented as a direct Google Ads API integration.
+- Facebook/Meta: future work; no production Meta API integration is active.
+
+## App installation
+
+Open:
 `https://traqnivanov.github.io/ivanov-tools/analytics/`
 
-### Android / Chrome
-Натисни бутона „Инсталирай приложението“ в горната лента или менюто на Chrome → „Добавяне към началния екран“.
-
-### Windows / Chrome или Edge
-Отвори таблото и натисни „Инсталирай приложението“. Ще се появи като отделна програма и икона.
-
-### iPhone / iPad
-Отвори таблото в Safari → Споделяне → „Добавяне към началния екран“.
-
-След инсталиране приложението се отваря в собствен прозорец. Данните продължават да идват от Firebase.
+The dashboard can be installed as a PWA from supported browsers/devices. Analytics data continues to be read from the protected production sources described above.
