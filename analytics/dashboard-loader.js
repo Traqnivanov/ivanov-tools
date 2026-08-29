@@ -1,6 +1,8 @@
-import { fetchAnalyticsEvents } from './event-source.js?v=20260829-stage5m';
+import { fetchAnalyticsEvents, clearAnalyticsEventCache } from './event-source.js?v=20260829-stage5m';
 
 window.__ivanovFetchAnalyticsEvents = fetchAnalyticsEvents;
+
+document.querySelector('#refreshBtn')?.addEventListener('click', clearAnalyticsEventCache, { capture: true });
 
 async function loadDashboard() {
   const sourceUrl = './dashboard.js?v=20260827-stage1e';
