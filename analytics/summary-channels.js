@@ -17,12 +17,19 @@ function liveStatusFor(key,status){
   if(!provider)return null;
   const connection=(status.connections||[]).find(item=>item.provider===provider);
   let profiles=(status.profiles||[]).filter(item=>item.provider===provider);
+  let partialSearch=false;
   if(provider==='search_console'){
     const siteProfiles=profiles.filter(item=>String(item.profile_key||'').startsWith('sc-city:'));
-    if(siteProfiles.length>=5)profiles=siteProfiles;
+    if(siteProfiles.length){
+      profiles=siteProfiles;
+      partialSearch=siteProfiles.length<5;
+    }
   }
   if(!connection)return 'Свързването предстои';
-  if(profiles.length)return `Свързано · ${profiles.length} профила`;
+  if(profiles.length){
+    if(provider==='search_console'&&partialSearch)return `Свързано · частично · ${profiles.length}/5 профила`;
+    return `Свързано · ${profiles.length} профила`;
+  }
   return key==='business'?'Разрешено · чака API':'Разрешено';
 }
 
