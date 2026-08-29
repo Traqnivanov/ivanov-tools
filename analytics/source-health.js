@@ -52,9 +52,12 @@ function render() {
   const node = existing || document.createElement('span');
   node.id = WARNING_ID;
   node.setAttribute('role', 'status');
-  node.textContent = text;
-  node.title = warningTitle();
-  node.style.cssText = 'display:inline-flex;align-items:center;gap:6px;max-width:340px;padding:7px 10px;border:1px solid currentColor;border-radius:8px;font-size:12px;font-weight:700;line-height:1.25;white-space:normal;';
+  if (node.textContent !== text) node.textContent = text;
+  const title = warningTitle();
+  if (node.title !== title) node.title = title;
+  if (!node.style.cssText) {
+    node.style.cssText = 'display:inline-flex;align-items:center;gap:6px;max-width:340px;padding:7px 10px;border:1px solid currentColor;border-radius:8px;font-size:12px;font-weight:700;line-height:1.25;white-space:normal;';
+  }
   if (!existing && topbar) {
     const spacer = topbar.querySelector('.spacer');
     topbar.insertBefore(node, spacer || null);
@@ -67,5 +70,4 @@ window.addEventListener('ivanov:analytics-source-status', event => {
 });
 window.addEventListener('ivanov:analytics-loader-fallback', render);
 ['periodFilter', 'dateFrom', 'dateTo'].forEach(id => document.querySelector(`#${id}`)?.addEventListener('change', render));
-new MutationObserver(render).observe(document.documentElement, { childList: true, subtree: true });
 render();
