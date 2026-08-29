@@ -68,24 +68,6 @@ async function startOAuth(provider, button) {
   }
 }
 
-async function syncChannels(button) {
-  const original = button.textContent;
-  button.disabled = true;
-  button.textContent = 'Обновявам…';
-  try {
-    const data = await ownerFetch('/api/sync', { method: 'POST' });
-    statusCache = null;
-    const errors = (data.results || []).filter(item => item?.error).map(item => item.error);
-    showMessage(button.closest('.channel-live-panel'), errors.length ? `Обновяването завърши с: ${errors.join(', ')}` : 'Данните са обновени.', Boolean(errors.length));
-    try { await loadStatus(true); } catch (_) {}
-  } catch (error) {
-    showMessage(button.closest('.channel-live-panel'), `Грешка: ${error.message}`, true);
-  } finally {
-    button.disabled = false;
-    button.textContent = original;
-  }
-}
-
 function showMessage(panel, text, isError = false) {
   if (!panel) return;
   let node = panel.querySelector('.channel-live-message');
@@ -100,9 +82,9 @@ function showMessage(panel, text, isError = false) {
 
 function statusText(type, info) {
   if (!info.connection) return type === 'business' ? 'Google Business още не е свързан.' : 'Search Console още не е свързан.';
-  if (info.profiles.length) return `Свързано: ${info.profiles.length} профил${info.profiles.length === 1 ? '' : 'а'}.`;
-  if (type === 'business') return 'Google разрешението е записано. Чака се достъпът до Business Profile API, за да бъдат открити профилите.';
-  return 'Google разрешението е записано, но още няма открити Search Console сайтове.';
+  if (info.profiles.length) return `Свързано: ${info.profiles.length} профил${info.profiles.length === 1 ? '' : 'а'}. Данните се обновяват автоматично от дневния backend cron.`;
+  if (type === 'business') return 'Google разрешението е записано. Чака се достъпът до Business Profile API; след одобрение профилите и данните ще се открият от автоматичния backend cron.';
+  return 'Google разрешението е записано, но още няма открити Search Console сайтове. Данните се обновяват автоматично от backend cron.';
 }
 
 function buildPanel(type, info) {
@@ -124,12 +106,10 @@ function buildPanel(type, info) {
     <p class="channel-live-status"></p>
     <div class="channel-live-actions">
       <button type="button" class="channel-live-primary" data-connect-provider="${provider}">${connected ? reconnect : action}</button>
-      ${connected ? '<button type="button" class="channel-live-secondary" data-sync-channels>Обнови данните</button>' : ''}
     </div>`;
 
   panel.querySelector('.channel-live-status').textContent = statusText(type, info);
   panel.querySelector('[data-connect-provider]').addEventListener('click', event => startOAuth(provider, event.currentTarget));
-  panel.querySelector('[data-sync-channels]')?.addEventListener('click', event => syncChannels(event.currentTarget));
   return panel;
 }
 
