@@ -20,6 +20,7 @@ function shiftDay(day,offset){
 
 function statusText(){
   if(!latestStatus)return 'Проверявам статуса…';
+  if(latestStatus.error)return 'Статусът временно не е достъпен.';
   if(latestStatus.configured===false)return 'Не са конфигурирани.';
   if(latestStatus.hasData)return 'Активирани · cron обобщенията се записват автоматично.';
   return 'Активирани · очаква първото cron обобщение.';
@@ -50,7 +51,12 @@ async function refresh(){
       apply();
       return latestStatus;
     })
-    .catch(()=>null)
+    .catch(()=>{
+      if(generation!==authGeneration||auth.currentUser?.uid!==userId)return null;
+      latestStatus={error:true};
+      apply();
+      return latestStatus;
+    })
     .finally(()=>{if(loadingPromise===request)loadingPromise=null});
   loadingPromise=request;
   return request;
