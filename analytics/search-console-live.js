@@ -5,6 +5,13 @@ import { loadChannelStatus } from './channel-api.js?v=20260829-stage5e';
 
 const RANKING_CACHE_MS = 60000;
 const rankingCache = new Map();
+const DERIVED_PROFILE_KEYS = new Set([
+  'sc-city:sofia',
+  'sc-city:lom',
+  'sc-city:montana',
+  'sc-city:lom-en',
+  'sc-city:lom-de',
+]);
 let renderToken = 0;
 let loadSequence = 0;
 
@@ -88,6 +95,8 @@ function selectedProfiles(profiles) {
     if (global.length) return [global[0]];
     const root = profiles.filter(profile => classify(profile) === 'root');
     if (root.length) return [root[0]];
+    const derived = profiles.filter(profile => DERIVED_PROFILE_KEYS.has(profile.profile_key));
+    if (derived.length === DERIVED_PROFILE_KEYS.size) return derived;
     return profiles.length ? [profiles[0]] : [];
   }
   return profiles;
@@ -139,7 +148,26 @@ function latestRankingSnapshot(rows) {
   const end = rows.reduce((max, row) => !max || row.period_end > max ? row.period_end : max, '');
   const latest = rows.filter(row => row.period_end === end);
   const start = latest.reduce((min, row) => !min || row.period_start < min ? row.period_start : min, '');
-  return { rows: latest.slice(0, 10), start, end };
+  const grouped = new Map();
+  for (const row of latest) {
+    const key = String(row.dimension_value || '');
+    if (!grouped.has(key)) grouped.set(key, { ...row, clicks: 0, impressions: 0, weightedPosition: 0, positionWeight: 0 });
+    const item = grouped.get(key);
+    const clicks = Number(row.clicks || 0);
+    const impressions = Number(row.impressions || 0);
+    const position = Number(row.position || 0);
+    const weight = impressions || 1;
+    item.clicks += clicks;
+    item.impressions += impressions;
+    item.weightedPosition += position * weight;
+    item.positionWeight += weight;
+  }
+  const combined = [...grouped.values()].map(item => ({
+    ...item,
+    ctr: item.impressions ? item.clicks / item.impressions : 0,
+    position: item.positionWeight ? item.weightedPosition / item.positionWeight : 0,
+  })).sort((a, b) => Number(b.clicks || 0) - Number(a.clicks || 0) || Number(b.impressions || 0) - Number(a.impressions || 0));
+  return { rows: combined.slice(0, 10), start, end };
 }
 
 function esc(value) {
@@ -192,6 +220,16 @@ function renderList(card, snapshot, type) {
   }).join('');
 }
 
+async function loadProfile(profile, period) {
+  const key = encodeURIComponent(profile.profile_key);
+  const [daily, queries, pages] = await Promise.all([
+    ownerFetch(`/api/data?provider=search_console&profileKey=${key}&from=${period.from}&to=${period.to}`),
+    rankingRows(profile.profile_key, 'query'),
+    rankingRows(profile.profile_key, 'page'),
+  ]);
+  return { daily: daily.data || [], queries, pages };
+}
+
 async function loadSearch(shell) {
   const token = ++renderToken;
   const status = await loadChannelStatus();
@@ -213,23 +251,12 @@ async function loadSearch(shell) {
   }
 
   const period = range();
-  const data = [];
-  const queryRows = [];
-  const pageRows = [];
-
-  for (const profile of profiles) {
-    const key = encodeURIComponent(profile.profile_key);
-    const [daily, queries, pages] = await Promise.all([
-      ownerFetch(`/api/data?provider=search_console&profileKey=${key}&from=${period.from}&to=${period.to}`),
-      rankingRows(profile.profile_key, 'query'),
-      rankingRows(profile.profile_key, 'page'),
-    ]);
-    data.push(...(daily.data || []));
-    queryRows.push(...queries);
-    pageRows.push(...pages);
-  }
-
+  const results = await Promise.all(profiles.map(profile => loadProfile(profile, period)));
   if (token !== renderToken || !document.contains(shell)) return;
+
+  const data = results.flatMap(result => result.daily);
+  const queryRows = results.flatMap(result => result.queries);
+  const pageRows = results.flatMap(result => result.pages);
 
   if (data.length) {
     const values = aggregate(data);
@@ -245,8 +272,8 @@ async function loadSearch(shell) {
   const cards = shell.querySelectorAll('.channel-grid .channel-card');
   const querySnapshot = latestRankingSnapshot(queryRows);
   const pageSnapshot = latestRankingSnapshot(pageRows);
-  if (cards[0]) renderList(cards[0], { ...querySnapshot, rows: querySnapshot.rows.sort((a, b) => Number(b.clicks || 0) - Number(a.clicks || 0)).slice(0, 10) }, 'query');
-  if (cards[1]) renderList(cards[1], { ...pageSnapshot, rows: pageSnapshot.rows.sort((a, b) => Number(b.clicks || 0) - Number(a.clicks || 0)).slice(0, 10) }, 'page');
+  if (cards[0]) renderList(cards[0], querySnapshot, 'query');
+  if (cards[1]) renderList(cards[1], pageSnapshot, 'page');
 
   note(
     shell,
