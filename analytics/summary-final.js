@@ -1,8 +1,6 @@
-import{getApp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
-import{getFirestore,collection,getDocsFromCache,query,where,orderBy,limit,Timestamp}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+import{fetchAnalyticsEvents}from'./event-source.js?v=20260829-stage5m';
 
 const view=document.querySelector('#view');
-const db=getFirestore(getApp());
 const SELF_SOURCE=/^(www\.)?ivanov-remonti\.com$/i;
 const BUSINESS=new Set(['phone_click','viber_click','form_success']);
 const INTEREST=new Set(['gallery_open','video_play','faq_open','price_open','contact_open']);
@@ -23,27 +21,9 @@ function normalizePath(value){
   return path;
 }
 
-function currentRange(){
-  const now=new Date(),start=new Date(now),end=new Date(now);end.setHours(23,59,59,999);
-  const period=document.querySelector('#periodFilter')?.value||'7d';
-  if(period==='today')start.setHours(0,0,0,0);
-  if(period==='yesterday'){start.setDate(start.getDate()-1);start.setHours(0,0,0,0);end.setDate(end.getDate()-1)}
-  if(period==='7d'){start.setDate(start.getDate()-6);start.setHours(0,0,0,0)}
-  if(period==='30d'){start.setDate(start.getDate()-29);start.setHours(0,0,0,0)}
-  if(period==='month'){start.setDate(1);start.setHours(0,0,0,0)}
-  if(period==='custom'){
-    const from=document.querySelector('#dateFrom')?.value,to=document.querySelector('#dateTo')?.value;
-    if(from)start.setTime(new Date(from+'T00:00:00').getTime());
-    if(to)end.setTime(new Date(to+'T23:59:59.999').getTime());
-  }
-  return{start,end};
-}
-function previousRange(r){const duration=r.end-r.start+1,end=new Date(r.start.getTime()-1);return{start:new Date(end.getTime()-duration+1),end}}
-async function cachedEvents(r){
-  const q=query(collection(db,'analytics_events'),where('timestamp','>=',Timestamp.fromDate(r.start)),where('timestamp','<=',Timestamp.fromDate(r.end)),orderBy('timestamp','desc'),limit(10000));
-  const snap=await getDocsFromCache(q);
-  return snap.docs.map(doc=>{const x=doc.data();return{id:doc.id,...x,pagePath:normalizePath(x.pagePath||'/'),date:x.timestamp?.toDate?.()||new Date()}});
-}
+function currentRange(){return window.IvanovPeriods.rangeFromControls()}
+function previousRange(r){return window.IvanovPeriods.previousRange(r)}
+async function cachedEvents(r){return fetchAnalyticsEvents(r)}
 
 function sessionsFrom(items){
   const grouped=new Map();
@@ -61,7 +41,7 @@ function sessionsFrom(items){
     return{id,events,views,pages,business,interest,engaged:active>=30||scroll>=50,source,medium,city:geo?.city||'unknown',country:geo?.country||'unknown',browser,os,technical,opened:(views[0]||events[0])?.date||new Date()};
   });
 }
-function siteFiltered(sessions){const site=document.querySelector('#siteFilter')?.value||'all';return site==='all'?sessions:sessions.filter(s=>s.events.some(e=>e.site===site))}
+function siteFiltered(sessions){const site=document.querySelector('#siteFilter')?.value||'all';if(site==='all')return sessions;return sessionsFrom(sessions.flatMap(s=>s.events.filter(e=>e.site===site)))}
 function stats(sessions){const client=sessions.filter(s=>s.business.length).length,interested=sessions.filter(s=>s.interest.length).length,engaged=sessions.filter(s=>s.engaged).length;return{sessions:sessions.length,engaged,interested,client,conversion:percent(client,sessions.length)}}
 function trend(now,old){if(!old&&now)return{cls:'up',text:'↑ ново'};if(!old&&!now)return{cls:'flat',text:'— без промяна'};const d=(now-old)/old*100;if(Math.abs(d)<.05)return{cls:'flat',text:'— без промяна'};return{cls:d>0?'up':'down',text:`${d>0?'↑':'↓'} ${Math.abs(d).toFixed(1)}%`}}
 function info(text){return`<button class="summary-info" type="button" aria-label="Пояснение" data-info="${esc(text)}">i</button>`}
@@ -70,13 +50,13 @@ function kpi(label,value,now,old,help,sub=''){const t=trend(now,old);return`<art
 function sourceName(s){const source=String(s.source||'direct').toLowerCase();if(source==='google'&&s.medium==='cpc')return'Google Ads';if(source==='google')return'Google търсене';if(source==='direct')return'Директно посещение';if(source.includes('facebook')||source==='fb'||source.includes('l.facebook'))return'Facebook';return'Други източници'}
 function cacheNames(){pageNames=new Map();document.querySelectorAll('[data-page]').forEach(n=>{const p=normalizePath(n.dataset.page||'');const label=n.textContent?.trim();if(p&&label&&!pageNames.has(p))pageNames.set(p,label)})}
 function pageName(path){if(pageNames.has(path))return pageNames.get(path);if(path==='/'||path==='/index.html')return'Начална страница';return path.split('/').pop().replace('.html','').split('-').join(' ').split('_').join(' ')||'Страница'}
-function pageRows(sessions){const m=new Map();sessions.forEach(s=>s.pages.forEach(path=>{if(!m.has(path))m.set(path,{path,sessions:new Set(),interest:new Set(),client:new Set()});const r=m.get(path);r.sessions.add(s.id);if(s.interest.length)r.interest.add(s.id);if(s.business.length)r.client.add(s.id)}));return[...m.values()].sort((a,b)=>b.client.size-a.client.size||b.interest.size-a.interest.size||b.sessions.size-a.sessions.size).slice(0,5)}
+function pageRows(sessions){const m=new Map();sessions.forEach(s=>s.pages.forEach(path=>{if(!m.has(path))m.set(path,{path,sessions:new Set(),interest:new Set(),client:new Set()});const r=m.get(path),pageEvents=s.events.filter(e=>e.pagePath===path);r.sessions.add(s.id);if(pageEvents.some(e=>INTEREST.has(e.eventType)))r.interest.add(s.id);if(pageEvents.some(e=>BUSINESS.has(e.eventType)))r.client.add(s.id)}));return[...m.values()].sort((a,b)=>b.client.size-a.client.size||b.interest.size-a.interest.size||b.sessions.size-a.sessions.size).slice(0,5)}
 function sourceRows(sessions){const order=['Google Ads','Google търсене','Директно посещение','Facebook','Други източници'],m=new Map(order.map(x=>[x,[]]));sessions.forEach(s=>m.get(sourceName(s)).push(s));return order.map(label=>({label,sessions:m.get(label)})).filter(r=>r.sessions.length)}
 function actionLeadsToClient(s,type){const action=s.events.find(e=>e.eventType===type);return!!action&&s.business.some(e=>e.date>=action.date)}
 function actionRows(sessions){return Object.entries(ACTIONS).map(([type,label])=>{const matched=sessions.filter(s=>s.events.some(e=>e.eventType===type));return{type,label,sessions:matched.length,clients:matched.filter(s=>actionLeadsToClient(s,type)).length}})}
 function geoRows(sessions){const m=new Map();sessions.filter(s=>!s.technical&&s.country!=='unknown').forEach(s=>{const key=(s.city||'unknown')+'|'+(s.country||'unknown');m.set(key,(m.get(key)||0)+1)});const all=[...m.entries()].map(([key,count])=>{const parts=key.split('|');return{city:parts[0]==='unknown'?'Неизвестен град':parts[0],country:parts[1],count}}).sort((a,b)=>b.count-a.count),rows=all.slice(0,3),other=all.slice(3).reduce((n,r)=>n+r.count,0);if(other)rows.push({city:'Други',country:'',count:other});return{rows,technical:sessions.filter(s=>s.technical).length}}
 function hourRows(sessions){const buckets=[['00–06',0,6],['06–09',6,9],['09–12',9,12],['12–15',12,15],['15–18',15,18],['18–21',18,21],['21–24',21,24]];return buckets.map(([label,from,to])=>{const list=sessions.filter(s=>{const h=hour(s.opened);return h>=from&&h<to}),clients=list.filter(s=>s.business.length).length;return{label,sessions:list.length,clients,conversion:percent(clients,list.length)}}).sort((a,b)=>b.clients-a.clients||b.sessions-a.sessions).slice(0,3)}
-function siteRows(sessions){const names={sofia:'София',lom:'Лом',montana:'Монтана','lom-en':'Лом EN','lom-de':'Лом DE'},m=new Map();sessions.forEach(s=>[...new Set(s.events.map(e=>e.site).filter(Boolean))].forEach(site=>{if(!m.has(site))m.set(site,{site,sessions:new Set(),clients:new Set()});m.get(site).sessions.add(s.id);if(s.business.length)m.get(site).clients.add(s.id)}));return[...m.values()].map(r=>({...r,label:names[r.site]||r.site})).sort((a,b)=>b.clients.size-a.clients.size||b.sessions.size-a.sessions.size)}
+function siteRows(sessions){const names={sofia:'София',lom:'Лом',montana:'Монтана','lom-en':'Лом EN','lom-de':'Лом DE'},m=new Map();sessions.forEach(s=>[...new Set(s.events.map(e=>e.site).filter(Boolean))].forEach(site=>{if(!m.has(site))m.set(site,{site,sessions:new Set(),clients:new Set()});const r=m.get(site),siteEvents=s.events.filter(e=>e.site===site);r.sessions.add(s.id);if(siteEvents.some(e=>BUSINESS.has(e.eventType)))r.clients.add(s.id)}));return[...m.values()].map(r=>({...r,label:names[r.site]||r.site})).sort((a,b)=>b.clients.size-a.clients.size||b.sessions.size-a.sessions.size)}
 
 function renderChart(sessions){
   const canvas=document.querySelector('#summaryChart');if(!canvas)return;const m=new Map();sessions.forEach(s=>{const key=dayKey(s.opened);if(!m.has(key))m.set(key,{date:s.opened,sessions:0,clients:0,engaged:0,interest:0});const r=m.get(key);r.sessions++;if(s.business.length)r.clients++;if(s.engaged)r.engaged++;if(s.interest.length)r.interest++});
@@ -96,7 +76,7 @@ function renderSummary(sessions,previous){
   <section class="card summary-section wide"><div class="summary-section-heading"><h2>Какво правят посетителите ${info('Показва уникални сесии, в които е използвана съответната част на сайта. Повторните действия в една и съща сесия не увеличават броя.')}</h2></div><div class="summary-action-grid">${actions.map(r=>`<button class="summary-action-chip" data-action="${r.type}"><span>${esc(r.label)}</span><strong>${r.sessions}</strong><small>${r.clients} → клиентско действие</small></button>`).join('')}</div></section>
   <section class="card summary-section"><div class="summary-section-heading"><h2>Къде са посетителите ${info('Приблизително местоположение по мрежова информация. Градът може да е неточен при VPN, proxy, мобилен оператор или друга мрежова услуга.')}</h2></div><div class="summary-geo-list">${geo.rows.map(r=>`<button class="summary-geo-row" data-geo="${esc(r.city)}|${esc(r.country)}"><span><strong>${esc(r.city)}</strong><small>${esc(r.country)}</small></span><b>${r.count}</b></button>`).join('')}${geo.technical?`<button class="summary-geo-row technical" data-technical><span><strong>Вероятно технически трафик</strong><small>по поведение, не по държава</small></span><b>${geo.technical}</b></button>`:''}</div></section>
   <section class="card summary-section"><div class="summary-section-heading"><h2>Най-силни часове ${info('Показва часовите интервали по Europe/Sofia с най-много клиентски сесии.')}</h2></div><div class="summary-mini-list">${hours.map(r=>`<button class="summary-mini-row" data-hours><span><strong>${r.label}</strong><small>${r.sessions} сесии · ${percentText(r.conversion)} конверсия</small></span><b>${r.clients}</b></button>`).join('')}</div></section>
-  <section class="card summary-section"><div class="summary-section-heading"><h2>Сайтове ${info('Сравнява сайтовете по сесии и клиентски сесии. Натисни сайт, за да филтрираш цялото табло само за него.')}</h2></div><div class="summary-mini-list">${sites.slice(0,4).map(r=>`<button class="summary-mini-row" data-site="${esc(r.site)}"><span><strong>${esc(r.label)}</strong><small>${r.clients.size} клиентски сесии</small></span><b>${r.sessions.size}</b></button>`).join('')}</div></section>
+  <section class="card summary-section"><div class="summary-section-heading"><h2>Сайтове ${info('Сравнява сайтовете по сесии и клиентски сесии. Една сесия може да присъства в повече от един сайт, ако посетителят е минал между тях, затова редовете не се събират задължително до общия брой сесии. Натисни сайт, за да филтрираш цялото табло само за него.')}</h2></div><div class="summary-mini-list">${sites.slice(0,4).map(r=>`<button class="summary-mini-row" data-site="${esc(r.site)}"><span><strong>${esc(r.label)}</strong><small>${r.clients.size} клиентски сесии</small></span><b>${r.sessions.size}</b></button>`).join('')}</div></section>
   </div></div>`;
   bind();requestAnimationFrame(()=>renderChart(sessions));
 }
@@ -114,7 +94,7 @@ function bind(){
 }
 function exportJson(){if(!last)return;const seen=new Set(),events=[];last.sessions.forEach(s=>s.events.forEach(e=>{const key=e.id||s.id+'|'+e.eventType+'|'+e.date?.getTime?.();if(seen.has(key))return;seen.add(key);const x={...e,date:e.date?.toISOString?.()||null};delete x.timestamp;events.push(x)}));const blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(),period:document.querySelector('#periodFilter')?.selectedOptions?.[0]?.textContent||'',site:document.querySelector('#siteFilter')?.value||'all',eventCount:events.length,events},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='ivanov-analytics-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 function openPage(path){document.querySelector('.nav button[data-view="pages"]')?.click();setTimeout(()=>[...document.querySelectorAll('[data-page]')].find(b=>normalizePath(b.dataset.page)===normalizePath(path))?.click(),0)}
-function openSources(label){document.querySelector('.nav button[data-view="sources"]')?.click();setTimeout(()=>{const rows=[...document.querySelectorAll('tbody tr')],match=rows.find(r=>{const raw=r.querySelector('td')?.textContent?.trim()?.toLowerCase()||'';if(label==='Google Ads')return raw==='google';if(label==='Google търсене')return raw==='google';if(label==='Директно посещение')return raw==='direct';if(label==='Facebook')return raw.includes('facebook')||raw==='fb';return false});if(match){match.classList.add('summary-highlight');match.scrollIntoView({block:'center',behavior:'smooth'});setTimeout(()=>match.classList.remove('summary-highlight'),2200)}},50)}
+function openSources(label){if(label==='Google Ads'){document.querySelector('.nav [data-external-view="ads"]')?.click();return}document.querySelector('.nav button[data-view="sources"]')?.click();setTimeout(()=>{const rows=[...document.querySelectorAll('tbody tr')],match=rows.find(r=>{const raw=r.querySelector('td')?.textContent?.trim()?.toLowerCase()||'';if(label==='Google търсене')return raw==='google';if(label==='Директно посещение')return raw==='direct';if(label==='Facebook')return raw.includes('facebook')||raw==='fb';return false});if(match){match.classList.add('summary-highlight');match.scrollIntoView({block:'center',behavior:'smooth'});setTimeout(()=>match.classList.remove('summary-highlight'),2200)}},50)}
 function actionDetail(type){if(!last)return;const matched=last.sessions.filter(s=>s.events.some(e=>e.eventType===type)),pages=new Map(),sources=new Map();matched.forEach(s=>{s.pages.forEach(p=>pages.set(p,(pages.get(p)||0)+1));const src=sourceName(s);sources.set(src,(sources.get(src)||0)+1)});const client=matched.filter(s=>actionLeadsToClient(s,type)).length;modal(ACTIONS[type]||type,`<div class="modal-kpis"><div><strong>${matched.length}</strong><span>сесии</span></div><div><strong>${client}</strong><span>стигнали след това до клиентско действие</span></div></div><h3>Най-често на страници</h3>${detail([...pages.entries()].sort((a,b)=>b[1]-a[1]).slice(0,5).map(([p,n])=>[pageName(p),n]))}<h3>Откъде са дошли</h3>${detail([...sources.entries()].sort((a,b)=>b[1]-a[1]).slice(0,5))}`)}
 function geoDetail(key){if(!last)return;const parts=key.split('|'),city=parts[0],country=parts[1],matched=last.sessions.filter(s=>!s.technical&&(city==='Други'||(s.city===city&&s.country===country)));modal('Местоположение',`<div class="modal-kpis"><div><strong>${matched.length}</strong><span>сесии</span></div><div><strong>${matched.filter(s=>s.business.length).length}</strong><span>клиентски сесии</span></div></div><h3>Най-силни страници</h3>${detail(pageRows(matched).map(r=>[pageName(r.path),r.sessions.size]))}`)}
 function technicalDetail(){if(!last)return;const matched=last.sessions.filter(s=>s.technical);modal('Вероятно технически трафик',`<p class="card-note">Маркира се по комбинация от много различни страници за кратко време и липса на нормални сигнали за взаимодействие. Данните не се изтриват.</p>${detail(matched.slice(0,20).map(s=>[(s.city==='unknown'?'Неизвестен град':s.city)+', '+(s.country==='unknown'?'—':s.country)+' · '+s.pages.length+' страници',shortDay(s.opened)]))}`)}
@@ -126,6 +106,6 @@ function popover(x,y,html){document.querySelector('.summary-popover')?.remove();
 async function enhance(){
   const h=view?.querySelector('.view-heading h1');if(!h||h.textContent.trim()!=='Обобщение'||view.querySelector('[data-summary-final]'))return;
   const id=++token;cacheNames();
-  try{const r=currentRange(),data=await Promise.all([cachedEvents(r),cachedEvents(previousRange(r))]);if(id!==token)return;renderSummary(siteFiltered(sessionsFrom(data[0])),siteFiltered(sessionsFrom(data[1])))}catch(error){console.warn('Final summary cache renderer unavailable; base summary remains active.',error)}
+  try{const r=currentRange(),data=await Promise.all([cachedEvents(r),cachedEvents(previousRange(r))]);if(id!==token)return;renderSummary(siteFiltered(sessionsFrom(data[0])),siteFiltered(sessionsFrom(data[1])))}catch(error){console.warn('Final summary renderer unavailable; base summary remains active.',error)}
 }
 const observer=new MutationObserver(enhance);if(view)observer.observe(view,{childList:true,subtree:true});enhance();
