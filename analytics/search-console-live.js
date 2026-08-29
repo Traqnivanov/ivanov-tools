@@ -102,6 +102,13 @@ function selectedProfiles(profiles) {
   return profiles;
 }
 
+function partialAllSelection(allProfiles, selectedProfilesList) {
+  if ((document.querySelector('#siteFilter')?.value || 'all') !== 'all') return false;
+  if (allProfiles.some(profile => ['global', 'root'].includes(classify(profile)))) return false;
+  const derived = allProfiles.filter(profile => DERIVED_PROFILE_KEYS.has(profile.profile_key));
+  return derived.length > 0 && derived.length < DERIVED_PROFILE_KEYS.size && selectedProfilesList.every(profile => DERIVED_PROFILE_KEYS.has(profile.profile_key));
+}
+
 function fmtInt(value) {
   return new Intl.NumberFormat('bg-BG', { maximumFractionDigits: 0 }).format(Math.round(value || 0));
 }
@@ -264,6 +271,7 @@ async function loadSearch(shell) {
     return;
   }
 
+  const partialAll = partialAllSelection(all, profiles);
   const period = range();
   const results = await Promise.all(profiles.map(profile => loadProfile(profile, period)));
   if (token !== renderToken || !document.contains(shell)) return;
@@ -282,18 +290,19 @@ async function loadSearch(shell) {
     clearMetrics(shell);
   }
 
-  setState(shell, 'Свързано', true);
+  setState(shell, partialAll ? 'Свързано · частично' : 'Свързано', true);
   const cards = shell.querySelectorAll('.channel-grid .channel-card');
   const querySnapshot = latestRankingSnapshot(queryRows);
   const pageSnapshot = latestRankingSnapshot(pageRows);
   if (cards[0]) renderList(cards[0], querySnapshot, 'query');
   if (cards[1]) renderList(cards[1], pageSnapshot, 'page');
 
+  const partialPrefix = partialAll ? `Частични данни: налични са ${profiles.length} от ${DERIVED_PROFILE_KEYS.size} профила. ` : '';
   note(
     shell,
-    data.length
+    partialPrefix + (data.length
       ? `KPI са от записаните Search Console данни за ${period.from} – ${period.to}. Таблиците са последният наличен 28-дневен snapshot. Обновяването е автоматично от backend cron.`
-      : `За ${period.from} – ${period.to} още няма синхронизирани дневни KPI. Таблиците са последният наличен snapshot; frontend-ът не стартира ръчен Google sync.`,
+      : `За ${period.from} – ${period.to} още няма синхронизирани дневни KPI. Таблиците са последният наличен snapshot; frontend-ът не стартира ръчен Google sync.`),
   );
 }
 
