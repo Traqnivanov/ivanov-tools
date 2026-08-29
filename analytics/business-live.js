@@ -112,6 +112,14 @@ function updateComparison(shell, cityValues) {
   if (note) note.textContent = 'Сравнението използва само реалните Google Business действия за избрания период.';
 }
 
+function clearComparison(shell, noteText = 'Сравнението временно не е достъпно.') {
+  const compare = shell.querySelector('.business-compare');
+  if (!compare) return;
+  compare.querySelectorAll('.business-compare-grid strong').forEach(node => { node.textContent = '—'; });
+  const note = compare.querySelector('.card-note');
+  if (note) note.textContent = noteText;
+}
+
 async function loadBusiness(shell) {
   const token = ++renderToken;
   const status = await loadChannelStatus();
@@ -126,6 +134,7 @@ async function loadBusiness(shell) {
       setCardState(card, 'Не е свързано', false);
       setCardMetrics(card, {}, false);
     });
+    clearComparison(shell, 'Сравнение ще има след свързване на Google Business профилите.');
     return;
   }
 
@@ -178,6 +187,7 @@ function decorate() {
           setCardMetrics(card, {}, false);
           setCardNote(card, `Не мога да заредя Google Business: ${error.message}`);
         });
+        clearComparison(shell);
       })
       .finally(() => {
         if (document.contains(shell) && shell.dataset.gbLiveRun === run) shell.dataset.gbLiveLoading = '0';
