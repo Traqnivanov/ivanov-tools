@@ -15,7 +15,8 @@ Production dashboard:
 
 ## What is tracked
 
-- page views and temporary sessions;
+- page views and sessions;
+- sessions expire after 30 minutes without visitor activity; returning after that starts a new session even if the browser tab was left open;
 - engagement thresholds and scroll depth;
 - phone, Viber and successful form actions;
 - initial source for the session, UTM and Google Ads attribution;
