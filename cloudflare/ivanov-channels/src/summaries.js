@@ -244,8 +244,14 @@ export async function refreshAnalyticsSummaries(env) {
   if (!await summarySchemaReady(env)) return { skipped: 'summary_schema_missing' };
 
   const today = todaySofia();
-  const yesterday = shiftIsoDay(today, -1);
-  const daily = await summarizeRange(env, 'analytics_daily_summaries', yesterday, yesterday, today);
+  const recentDaily = [];
+  for (let daysAgo = 1; daysAgo <= 3; daysAgo++) {
+    const day = shiftIsoDay(today, -daysAgo);
+    const nextDay = shiftIsoDay(day, 1);
+    const result = await summarizeRange(env, 'analytics_daily_summaries', day, day, nextDay);
+    recentDaily.push({ day, ...result });
+  }
+  const daily = recentDaily[0];
 
   const month = currentMonthSofia();
   const monthStart = `${month}-01`;
@@ -270,7 +276,8 @@ export async function refreshAnalyticsSummaries(env) {
   }
 
   return {
-    daily: { day: yesterday, ...daily },
+    daily,
+    recentDaily,
     monthly: { month, ...monthly },
     previousMonthly,
   };
