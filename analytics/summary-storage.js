@@ -7,6 +7,7 @@ let latestStatus=null;
 let loadingPromise=null;
 let authUnsubscribe=null;
 let authRetry=0;
+let authGeneration=0;
 
 function sofiaDay(date=new Date()){
   return new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Sofia',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);
@@ -36,18 +37,23 @@ function apply(root=document){
 async function refresh(){
   if(loadingPromise)return loadingPromise;
   const app=getApps()[0];
-  const user=app?getAuth(app).currentUser:null;
+  const auth=app?getAuth(app):null;
+  const user=auth?.currentUser||null;
   if(!user)return null;
+  const generation=authGeneration;
+  const userId=user.uid;
   const yesterday=shiftDay(sofiaDay(),-1);
-  loadingPromise=channelOwnerFetch(`/api/analytics/summaries?period=daily&from=${encodeURIComponent(yesterday)}&to=${encodeURIComponent(yesterday)}&site=all`)
+  const request=channelOwnerFetch(`/api/analytics/summaries?period=daily&from=${encodeURIComponent(yesterday)}&to=${encodeURIComponent(yesterday)}&site=all`)
     .then(payload=>{
+      if(generation!==authGeneration||auth.currentUser?.uid!==userId)return null;
       latestStatus={configured:payload.configured!==false,hasData:Array.isArray(payload.data)&&payload.data.length>0};
       apply();
       return latestStatus;
     })
     .catch(()=>null)
-    .finally(()=>{loadingPromise=null});
-  return loadingPromise;
+    .finally(()=>{if(loadingPromise===request)loadingPromise=null});
+  loadingPromise=request;
+  return request;
 }
 
 function mount(){
@@ -64,6 +70,7 @@ function bindAuth(){
     return;
   }
   authUnsubscribe=onAuthStateChanged(getAuth(app),user=>{
+    authGeneration++;
     latestStatus=null;
     loadingPromise=null;
     apply();
