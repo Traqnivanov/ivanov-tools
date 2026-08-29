@@ -59,8 +59,21 @@ const SEARCH_SITE_PROFILES = [
   },
 ];
 
-function isoDay(date) {
-  return date.toISOString().slice(0, 10);
+const SOFIA_DAY_FORMATTER = new Intl.DateTimeFormat('sv-SE', {
+  timeZone: 'Europe/Sofia',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+function sofiaDay(date = new Date()) {
+  return SOFIA_DAY_FORMATTER.format(date);
+}
+
+function shiftDay(value, days) {
+  const [year, month, day] = value.split('-').map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1, day + days));
+  return shifted.toISOString().slice(0, 10);
 }
 
 function dateParts(value) {
@@ -69,11 +82,9 @@ function dateParts(value) {
 }
 
 function backfillRange(days) {
-  const end = new Date();
-  end.setUTCDate(end.getUTCDate() - 1);
-  const start = new Date(end);
-  start.setUTCDate(start.getUTCDate() - (days - 1));
-  return { start: isoDay(start), end: isoDay(end) };
+  const end = shiftDay(sofiaDay(), -1);
+  const start = shiftDay(end, -(days - 1));
+  return { start, end };
 }
 
 async function connectedProfiles(env, provider) {

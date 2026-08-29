@@ -6,14 +6,28 @@ import {
   discoverGoogleProfiles,
 } from './google.js';
 import { syncConnectedGoogleChannels } from './sync.js';
+import {
+  enforceAnalyticsRateLimit,
+  listAnalyticsEvents,
+  parseAnalyticsEvent,
+  storeAnalyticsEvent,
+} from './analytics.js';
 
 const GOOGLE_PROVIDERS = new Set(['google_business', 'search_console']);
 
-function allowedOrigins(env) {
-  return new Set(String(env.ALLOWED_ORIGINS || '').split(',').map(value => value.trim()).filter(Boolean));
+function parseOrigins(value) {
+  return new Set(String(value || '').split(',').map(item => item.trim()).filter(Boolean));
 }
 
-function responseHeaders(env, origin) {
+function allowedOrigins(env) {
+  return parseOrigins(env.ALLOWED_ORIGINS);
+}
+
+function publicAnalyticsOrigins(env) {
+  return parseOrigins(env.PUBLIC_ANALYTICS_ORIGINS);
+}
+
+function responseHeaders(env, origin, origins = allowedOrigins(env)) {
   const headers = new Headers({
     'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-store',
@@ -22,12 +36,12 @@ function responseHeaders(env, origin) {
     'Referrer-Policy': 'no-referrer',
     'Vary': 'Origin',
   });
-  if (origin && allowedOrigins(env).has(origin)) headers.set('Access-Control-Allow-Origin', origin);
+  if (origin && origins.has(origin)) headers.set('Access-Control-Allow-Origin', origin);
   return headers;
 }
 
-function json(env, body, status = 200, origin = null) {
-  return new Response(JSON.stringify(body), { status, headers: responseHeaders(env, origin) });
+function json(env, body, status = 200, origin = null, origins = allowedOrigins(env)) {
+  return new Response(JSON.stringify(body), { status, headers: responseHeaders(env, origin, origins) });
 }
 
 function randomState() {
@@ -156,21 +170,34 @@ async function rankingData(env, url) {
   return { data: rows.results || [], status: 200 };
 }
 
+async function ingestAnalytics(request, env, origin, origins) {
+  if (!origin || !origins.has(origin)) return json(env, { error: 'forbidden_origin' }, 403, null, origins);
+  const rateLimit = await enforceAnalyticsRateLimit(request, env);
+  if (!rateLimit.ok) return json(env, { error: rateLimit.error }, rateLimit.status, origin, origins);
+  const parsed = await parseAnalyticsEvent(request);
+  if (parsed.error) return json(env, { error: parsed.error }, parsed.status, origin, origins);
+  const stored = await storeAnalyticsEvent(env, parsed.event);
+  return json(env, { ok: true, id: stored.id, timestamp: stored.receivedAt }, 202, origin, origins);
+}
+
 async function handleFetch(request, env) {
+  const url = new URL(request.url);
   const origin = request.headers.get('Origin');
-  const origins = allowedOrigins(env);
-  if (origin && !origins.has(origin)) return json(env, { error: 'forbidden_origin' }, 403, null);
+  const isAnalyticsIngest = url.pathname === '/ingest';
+  const origins = isAnalyticsIngest ? publicAnalyticsOrigins(env) : allowedOrigins(env);
+  if (origin && !origins.has(origin)) return json(env, { error: 'forbidden_origin' }, 403, null, origins);
 
   if (request.method === 'OPTIONS') {
     if (!origin || !origins.has(origin)) return new Response(null, { status: 403 });
-    const headers = responseHeaders(env, origin);
+    const headers = responseHeaders(env, origin, origins);
     headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     headers.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
     headers.set('Access-Control-Max-Age', '3600');
     return new Response(null, { status: 204, headers });
   }
 
-  const url = new URL(request.url);
+  if (request.method === 'POST' && isAnalyticsIngest) return ingestAnalytics(request, env, origin, origins);
+
   if (request.method === 'GET' && url.pathname === '/health') return json(env, { ok: true, service: 'ivanov-channels' }, 200, origin);
 
   const callbackMatch = url.pathname.match(/^\/oauth\/callback\/(google_business|search_console)$/);
@@ -199,13 +226,20 @@ async function handleFetch(request, env) {
     return result.error ? json(env, { error: result.error }, result.status, origin) : json(env, { data: result.data }, 200, origin);
   }
 
+  if (request.method === 'GET' && url.pathname === '/api/analytics/events') {
+    const auth = await ownerOrResponse(request, env, origin);
+    if (auth.response) return auth.response;
+    const result = await listAnalyticsEvents(env, url);
+    return result.error ? json(env, { error: result.error }, result.status, origin) : json(env, { data: result.data }, 200, origin);
+  }
+
   if (request.method === 'POST' && url.pathname === '/api/sync') {
     const auth = await ownerOrResponse(request, env, origin);
     if (auth.response) return auth.response;
     return json(env, { results: await syncConnectedGoogleChannels(env) }, 200, origin);
   }
 
-  return json(env, { error: 'not_found' }, 404, origin);
+  return json(env, { error: 'not_found' }, 404, origin, origins);
 }
 
 async function cleanup(env) {
@@ -216,8 +250,10 @@ export default {
   fetch(request, env) {
     return handleFetch(request, env).catch(error => {
       console.error('ivanov-channels request failed', error);
+      const url = new URL(request.url);
       const origin = request.headers.get('Origin');
-      return json(env, { error: 'internal_error' }, 500, origin && allowedOrigins(env).has(origin) ? origin : null);
+      const origins = url.pathname === '/ingest' ? publicAnalyticsOrigins(env) : allowedOrigins(env);
+      return json(env, { error: 'internal_error' }, 500, origin && origins.has(origin) ? origin : null, origins);
     });
   },
   async scheduled(controller, env) {
