@@ -250,8 +250,10 @@ export default {
   fetch(request, env) {
     return handleFetch(request, env).catch(error => {
       console.error('ivanov-channels request failed', error);
+      const url = new URL(request.url);
       const origin = request.headers.get('Origin');
-      return json(env, { error: 'internal_error' }, 500, origin && allowedOrigins(env).has(origin) ? origin : null);
+      const origins = url.pathname === '/ingest' ? publicAnalyticsOrigins(env) : allowedOrigins(env);
+      return json(env, { error: 'internal_error' }, 500, origin && origins.has(origin) ? origin : null, origins);
     });
   },
   async scheduled(controller, env) {
