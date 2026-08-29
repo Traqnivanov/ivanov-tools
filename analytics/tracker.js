@@ -1,6 +1,6 @@
 import{normalizePath,siteFromPath}from'./sites.js?v=20260818-5';
 
-const VERSION='2.1.8';
+const VERSION='2.1.9';
 const INGEST_ENDPOINT='https://ivanov-channels.traqnivanov1.workers.dev/ingest';
 const GEO_ENDPOINT='https://ivanov-geo.traqnivanov1.workers.dev/';
 const EXCLUDE_KEY='ivanov_analytics_excluded';
@@ -167,6 +167,13 @@ if(!adminAction&&!excluded&&!isObviousBot()){
     if(r.includes('instagram.'))return'instagram';
     return r;
   }
+  function saveAttribution(value){
+    try{sessionStorage.setItem('ia_attribution_v3',JSON.stringify({sessionId,value}))}catch(e){}
+    return value;
+  }
+  function directAttribution(){
+    return saveAttribution({source:'direct',medium:'',campaign:'',content:'',term:''});
+  }
   function attribution(){
     const key='ia_attribution_v3';
     try{
@@ -178,8 +185,7 @@ if(!adminAction&&!excluded&&!isObviousBot()){
       campaign:(q.get('utm_campaign')||'').slice(0,180),content:(q.get('utm_content')||'').slice(0,180),
       term:(q.get('utm_term')||'').slice(0,180)
     };
-    try{sessionStorage.setItem(key,JSON.stringify({sessionId,value}))}catch(e){}
-    return value;
+    return saveAttribution(value);
   }
   let firstTouch=attribution();
 
@@ -245,7 +251,7 @@ if(!adminAction&&!excluded&&!isObviousBot()){
     scrolls=new Set();
     engagements=new Set();
     markActivity(now);
-    firstTouch=attribution();
+    firstTouch=directAttribution();
     if(emitPageView){
       transmit(payload('page_view'));
       loadGeoOnce();
