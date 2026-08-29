@@ -24,6 +24,7 @@ function combinedStatus() {
 }
 
 function warningText(status) {
+  if (window.__ivanovDashboardLegacyFallback?.active) return '⚠ Частичен режим · основният analytics loader не е активен.';
   if (!status) return '';
   if (status.unavailable) return '⚠ Analytics източниците са временно недостъпни за част от избрания отчет.';
   if (!status.partial) return '';
@@ -31,6 +32,13 @@ function warningText(status) {
   if (!status.firestore) missing.push('Firestore history');
   if (!status.d1) missing.push('D1 live data');
   return `⚠ Частични analytics данни · липсва ${missing.join(' + ')}.`;
+}
+
+function warningTitle() {
+  if (window.__ivanovDashboardLegacyFallback?.active) {
+    return 'Dashboard-ът е стартирал резервния legacy renderer. Той може да не включва D1 live данните. Презареди страницата; предупреждението трябва да изчезне при нормален loader.';
+  }
+  return 'Таблото продължава с наличния източник, но числата за текущия или сравнявания период може да са непълни. „Обнови“ проверява отново.';
 }
 
 function render() {
@@ -45,7 +53,7 @@ function render() {
   node.id = WARNING_ID;
   node.setAttribute('role', 'status');
   node.textContent = text;
-  node.title = 'Таблото продължава с наличния източник, но числата за текущия или сравнявания период може да са непълни. „Обнови“ проверява отново.';
+  node.title = warningTitle();
   node.style.cssText = 'display:inline-flex;align-items:center;gap:6px;max-width:340px;padding:7px 10px;border:1px solid currentColor;border-radius:8px;font-size:12px;font-weight:700;line-height:1.25;white-space:normal;';
   if (!existing && topbar) {
     const spacer = topbar.querySelector('.spacer');
@@ -57,6 +65,7 @@ window.addEventListener('ivanov:analytics-source-status', event => {
   if (event.detail?.rangeKey) statuses.set(event.detail.rangeKey, event.detail);
   render();
 });
+window.addEventListener('ivanov:analytics-loader-fallback', render);
 ['periodFilter', 'dateFrom', 'dateTo'].forEach(id => document.querySelector(`#${id}`)?.addEventListener('change', render));
 new MutationObserver(render).observe(document.documentElement, { childList: true, subtree: true });
 render();
