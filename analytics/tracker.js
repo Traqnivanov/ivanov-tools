@@ -1,6 +1,6 @@
 import{normalizePath,siteFromPath}from'./sites.js?v=20260818-5';
 
-const VERSION='2.1.13';
+const VERSION='2.1.14';
 const INGEST_ENDPOINT='https://ivanov-channels.traqnivanov1.workers.dev/ingest';
 const GEO_ENDPOINT='https://ivanov-geo.traqnivanov1.workers.dev/';
 const EXCLUDE_KEY='ivanov_analytics_excluded';
@@ -229,7 +229,8 @@ if(!adminAction&&!ingestHealth&&!excluded&&!isObviousBot()){
       eventType,site,pagePath:path,pageTitle:document.title.slice(0,160),sessionId,
       trackerVersion:VERSION,source:firstTouch.source,medium:firstTouch.medium,
       campaign:firstTouch.campaign,content:firstTouch.content,term:firstTouch.term,
-      referrerDomain:ref(),device:device(),browser:browser(),os:os(),country:'unknown',...extra
+      referrerDomain:ref(),device:device(),browser:browser(),os:os(),country:'unknown',
+      eventTime:new Date().toISOString(),...extra
     };
   }
 
