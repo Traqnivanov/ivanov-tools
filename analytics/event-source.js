@@ -18,22 +18,29 @@ function rangeKey(range) {
   return `${range.start.getTime()}:${range.end.getTime()}`;
 }
 
-function publishSourceHealth(range, firestoreResult, d1Result) {
+function publishSourceHealth(range, firestoreRequired, d1Required, firestoreResult, d1Result) {
   const key = rangeKey(range);
+  const firestoreSucceeded = firestoreResult.status === 'fulfilled';
+  const d1Succeeded = d1Result.status === 'fulfilled';
+  const anyRequiredSuccess = (firestoreRequired && firestoreSucceeded) || (d1Required && d1Succeeded);
+  const anyRequiredFailure = (firestoreRequired && !firestoreSucceeded) || (d1Required && !d1Succeeded);
   const detail = {
     rangeKey: key,
-    firestore: firestoreResult.status === 'fulfilled',
-    d1: d1Result.status === 'fulfilled',
-    partial: firestoreResult.status !== d1Result.status,
-    unavailable: firestoreResult.status === 'rejected' && d1Result.status === 'rejected',
-    firestoreError: firestoreResult.status === 'rejected' ? String(firestoreResult.reason?.message || 'firestore_unavailable') : '',
-    d1Error: d1Result.status === 'rejected' ? String(d1Result.reason?.message || 'd1_unavailable') : '',
+    firestore: !firestoreRequired || firestoreSucceeded,
+    d1: !d1Required || d1Succeeded,
+    firestoreRequired,
+    d1Required,
+    partial: anyRequiredFailure && anyRequiredSuccess,
+    unavailable: anyRequiredFailure && !anyRequiredSuccess,
+    firestoreError: firestoreRequired && !firestoreSucceeded ? String(firestoreResult.reason?.message || 'firestore_unavailable') : '',
+    d1Error: d1Required && !d1Succeeded ? String(d1Result.reason?.message || 'd1_unavailable') : '',
     checkedAt: new Date().toISOString(),
   };
   const statuses = window.__ivanovAnalyticsSourceStatuses || {};
   statuses[key] = detail;
   window.__ivanovAnalyticsSourceStatuses = statuses;
   window.dispatchEvent(new CustomEvent('ivanov:analytics-source-status', { detail }));
+  return detail;
 }
 
 function firestoreEvent(doc) {
@@ -104,15 +111,17 @@ function needsD1(range) {
 }
 
 async function loadRange(range) {
-  const firestoreTask = needsFirestore(range) ? fetchFirestoreEvents(range) : Promise.resolve([]);
-  const d1Task = needsD1(range) ? fetchD1Events(range) : Promise.resolve([]);
+  const firestoreRequired = needsFirestore(range);
+  const d1Required = needsD1(range);
+  const firestoreTask = firestoreRequired ? fetchFirestoreEvents(range) : Promise.resolve([]);
+  const d1Task = d1Required ? fetchD1Events(range) : Promise.resolve([]);
   const [firestoreResult, d1Result] = await Promise.allSettled([firestoreTask, d1Task]);
-  publishSourceHealth(range, firestoreResult, d1Result);
+  const health = publishSourceHealth(range, firestoreRequired, d1Required, firestoreResult, d1Result);
+  if (health.unavailable) {
+    throw new Error(`analytics_sources_unavailable: ${health.firestoreError || 'firestore_not_required'}; ${health.d1Error || 'd1_not_required'}`);
+  }
   const firestore = firestoreResult.status === 'fulfilled' ? firestoreResult.value : [];
   const d1 = d1Result.status === 'fulfilled' ? d1Result.value : [];
-  if (!firestore.length && !d1.length && firestoreResult.status === 'rejected' && d1Result.status === 'rejected') {
-    throw new Error(`analytics_sources_unavailable: ${firestoreResult.reason?.message || 'firestore'}; ${d1Result.reason?.message || 'd1'}`);
-  }
   return mergeEvents(firestore, d1);
 }
 
