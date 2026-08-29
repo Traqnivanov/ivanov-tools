@@ -1,10 +1,12 @@
 import { getApps } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
-import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
-import { CHANNEL_WORKER_BASE } from './channel-config.js?v=20260827-stage1f';
+import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
+import { channelOwnerFetch } from './channel-api.js?v=20260829-stage5e';
 
 const view=document.querySelector('#view');
 let latestStatus=null;
-let loading=false;
+let loadingPromise=null;
+let authUnsubscribe=null;
+let authRetry=0;
 
 function sofiaDay(date=new Date()){
   return new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Sofia',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);
@@ -32,25 +34,20 @@ function apply(root=document){
 }
 
 async function refresh(){
-  if(loading)return;
+  if(loadingPromise)return loadingPromise;
   const app=getApps()[0];
   const user=app?getAuth(app).currentUser:null;
-  if(!user)return;
-  loading=true;
-  try{
-    const yesterday=shiftDay(sofiaDay(),-1);
-    const token=await user.getIdToken();
-    const response=await fetch(`${CHANNEL_WORKER_BASE}/api/analytics/summaries?period=daily&from=${encodeURIComponent(yesterday)}&to=${encodeURIComponent(yesterday)}&site=all`,{
-      headers:{Authorization:`Bearer ${token}`},cache:'no-store'
-    });
-    if(!response.ok)return;
-    const payload=await response.json();
-    latestStatus={configured:payload.configured!==false,hasData:Array.isArray(payload.data)&&payload.data.length>0};
-    apply();
-  }catch(_){
-  }finally{
-    loading=false;
-  }
+  if(!user)return null;
+  const yesterday=shiftDay(sofiaDay(),-1);
+  loadingPromise=channelOwnerFetch(`/api/analytics/summaries?period=daily&from=${encodeURIComponent(yesterday)}&to=${encodeURIComponent(yesterday)}&site=all`)
+    .then(payload=>{
+      latestStatus={configured:payload.configured!==false,hasData:Array.isArray(payload.data)&&payload.data.length>0};
+      apply();
+      return latestStatus;
+    })
+    .catch(()=>null)
+    .finally(()=>{loadingPromise=null});
+  return loadingPromise;
 }
 
 function mount(){
@@ -58,13 +55,24 @@ function mount(){
   refresh();
 }
 
+function bindAuth(){
+  if(authUnsubscribe)return;
+  const app=getApps()[0];
+  if(!app){
+    clearTimeout(authRetry);
+    authRetry=setTimeout(bindAuth,50);
+    return;
+  }
+  authUnsubscribe=onAuthStateChanged(getAuth(app),user=>{
+    latestStatus=null;
+    loadingPromise=null;
+    apply();
+    if(user)refresh();
+  });
+}
+
 window.addEventListener('focus',refresh);
-let attempts=0;
-const authWait=setInterval(()=>{
-  attempts++;
-  refresh();
-  if(latestStatus||attempts>=40)clearInterval(authWait);
-},250);
+bindAuth();
 
 if(view){
   new MutationObserver(mount).observe(view,{childList:true,subtree:true});
