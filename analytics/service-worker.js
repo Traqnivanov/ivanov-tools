@@ -1,4 +1,4 @@
-const CACHE_NAME = "ivanov-analytics-v48-stage5k";
+const CACHE_NAME = "ivanov-analytics-v49-stage5l";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -11,15 +11,15 @@ const APP_SHELL = [
   "./search-console-live.css?v=20260827-search-live1",
   "./periods.js?v=20260827-stage1e",
   "./dashboard.js?v=20260827-stage1e",
-  "./dashboard-loader.js?v=20260829-stage5k",
-  "./event-source.js?v=20260829-stage5k",
+  "./dashboard-loader.js?v=20260829-stage5l",
+  "./event-source.js?v=20260829-stage5l",
   "./source-health.js?v=20260829-stage5k",
-  "./summary-loader.js?v=20260829-stage5k",
+  "./summary-loader.js?v=20260829-stage5l",
   "./summary-final.js?v=20260827-livefix3",
   "./navigation.js?v=20260827-stage1d",
   "./summary-channels.js?v=20260829-stage5e",
   "./summary-storage.js?v=20260829-stage5c",
-  "./ads-live.js?v=20260829-stage5k",
+  "./ads-live.js?v=20260829-stage5l",
   "./channel-config.js?v=20260827-stage1f",
   "./channel-api.js?v=20260829-stage5e",
   "./channels-live.js?v=20260829-stage5e",
