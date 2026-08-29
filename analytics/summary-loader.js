@@ -1,5 +1,5 @@
 import{getApps}from'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
-import{fetchAnalyticsEvents}from'./event-source.js?v=20260829-stage5k';
+import{fetchAnalyticsEvents}from'./event-source.js?v=20260829-stage5l';
 
 const view=document.querySelector('#view');
 let loaded=false;
