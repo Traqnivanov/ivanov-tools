@@ -201,13 +201,25 @@ function note(shell, text) {
   node.textContent = text;
 }
 
+function clearRankingLists(shell, text = 'Ranking данните временно не са достъпни.') {
+  shell.querySelectorAll('.channel-grid .channel-card').forEach((card, index) => {
+    const heading = card.querySelector('h2');
+    if (heading) heading.textContent = index === 0 ? 'Последен наличен snapshot — заявки' : 'Последен наличен snapshot — страници';
+    const status = card.querySelector('.channel-status,.sc-live-table');
+    if (!status) return;
+    status.className = 'channel-status';
+    status.textContent = text;
+  });
+}
+
 function renderList(card, snapshot, type) {
-  const status = card.querySelector('.channel-status');
+  const status = card.querySelector('.channel-status,.sc-live-table');
   if (!status) return;
   const heading = card.querySelector('h2');
   if (heading) heading.textContent = type === 'query' ? 'Последен наличен snapshot — заявки' : 'Последен наличен snapshot — страници';
   const rows = snapshot.rows;
   if (!rows.length) {
+    status.className = 'channel-status';
     status.textContent = type === 'query' ? 'Още няма записан snapshot за заявки.' : 'Още няма записан snapshot за страници.';
     return;
   }
@@ -238,6 +250,7 @@ async function loadSearch(shell) {
   if (!(status.connections || []).some(item => item.provider === 'search_console')) {
     setState(shell, 'Не е свързано', false);
     clearMetrics(shell);
+    clearRankingLists(shell, 'Ranking данни ще има след свързване на Search Console.');
     return;
   }
 
@@ -246,6 +259,7 @@ async function loadSearch(shell) {
   if (!profiles.length) {
     setState(shell, 'Свързано', true);
     clearMetrics(shell);
+    clearRankingLists(shell, 'За този сайт още няма backend snapshot.');
     note(shell, 'Връзката е активна, но този сайт още няма backend snapshot. Данните ще се появят след автоматичния дневен sync.');
     return;
   }
@@ -294,6 +308,7 @@ function decorate() {
         if (document.contains(shell) && shell.dataset.scLiveRun === run) {
           setState(shell, 'Грешка', false);
           clearMetrics(shell);
+          clearRankingLists(shell);
           note(shell, `Не мога да заредя Search Console: ${error.message}`);
         }
       })
