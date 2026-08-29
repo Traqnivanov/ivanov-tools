@@ -33,9 +33,7 @@ async function ownerFetch(path) {
   return body;
 }
 
-function clearRankingCache() {
-  rankingCache.clear();
-}
+function clearRankingCache() { rankingCache.clear(); }
 
 function rankingRows(profileKey, dimension) {
   const cacheKey = `${profileKey}|${dimension}`;
@@ -77,13 +75,7 @@ function classify(profile) {
 
 function selectedProfiles(profiles) {
   const selected = document.querySelector('#siteFilter')?.value || 'all';
-  const derivedKey = {
-    sofia: 'sc-city:sofia',
-    lom: 'sc-city:lom',
-    montana: 'sc-city:montana',
-    'lom-en': 'sc-city:lom-en',
-    'lom-de': 'sc-city:lom-de',
-  }[selected];
+  const derivedKey = { sofia: 'sc-city:sofia', lom: 'sc-city:lom', montana: 'sc-city:montana', 'lom-en': 'sc-city:lom-en', 'lom-de': 'sc-city:lom-de' }[selected];
   if (derivedKey) {
     const derived = profiles.filter(profile => profile.profile_key === derivedKey);
     if (derived.length) return derived;
@@ -102,15 +94,9 @@ function selectedProfiles(profiles) {
   return profiles;
 }
 
-function fmtInt(value) {
-  return new Intl.NumberFormat('bg-BG', { maximumFractionDigits: 0 }).format(Math.round(value || 0));
-}
-function fmtPct(value) {
-  return `${(Number(value || 0) * 100).toLocaleString('bg-BG', { maximumFractionDigits: 1 })}%`;
-}
-function fmtPos(value) {
-  return Number(value || 0).toLocaleString('bg-BG', { maximumFractionDigits: 1 });
-}
+function fmtInt(value) { return new Intl.NumberFormat('bg-BG', { maximumFractionDigits: 0 }).format(Math.round(value || 0)); }
+function fmtPct(value) { return `${(Number(value || 0) * 100).toLocaleString('bg-BG', { maximumFractionDigits: 1 })}%`; }
+function fmtPos(value) { return Number(value || 0).toLocaleString('bg-BG', { maximumFractionDigits: 1 }); }
 
 function aggregate(rows) {
   const grouped = new Map();
@@ -122,10 +108,7 @@ function aggregate(rows) {
     if (row.metric === 'IMPRESSIONS') item.impressions = Number(row.value || 0);
     if (row.metric === 'POSITION') item.position = Number(row.value || 0);
   }
-  let clicks = 0;
-  let impressions = 0;
-  let weightedPos = 0;
-  let posWeight = 0;
+  let clicks = 0, impressions = 0, weightedPos = 0, posWeight = 0;
   for (const item of grouped.values()) {
     clicks += item.clicks;
     impressions += item.impressions;
@@ -135,12 +118,7 @@ function aggregate(rows) {
       posWeight += weight;
     }
   }
-  return {
-    clicks,
-    impressions,
-    ctr: impressions ? clicks / impressions : 0,
-    position: posWeight ? weightedPos / posWeight : 0,
-  };
+  return { clicks, impressions, ctr: impressions ? clicks / impressions : 0, position: posWeight ? weightedPos / posWeight : 0 };
 }
 
 function latestRankingSnapshot(rows) {
@@ -153,64 +131,39 @@ function latestRankingSnapshot(rows) {
     const key = String(row.dimension_value || '');
     if (!grouped.has(key)) grouped.set(key, { ...row, clicks: 0, impressions: 0, weightedPosition: 0, positionWeight: 0 });
     const item = grouped.get(key);
-    const clicks = Number(row.clicks || 0);
-    const impressions = Number(row.impressions || 0);
-    const position = Number(row.position || 0);
-    const weight = impressions || 1;
-    item.clicks += clicks;
-    item.impressions += impressions;
-    item.weightedPosition += position * weight;
-    item.positionWeight += weight;
+    const clicks = Number(row.clicks || 0), impressions = Number(row.impressions || 0), position = Number(row.position || 0), weight = impressions || 1;
+    item.clicks += clicks; item.impressions += impressions; item.weightedPosition += position * weight; item.positionWeight += weight;
   }
-  const combined = [...grouped.values()].map(item => ({
-    ...item,
-    ctr: item.impressions ? item.clicks / item.impressions : 0,
-    position: item.positionWeight ? item.weightedPosition / item.positionWeight : 0,
-  })).sort((a, b) => Number(b.clicks || 0) - Number(a.clicks || 0) || Number(b.impressions || 0) - Number(a.impressions || 0));
+  const combined = [...grouped.values()].map(item => ({ ...item, ctr: item.impressions ? item.clicks / item.impressions : 0, position: item.positionWeight ? item.weightedPosition / item.positionWeight : 0 }))
+    .sort((a, b) => Number(b.clicks || 0) - Number(a.clicks || 0) || Number(b.impressions || 0) - Number(a.impressions || 0));
   return { rows: combined.slice(0, 10), start, end };
 }
 
-function esc(value) {
-  return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
-}
+function esc(value) { return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])); }
+function setMetric(shell, index, value) { const node = shell.querySelectorAll('.search-overview .channel-metric strong')[index]; if (node) node.textContent = value; }
+function clearMetrics(shell) { ['—', '—', '—', '—'].forEach((value, index) => setMetric(shell, index, value)); }
+function setState(shell, text, connected = true) { const node = shell.querySelector('.search-overview .channel-state'); if (!node) return; node.textContent = text; node.classList.toggle('pending', !connected); node.classList.toggle('connected', connected); }
+function note(shell, text) { let node = shell.querySelector('.sc-live-note'); if (!node) { node = document.createElement('div'); node.className = 'channel-status sc-live-note'; shell.querySelector('.search-overview')?.appendChild(node); } node.textContent = text; }
 
-function setMetric(shell, index, value) {
-  const node = shell.querySelectorAll('.search-overview .channel-metric strong')[index];
-  if (node) node.textContent = value;
-}
-
-function clearMetrics(shell) {
-  ['—', '—', '—', '—'].forEach((value, index) => setMetric(shell, index, value));
-}
-
-function setState(shell, text, connected = true) {
-  const node = shell.querySelector('.search-overview .channel-state');
-  if (!node) return;
-  node.textContent = text;
-  node.classList.toggle('pending', !connected);
-  node.classList.toggle('connected', connected);
-}
-
-function note(shell, text) {
-  let node = shell.querySelector('.sc-live-note');
-  if (!node) {
-    node = document.createElement('div');
-    node.className = 'channel-status sc-live-note';
-    shell.querySelector('.search-overview')?.appendChild(node);
-  }
-  node.textContent = text;
+function clearRankingLists(shell, text = 'Ranking данните временно не са достъпни.') {
+  const cards = shell.querySelectorAll('.channel-grid .channel-card');
+  cards.forEach((card, index) => {
+    const heading = card.querySelector('h2');
+    if (heading) heading.textContent = index === 0 ? 'Последен наличен snapshot — заявки' : 'Последен наличен snapshot — страници';
+    let status = card.querySelector('.channel-status,.sc-live-table');
+    if (!status) return;
+    status.className = 'channel-status';
+    status.textContent = text;
+  });
 }
 
 function renderList(card, snapshot, type) {
-  const status = card.querySelector('.channel-status');
+  const status = card.querySelector('.channel-status,.sc-live-table');
   if (!status) return;
   const heading = card.querySelector('h2');
   if (heading) heading.textContent = type === 'query' ? 'Последен наличен snapshot — заявки' : 'Последен наличен snapshot — страници';
   const rows = snapshot.rows;
-  if (!rows.length) {
-    status.textContent = type === 'query' ? 'Още няма записан snapshot за заявки.' : 'Още няма записан snapshot за страници.';
-    return;
-  }
+  if (!rows.length) { status.className = 'channel-status'; status.textContent = type === 'query' ? 'Още няма записан snapshot за заявки.' : 'Още няма записан snapshot за страници.'; return; }
   const period = snapshot.start && snapshot.end ? `Snapshot период: ${esc(snapshot.start)} – ${esc(snapshot.end)}` : 'Последен наличен snapshot';
   status.className = 'sc-live-table';
   status.innerHTML = `<div class="sc-snapshot-meta">${period}</div>` + rows.map(row => {
@@ -223,9 +176,7 @@ function renderList(card, snapshot, type) {
 async function loadProfile(profile, period) {
   const key = encodeURIComponent(profile.profile_key);
   const [daily, queries, pages] = await Promise.all([
-    ownerFetch(`/api/data?provider=search_console&profileKey=${key}&from=${period.from}&to=${period.to}`),
-    rankingRows(profile.profile_key, 'query'),
-    rankingRows(profile.profile_key, 'page'),
+    ownerFetch(`/api/data?provider=search_console&profileKey=${key}&from=${period.from}&to=${period.to}`), rankingRows(profile.profile_key, 'query'), rankingRows(profile.profile_key, 'page'),
   ]);
   return { daily: daily.data || [], queries, pages };
 }
@@ -236,16 +187,13 @@ async function loadSearch(shell) {
   if (token !== renderToken || !document.contains(shell)) return;
 
   if (!(status.connections || []).some(item => item.provider === 'search_console')) {
-    setState(shell, 'Не е свързано', false);
-    clearMetrics(shell);
-    return;
+    setState(shell, 'Не е свързано', false); clearMetrics(shell); clearRankingLists(shell, 'Ranking данни ще има след свързване на Search Console.'); return;
   }
 
   const all = (status.profiles || []).filter(item => item.provider === 'search_console');
   const profiles = selectedProfiles(all);
   if (!profiles.length) {
-    setState(shell, 'Свързано', true);
-    clearMetrics(shell);
+    setState(shell, 'Свързано', true); clearMetrics(shell); clearRankingLists(shell, 'За този сайт още няма backend snapshot.');
     note(shell, 'Връзката е активна, но този сайт още няма backend snapshot. Данните ще се появят след автоматичния дневен sync.');
     return;
   }
@@ -254,78 +202,43 @@ async function loadSearch(shell) {
   const results = await Promise.all(profiles.map(profile => loadProfile(profile, period)));
   if (token !== renderToken || !document.contains(shell)) return;
 
-  const data = results.flatMap(result => result.daily);
-  const queryRows = results.flatMap(result => result.queries);
-  const pageRows = results.flatMap(result => result.pages);
-
+  const data = results.flatMap(result => result.daily), queryRows = results.flatMap(result => result.queries), pageRows = results.flatMap(result => result.pages);
   if (data.length) {
     const values = aggregate(data);
-    setMetric(shell, 0, fmtInt(values.clicks));
-    setMetric(shell, 1, fmtInt(values.impressions));
-    setMetric(shell, 2, fmtPct(values.ctr));
-    setMetric(shell, 3, fmtPos(values.position));
-  } else {
-    clearMetrics(shell);
-  }
+    setMetric(shell, 0, fmtInt(values.clicks)); setMetric(shell, 1, fmtInt(values.impressions)); setMetric(shell, 2, fmtPct(values.ctr)); setMetric(shell, 3, fmtPos(values.position));
+  } else clearMetrics(shell);
 
   setState(shell, 'Свързано', true);
   const cards = shell.querySelectorAll('.channel-grid .channel-card');
-  const querySnapshot = latestRankingSnapshot(queryRows);
-  const pageSnapshot = latestRankingSnapshot(pageRows);
-  if (cards[0]) renderList(cards[0], querySnapshot, 'query');
-  if (cards[1]) renderList(cards[1], pageSnapshot, 'page');
-
-  note(
-    shell,
-    data.length
-      ? `KPI са от записаните Search Console данни за ${period.from} – ${period.to}. Таблиците са последният наличен 28-дневен snapshot. Обновяването е автоматично от backend cron.`
-      : `За ${period.from} – ${period.to} още няма синхронизирани дневни KPI. Таблиците са последният наличен snapshot; frontend-ът не стартира ръчен Google sync.`,
-  );
+  if (cards[0]) renderList(cards[0], latestRankingSnapshot(queryRows), 'query');
+  if (cards[1]) renderList(cards[1], latestRankingSnapshot(pageRows), 'page');
+  note(shell, data.length
+    ? `KPI са от записаните Search Console данни за ${period.from} – ${period.to}. Таблиците са последният наличен 28-дневен snapshot. Обновяването е автоматично от backend cron.`
+    : `За ${period.from} – ${period.to} още няма синхронизирани дневни KPI. Таблиците са последният наличен snapshot; frontend-ът не стартира ръчен Google sync.`);
 }
 
 function decorate() {
   document.querySelectorAll('[data-external-shell="search"]').forEach(shell => {
     if (shell.dataset.scLiveLoading === '1') return;
-    const run = String(++loadSequence);
-    shell.dataset.scLiveLoading = '1';
-    shell.dataset.scLiveRun = run;
+    const run = String(++loadSequence); shell.dataset.scLiveLoading = '1'; shell.dataset.scLiveRun = run;
     loadSearch(shell)
       .catch(error => {
         if (document.contains(shell) && shell.dataset.scLiveRun === run) {
-          setState(shell, 'Грешка', false);
-          clearMetrics(shell);
-          note(shell, `Не мога да заредя Search Console: ${error.message}`);
+          setState(shell, 'Грешка', false); clearMetrics(shell); clearRankingLists(shell); note(shell, `Не мога да заредя Search Console: ${error.message}`);
         }
       })
-      .finally(() => {
-        if (document.contains(shell) && shell.dataset.scLiveRun === run) shell.dataset.scLiveLoading = '0';
-      });
+      .finally(() => { if (document.contains(shell) && shell.dataset.scLiveRun === run) shell.dataset.scLiveLoading = '0'; });
   });
 }
 
-function forceDecorate(delay = 120) {
-  renderToken++;
-  setTimeout(() => {
-    document.querySelectorAll('[data-external-shell="search"]').forEach(shell => { shell.dataset.scLiveLoading = '0'; });
-    decorate();
-  }, delay);
-}
+function forceDecorate(delay = 120) { renderToken++; setTimeout(() => { document.querySelectorAll('[data-external-shell="search"]').forEach(shell => { shell.dataset.scLiveLoading = '0'; }); decorate(); }, delay); }
 
 new MutationObserver(decorate).observe(document.documentElement, { childList: true, subtree: true });
-document.addEventListener('change', event => {
-  if (['siteFilter', 'periodFilter', 'dateFrom', 'dateTo'].includes(event.target?.id)) forceDecorate(180);
-});
+document.addEventListener('change', event => { if (['siteFilter', 'periodFilter', 'dateFrom', 'dateTo'].includes(event.target?.id)) forceDecorate(180); });
 document.addEventListener('click', event => {
   const target = event.target instanceof Element ? event.target : null;
-  if (target?.closest('#refreshBtn')) {
-    clearRankingCache();
-    forceDecorate(180);
-    return;
-  }
+  if (target?.closest('#refreshBtn')) { clearRankingCache(); forceDecorate(180); return; }
   if (target?.closest('[data-external-view="search"],[data-channel="search"]')) forceDecorate(180);
 });
-window.addEventListener('focus', () => {
-  clearRankingCache();
-  forceDecorate(80);
-});
+window.addEventListener('focus', () => { clearRankingCache(); forceDecorate(80); });
 decorate();
