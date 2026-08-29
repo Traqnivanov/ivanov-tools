@@ -47,7 +47,8 @@ function renderData(sessions){
   const interested=sessions.filter(session=>session.interest).length,clients=sessions.filter(session=>session.business).length;
   const values=[sessions.length,interested,clients,pct(clients,sessions.length)];
   shell.querySelectorAll('.ads-overview .channel-metric strong').forEach((node,index)=>{node.textContent=values[index]??'—'});
-  const status=shell.querySelector('.ads-overview .channel-state');if(status){status.textContent='Реални tracker данни';status.classList.remove('pending');status.classList.add('live')}
+  const status=shell.querySelector('.ads-overview .channel-state');if(status){status.textContent='UTM/gclid tracker оценка · неофициално';status.classList.remove('pending');status.classList.add('live')}
+  const note=shell.querySelector('.ads-overview .card-note');if(note){note.textContent='Приблизителна оценка от UTM/gclid атрибуцията на Ivanov Analytics. Това не са официални метрики от Google Ads акаунта.'}
   const campaignCard=shell.querySelector('.channel-grid .channel-card:first-child');if(!campaignCard)return;
   const rows=campaignRows(sessions);
   const old=campaignCard.querySelector('.channel-status,.ads-live-list');
