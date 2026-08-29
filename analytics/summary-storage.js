@@ -3,6 +3,7 @@ import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/
 import { channelOwnerFetch } from './channel-api.js?v=20260829-stage5e';
 
 const view=document.querySelector('#view');
+const FIRST_COMPLETE_D1_DAY='2026-08-30';
 let latestStatus=null;
 let loadingPromise=null;
 let authUnsubscribe=null;
@@ -22,8 +23,9 @@ function statusText(){
   if(!latestStatus)return 'Проверявам статуса…';
   if(latestStatus.error)return 'Статусът временно не е достъпен.';
   if(latestStatus.configured===false)return 'Не са конфигурирани.';
+  if(latestStatus.beforeCoverage)return 'Активирани · първият пълен D1 ден е 30.08.2026; дневното обобщение се появява след приключването му.';
   if(latestStatus.hasData)return 'Активирани · cron обобщенията се записват автоматично.';
-  return 'Активирани · очаква първото cron обобщение.';
+  return 'Активирани · очаква първото пълно D1 дневно обобщение.';
 }
 
 function apply(root=document){
@@ -52,6 +54,11 @@ async function refresh(){
   const generation=authGeneration;
   const userId=user.uid;
   const yesterday=shiftDay(sofiaDay(),-1);
+  if(yesterday<FIRST_COMPLETE_D1_DAY){
+    latestStatus={configured:true,hasData:false,beforeCoverage:true};
+    apply();
+    return latestStatus;
+  }
   const request=channelOwnerFetch(`/api/analytics/summaries?period=daily&from=${encodeURIComponent(yesterday)}&to=${encodeURIComponent(yesterday)}&site=all`)
     .then(payload=>{
       if(generation!==authGeneration||auth.currentUser?.uid!==userId)return null;
