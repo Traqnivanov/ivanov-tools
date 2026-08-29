@@ -35,7 +35,11 @@
     else if(period==='7d')startKey=shiftKey(today,-6);
     else if(period==='30d')startKey=shiftKey(today,-29);
     else if(period==='month')startKey=`${today.slice(0,7)}-01`;
-    else if(period==='custom'){startKey=from||today;endKey=to||today}
+    else if(period==='custom'){
+      startKey=from||today;
+      endKey=to||today;
+      if(startKey>endKey)[startKey,endKey]=[endKey,startKey];
+    }
     const start=zonedDateTime(startKey);
     const end=new Date(zonedDateTime(shiftKey(endKey,1)).getTime()-1);
     return{start,end,from:startKey,to:endKey,timeZone:TIME_ZONE};
@@ -56,7 +60,25 @@
     };
   }
 
+  function normalizeCustomControls(){
+    const period=document.querySelector('#periodFilter');
+    const from=document.querySelector('#dateFrom');
+    const to=document.querySelector('#dateTo');
+    if(period?.value!=='custom'||!from||!to)return;
+    const today=dateKey();
+    if(!from.value)from.value=today;
+    if(!to.value)to.value=today;
+    if(from.value>to.value){
+      if(document.activeElement===from)to.value=from.value;
+      else if(document.activeElement===to)from.value=to.value;
+      else [from.value,to.value]=[to.value,from.value];
+    }
+    from.max=to.value;
+    to.min=from.value;
+  }
+
   function rangeFromControls(){
+    normalizeCustomControls();
     return range(
       document.querySelector('#periodFilter')?.value||'7d',
       document.querySelector('#dateFrom')?.value||'',
