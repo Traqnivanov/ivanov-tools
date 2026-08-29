@@ -18,6 +18,8 @@ const EVENT_TYPES = new Set([
 const SITES = new Set(['sofia', 'lom', 'montana', 'lom-en', 'lom-de']);
 const DEVICES = new Set(['desktop', 'mobile', 'tablet']);
 const SCROLL_DEPTHS = new Set([25, 50, 75, 90]);
+const EVENT_TIME_MAX_AGE_MS = 48 * 60 * 60 * 1000;
+const EVENT_TIME_MAX_FUTURE_MS = 5 * 60 * 1000;
 const ALLOWED_KEYS = new Set([
   'eventType',
   'site',
@@ -40,6 +42,7 @@ const ALLOWED_KEYS = new Set([
   'totalSeconds',
   'scrollDepth',
   'formId',
+  'eventTime',
 ]);
 
 function stringValue(value, maxLength) {
@@ -48,6 +51,15 @@ function stringValue(value, maxLength) {
 
 function optionalNumber(value, max) {
   return value === undefined || (Number.isFinite(value) && value >= 0 && value <= max);
+}
+
+function validEventTime(value) {
+  if (value === undefined) return true;
+  if (typeof value !== 'string' || value.length > 40) return false;
+  const parsed = Date.parse(value);
+  if (!Number.isFinite(parsed)) return false;
+  const now = Date.now();
+  return parsed >= now - EVENT_TIME_MAX_AGE_MS && parsed <= now + EVENT_TIME_MAX_FUTURE_MS;
 }
 
 function validateEvent(event) {
@@ -74,6 +86,7 @@ function validateEvent(event) {
   if (!optionalNumber(event.totalSeconds, 86400)) return 'invalid_total_seconds';
   if (event.scrollDepth !== undefined && !SCROLL_DEPTHS.has(event.scrollDepth)) return 'invalid_scroll_depth';
   if (event.formId !== undefined && !stringValue(event.formId, 100)) return 'invalid_form_id';
+  if (!validEventTime(event.eventTime)) return 'invalid_event_time';
   return null;
 }
 
@@ -104,7 +117,7 @@ export async function enforceAnalyticsRateLimit(request, env) {
 
 export async function storeAnalyticsEvent(env, event) {
   const id = crypto.randomUUID();
-  const receivedAt = new Date().toISOString();
+  const receivedAt = event.eventTime ? new Date(event.eventTime).toISOString() : new Date().toISOString();
   await env.DB.prepare(`
     INSERT INTO analytics_events(
       id, event_type, site, page_path, page_title, session_id, received_at,
