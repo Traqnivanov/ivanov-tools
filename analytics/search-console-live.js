@@ -3,6 +3,8 @@ import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-aut
 import { CHANNEL_WORKER_BASE } from './channel-config.js?v=20260827-stage1f';
 import { loadChannelStatus } from './channel-api.js?v=20260829-stage5e';
 
+const RANKING_CACHE_MS = 60000;
+const rankingCache = new Map();
 let renderToken = 0;
 let loadSequence = 0;
 
@@ -22,6 +24,26 @@ async function ownerFetch(path) {
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
   return body;
+}
+
+function clearRankingCache() {
+  rankingCache.clear();
+}
+
+function rankingRows(profileKey, dimension) {
+  const cacheKey = `${profileKey}|${dimension}`;
+  const now = Date.now();
+  const cached = rankingCache.get(cacheKey);
+  if (cached && now - cached.createdAt < RANKING_CACHE_MS) return cached.promise;
+  const key = encodeURIComponent(profileKey);
+  const promise = ownerFetch(`/api/rankings?provider=search_console&profileKey=${key}&dimension=${dimension}`)
+    .then(body => body.data || [])
+    .catch(error => {
+      if (rankingCache.get(cacheKey)?.promise === promise) rankingCache.delete(cacheKey);
+      throw error;
+    });
+  rankingCache.set(cacheKey, { createdAt: now, promise });
+  return promise;
 }
 
 function range() {
@@ -197,12 +219,14 @@ async function loadSearch(shell) {
 
   for (const profile of profiles) {
     const key = encodeURIComponent(profile.profile_key);
-    const daily = await ownerFetch(`/api/data?provider=search_console&profileKey=${key}&from=${period.from}&to=${period.to}`);
+    const [daily, queries, pages] = await Promise.all([
+      ownerFetch(`/api/data?provider=search_console&profileKey=${key}&from=${period.from}&to=${period.to}`),
+      rankingRows(profile.profile_key, 'query'),
+      rankingRows(profile.profile_key, 'page'),
+    ]);
     data.push(...(daily.data || []));
-    const queries = await ownerFetch(`/api/rankings?provider=search_console&profileKey=${key}&dimension=query`);
-    const pages = await ownerFetch(`/api/rankings?provider=search_console&profileKey=${key}&dimension=page`);
-    queryRows.push(...(queries.data || []));
-    pageRows.push(...(pages.data || []));
+    queryRows.push(...queries);
+    pageRows.push(...pages);
   }
 
   if (token !== renderToken || !document.contains(shell)) return;
@@ -266,7 +290,15 @@ document.addEventListener('change', event => {
 });
 document.addEventListener('click', event => {
   const target = event.target instanceof Element ? event.target : null;
-  if (target?.closest('#refreshBtn,[data-external-view="search"],[data-channel="search"]')) forceDecorate(180);
+  if (target?.closest('#refreshBtn')) {
+    clearRankingCache();
+    forceDecorate(180);
+    return;
+  }
+  if (target?.closest('[data-external-view="search"],[data-channel="search"]')) forceDecorate(180);
 });
-window.addEventListener('focus', () => forceDecorate(80));
+window.addEventListener('focus', () => {
+  clearRankingCache();
+  forceDecorate(80);
+});
 decorate();
