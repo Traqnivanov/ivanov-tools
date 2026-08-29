@@ -18,6 +18,7 @@ function isMobileUi(){
 }
 
 function mobileKeyForView(viewName){
+  if(['home','site','channels','more'].includes(viewName))return viewName;
   if(viewName==='summary')return'home';
   if(viewName==='system')return'more';
   return'site';
@@ -108,6 +109,7 @@ function activateExternalWhenReady(channel,attempt=0){
     suppressHistory=true;
     link.click();
     suppressHistory=previous;
+    syncMobileActive('channels');
     updateBackButton();
     return;
   }
@@ -228,6 +230,12 @@ document.addEventListener('click',event=>{
   const target=event.target instanceof Element?event.target:null;
   if(!target)return;
 
+  const primaryNav=target.closest('.mobile-primary-nav [data-mobile-nav]');
+  if(primaryNav&&isMobileUi()){
+    const key=primaryNav.dataset.mobileNav||'home';
+    requestAnimationFrame(()=>syncMobileActive(key));
+  }
+
   const desktopView=target.closest('.nav button[data-view]');
   if(desktopView&&!suppressHistory){
     pushHistory('view',desktopView.dataset.view||'summary');
@@ -267,6 +275,7 @@ document.addEventListener('click',event=>{
   const mobileChannel=target.closest('.mobile-nav-sheet [data-channel]');
   if(mobileChannel&&!suppressHistory){
     pushHistory('external',mobileChannel.dataset.channel||'');
+    requestAnimationFrame(()=>syncMobileActive('channels'));
   }
 
   const deviceButton=target.closest('#excludeDeviceBtn,#includeDeviceBtn,#checkDeviceBtn');
