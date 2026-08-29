@@ -1,10 +1,13 @@
 import{normalizePath,siteFromPath}from'./sites.js?v=20260818-5';
 
-const VERSION='2.1.7';
+const VERSION='2.1.8';
 const INGEST_ENDPOINT='https://ivanov-channels.traqnivanov1.workers.dev/ingest';
 const GEO_ENDPOINT='https://ivanov-geo.traqnivanov1.workers.dev/';
 const EXCLUDE_KEY='ivanov_analytics_excluded';
 const DASHBOARD_ORIGIN='https://traqnivanov.github.io';
+const SESSION_TIMEOUT_MS=30*60*1000;
+const SESSION_ID_KEY='ia_session';
+const SESSION_ACTIVITY_KEY='ia_session_last_activity_v2';
 const params=new URLSearchParams(location.search);
 const adminAction=params.get('ivanov_device_action');
 
@@ -101,44 +104,41 @@ if(!adminAction&&!excluded&&!isObviousBot()){
   const path=normalizePath(location.pathname);
   const site=siteFromPath(path);
   const q=new URLSearchParams(location.search);
-  const start=Date.now();
+  let sessionStart=Date.now();
   let active=0,last=Date.now(),visible=!document.hidden,scrolls=new Set(),engagements=new Set();
+  let lastActivityAt=Date.now();
 
-  function sid(){
-    let k='ia_session',v=sessionStorage.getItem(k);
-    if(!v){
-      v=crypto.randomUUID?.()||Math.random().toString(36).slice(2);
-      sessionStorage.setItem(k,v);
-    }
-    return v;
+  function newSessionId(){
+    return crypto.randomUUID?.()||Math.random().toString(36).slice(2);
   }
-  const sessionId=sid();
 
-  async function loadGeoOnce(){
-    const key='ia_geo_v1';
+  function restoreSession(){
+    const now=Date.now();
     try{
-      if(sessionStorage.getItem(key))return;
-      sessionStorage.setItem(key,'pending');
+      const storedId=sessionStorage.getItem(SESSION_ID_KEY);
+      const storedActivity=Number(sessionStorage.getItem(SESSION_ACTIVITY_KEY)||0);
+      if(storedId&&Number.isFinite(storedActivity)&&storedActivity>0&&now-storedActivity<SESSION_TIMEOUT_MS){
+        lastActivityAt=storedActivity;
+        return storedId;
+      }
     }catch(e){}
-
-    const controller=new AbortController();
-    const timer=setTimeout(()=>controller.abort(),2000);
+    const id=newSessionId();
+    lastActivityAt=now;
     try{
-      const response=await fetch(GEO_ENDPOINT,{
-        method:'GET',mode:'cors',cache:'no-store',credentials:'omit',
-        referrerPolicy:'no-referrer',signal:controller.signal
-      });
-      if(!response.ok)throw Error('geo_http_'+response.status);
-      const data=await response.json();
-      const city=typeof data.city==='string'&&data.city?data.city.slice(0,120):'unknown';
-      const country=typeof data.country==='string'&&data.country?data.country.slice(0,30):'unknown';
-      try{sessionStorage.setItem(key,JSON.stringify({city,country}))}catch(e){}
-      send('session_geo',{city,country});
-    }catch(e){
-      try{sessionStorage.setItem(key,'failed')}catch(_){}
-    }finally{
-      clearTimeout(timer);
-    }
+      sessionStorage.setItem(SESSION_ID_KEY,id);
+      sessionStorage.setItem(SESSION_ACTIVITY_KEY,String(now));
+    }catch(e){}
+    return id;
+  }
+
+  let sessionId=restoreSession();
+
+  function markActivity(now=Date.now()){
+    lastActivityAt=now;
+    try{
+      sessionStorage.setItem(SESSION_ID_KEY,sessionId);
+      sessionStorage.setItem(SESSION_ACTIVITY_KEY,String(now));
+    }catch(e){}
   }
 
   function device(){
@@ -168,20 +168,20 @@ if(!adminAction&&!excluded&&!isObviousBot()){
     return r;
   }
   function attribution(){
-    const key='ia_attribution_v2';
+    const key='ia_attribution_v3';
     try{
-      const saved=sessionStorage.getItem(key);
-      if(saved)return JSON.parse(saved);
+      const saved=JSON.parse(sessionStorage.getItem(key)||'null');
+      if(saved?.sessionId===sessionId&&saved.value)return saved.value;
     }catch(e){}
     const value={
       source:detectedSource(),medium:(q.get('utm_medium')||(q.get('gclid')?'cpc':'')).slice(0,100),
       campaign:(q.get('utm_campaign')||'').slice(0,180),content:(q.get('utm_content')||'').slice(0,180),
       term:(q.get('utm_term')||'').slice(0,180)
     };
-    try{sessionStorage.setItem(key,JSON.stringify(value))}catch(e){}
+    try{sessionStorage.setItem(key,JSON.stringify({sessionId,value}))}catch(e){}
     return value;
   }
-  const firstTouch=attribution();
+  let firstTouch=attribution();
 
   function payload(eventType,extra={}){
     return{
@@ -209,20 +209,79 @@ if(!adminAction&&!excluded&&!isObviousBot()){
     });
   }
 
-  function send(eventType,extra={}){
+  async function loadGeoOnce(){
+    const key=`ia_geo_v2:${sessionId}`;
+    try{
+      if(sessionStorage.getItem(key))return;
+      sessionStorage.setItem(key,'pending');
+    }catch(e){}
+
+    const geoSessionId=sessionId;
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),2000);
+    try{
+      const response=await fetch(GEO_ENDPOINT,{
+        method:'GET',mode:'cors',cache:'no-store',credentials:'omit',
+        referrerPolicy:'no-referrer',signal:controller.signal
+      });
+      if(!response.ok)throw Error('geo_http_'+response.status);
+      const data=await response.json();
+      const city=typeof data.city==='string'&&data.city?data.city.slice(0,120):'unknown';
+      const country=typeof data.country==='string'&&data.country?data.country.slice(0,30):'unknown';
+      try{sessionStorage.setItem(key,JSON.stringify({city,country}))}catch(e){}
+      if(sessionId===geoSessionId)send('session_geo',{city,country},{activity:false});
+    }catch(e){
+      try{sessionStorage.setItem(key,'failed')}catch(_){}
+    }finally{
+      clearTimeout(timer);
+    }
+  }
+
+  function startNewSession(now=Date.now(),emitPageView=true){
+    sessionId=newSessionId();
+    sessionStart=now;
+    active=0;
+    last=now;
+    scrolls=new Set();
+    engagements=new Set();
+    markActivity(now);
+    firstTouch=attribution();
+    if(emitPageView){
+      transmit(payload('page_view'));
+      loadGeoOnce();
+    }
+  }
+
+  function ensureActiveSession(){
+    const now=Date.now();
+    if(now-lastActivityAt>=SESSION_TIMEOUT_MS){
+      startNewSession(now,true);
+      return true;
+    }
+    return false;
+  }
+
+  function send(eventType,extra={},options={}){
+    if(options.activity!==false){
+      ensureActiveSession();
+      markActivity();
+    }
     return transmit(payload(eventType,extra));
   }
 
   function sendOnce(eventType,extra={}){
-    const key=`ia_once_v1:${path}:${eventType}`;
+    ensureActiveSession();
+    markActivity();
+    const key=`ia_once_v2:${sessionId}:${path}:${eventType}`;
     try{
       if(sessionStorage.getItem(key)==='1')return;
       sessionStorage.setItem(key,'1');
     }catch(e){}
-    send(eventType,extra);
+    return transmit(payload(eventType,extra));
   }
 
-  send('page_view');
+  markActivity();
+  send('page_view',{}, {activity:false});
   loadGeoOnce();
 
   function updateActive(){
@@ -235,7 +294,7 @@ if(!adminAction&&!excluded&&!isObviousBot()){
     [15,30,60,120,300].forEach(seconds=>{
       if(active>=seconds&&!engagements.has(seconds)){
         engagements.add(seconds);
-        send('engagement',{activeSeconds:seconds});
+        send('engagement',{activeSeconds:seconds},{activity:false});
       }
     });
   },5000);
@@ -243,6 +302,10 @@ if(!adminAction&&!excluded&&!isObviousBot()){
   document.addEventListener('visibilitychange',()=>{
     updateActive();
     visible=!document.hidden;
+    if(visible){
+      ensureActiveSession();
+      markActivity();
+    }
   });
 
   let scrollQueued=false;
@@ -251,12 +314,14 @@ if(!adminAction&&!excluded&&!isObviousBot()){
     scrollQueued=true;
     requestAnimationFrame(()=>{
       scrollQueued=false;
+      ensureActiveSession();
+      markActivity();
       let m=Math.max(1,document.documentElement.scrollHeight-innerHeight);
       let d=Math.round(scrollY/m*100);
       [25,50,75,90].forEach(n=>{
         if(d>=n&&!scrolls.has(n)){
           scrolls.add(n);
-          send('scroll',{scrollDepth:n});
+          transmit(payload('scroll',{scrollDepth:n}));
         }
       });
     });
@@ -291,7 +356,7 @@ if(!adminAction&&!excluded&&!isObviousBot()){
     updateActive();
     transmit(payload('session_end',{
       activeSeconds:Math.round(active),
-      totalSeconds:Math.round((Date.now()-start)/1000)
+      totalSeconds:Math.round((Date.now()-sessionStart)/1000)
     }),{beacon:true});
   },{once:true});
 }
