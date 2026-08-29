@@ -1,6 +1,4 @@
-import { getApps } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
-import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
-import { CHANNEL_WORKER_BASE } from './channel-config.js?v=20260827-stage1f';
+import { loadChannelStatus } from './channel-api.js?v=20260829-stage5e';
 
 const view=document.querySelector('#view');
 let latestChannelStatus=null;
@@ -38,15 +36,9 @@ function applyLiveStatuses(root=document){
 
 async function refreshStatus(){
   if(statusLoading)return;
-  const app=getApps()[0];
-  const user=app?getAuth(app).currentUser:null;
-  if(!user)return;
   statusLoading=true;
   try{
-    const token=await user.getIdToken();
-    const response=await fetch(`${CHANNEL_WORKER_BASE}/api/status`,{headers:{Authorization:`Bearer ${token}`},cache:'no-store'});
-    if(!response.ok)return;
-    latestChannelStatus=await response.json();
+    latestChannelStatus=await loadChannelStatus();
     applyLiveStatuses();
   }catch(_){
   }finally{

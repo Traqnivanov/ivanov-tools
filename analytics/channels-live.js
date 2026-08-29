@@ -1,44 +1,11 @@
 import { getApps } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
-import { CHANNEL_WORKER_BASE } from './channel-config.js?v=20260827-stage1f';
-
-let statusCache = null;
-let statusPromise = null;
-
-function authUser() {
-  const app = getApps()[0];
-  return app ? getAuth(app).currentUser : null;
-}
-
-async function ownerFetch(path, options = {}) {
-  const user = authUser();
-  if (!user) throw new Error('Няма активен вход в Ivanov Analytics.');
-  const token = await user.getIdToken();
-  const headers = new Headers(options.headers || {});
-  headers.set('Authorization', `Bearer ${token}`);
-  if (options.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
-  const response = await fetch(`${CHANNEL_WORKER_BASE}${path}`, { ...options, headers });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
-  return body;
-}
-
-function publishStatus(data) {
-  window.dispatchEvent(new CustomEvent('ivanov:channel-status', { detail: data }));
-}
-
-async function loadStatus(force = false) {
-  if (!force && statusCache) return statusCache;
-  if (!force && statusPromise) return statusPromise;
-  statusPromise = ownerFetch('/api/status')
-    .then(data => {
-      statusCache = data;
-      publishStatus(data);
-      return data;
-    })
-    .finally(() => { statusPromise = null; });
-  return statusPromise;
-}
+import {
+  channelAuthUser,
+  channelOwnerFetch,
+  invalidateChannelStatus,
+  loadChannelStatus,
+} from './channel-api.js?v=20260829-stage5e';
 
 function providerInfo(status, provider) {
   const connection = (status?.connections || []).find(item => item.provider === provider) || null;
@@ -56,7 +23,7 @@ async function startOAuth(provider, button) {
   button.disabled = true;
   button.textContent = 'Отварям Google…';
   try {
-    const data = await ownerFetch(`/oauth/start/${provider}`, { method: 'POST' });
+    const data = await channelOwnerFetch(`/oauth/start/${provider}`, { method: 'POST' });
     if (!data.authorizationUrl) throw new Error('Google authorization URL липсва.');
     if (popup) popup.location.href = data.authorizationUrl;
     else window.location.href = data.authorizationUrl;
@@ -125,7 +92,7 @@ async function decorateShell(shell) {
   shell.querySelector('.channel-shell')?.prepend(placeholder);
 
   try {
-    const status = await loadStatus();
+    const status = await loadChannelStatus();
     const provider = type === 'business' ? 'google_business' : 'search_console';
     placeholder.replaceWith(buildPanel(type, providerInfo(status, provider)));
   } catch (error) {
@@ -148,9 +115,9 @@ document.addEventListener('click', event => {
 });
 
 window.addEventListener('focus', async () => {
-  if (!authUser()) return;
-  statusCache = null;
-  try { await loadStatus(true); } catch (_) {}
+  if (!channelAuthUser()) return;
+  invalidateChannelStatus();
+  try { await loadChannelStatus({ force: true }); } catch (_) {}
   document.querySelectorAll('[data-channel-live]').forEach(node => node.remove());
   decorateVisibleShells();
 });
@@ -158,9 +125,9 @@ window.addEventListener('focus', async () => {
 const app = getApps()[0];
 if (app) {
   onAuthStateChanged(getAuth(app), async user => {
-    statusCache = null;
+    invalidateChannelStatus();
     if (user) {
-      try { await loadStatus(true); } catch (_) {}
+      try { await loadChannelStatus({ force: true }); } catch (_) {}
       decorateVisibleShells();
     }
   });
