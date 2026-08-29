@@ -34,6 +34,13 @@ function applyLiveStatuses(root=document){
   });
 }
 
+function applyUnavailable(root=document){
+  root.querySelectorAll('[data-summary-channel="business"],[data-summary-channel="search"]').forEach(button=>{
+    const status=button.querySelector('em');
+    if(status)status.textContent='Статусът временно не е достъпен';
+  });
+}
+
 async function refreshStatus(){
   if(statusLoading)return;
   statusLoading=true;
@@ -41,6 +48,10 @@ async function refreshStatus(){
     latestChannelStatus=await loadChannelStatus();
     applyLiveStatuses();
   }catch(_){
+    if(latestChannelStatus){
+      latestChannelStatus=null;
+      applyUnavailable();
+    }
   }finally{
     statusLoading=false;
   }

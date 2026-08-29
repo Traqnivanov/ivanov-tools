@@ -1,4 +1,4 @@
-const CACHE_NAME = "ivanov-analytics-v69-stage5aj";
+const CACHE_NAME = "ivanov-analytics-v70-stage5ak";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -17,7 +17,7 @@ const APP_SHELL = [
   "./summary-loader.js?v=20260829-stage5aj",
   "./summary-final.js?v=20260827-livefix3",
   "./navigation.js?v=20260827-stage1d",
-  "./summary-channels.js?v=20260829-stage5e",
+  "./summary-channels.js?v=20260829-stage5ak",
   "./summary-storage.js?v=20260829-stage5ad",
   "./ads-live.js?v=20260829-stage5y",
   "./channel-config.js?v=20260827-stage1f",
