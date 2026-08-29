@@ -58,6 +58,7 @@ function renderData(sessions){
 
 function renderError(error){
   const shell=view?.querySelector('[data-external-shell="ads"]');if(!shell)return;
+  shell.querySelectorAll('.ads-overview .channel-metric strong').forEach(node=>{node.textContent='—'});
   const status=shell.querySelector('.ads-overview .channel-state');if(status){status.textContent='Грешка при зареждане';status.classList.remove('live');status.classList.add('pending')}
   const campaignCard=shell.querySelector('.channel-grid .channel-card:first-child');
   const old=campaignCard?.querySelector('.channel-status,.ads-live-list');
