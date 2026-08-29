@@ -1,6 +1,7 @@
 import { getApps } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import { CHANNEL_WORKER_BASE } from './channel-config.js?v=20260827-stage1f';
+import { loadChannelStatus } from './channel-api.js?v=20260829-stage5e';
 
 let renderToken = 0;
 let loadSequence = 0;
@@ -171,7 +172,7 @@ function renderList(card, snapshot, type) {
 
 async function loadSearch(shell) {
   const token = ++renderToken;
-  const status = await ownerFetch('/api/status');
+  const status = await loadChannelStatus();
   if (token !== renderToken || !document.contains(shell)) return;
 
   if (!(status.connections || []).some(item => item.provider === 'search_console')) {
