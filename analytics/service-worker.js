@@ -1,4 +1,4 @@
-const CACHE_NAME = "ivanov-analytics-v63-stage5ad";
+const CACHE_NAME = "ivanov-analytics-v64-stage5ae";
 const APP_SHELL = [
   "./",
   "./index.html",
