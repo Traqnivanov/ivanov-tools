@@ -32,15 +32,22 @@ function apply(root=document){
   root.querySelectorAll('p').forEach(paragraph=>{
     const strong=paragraph.querySelector('strong');
     if(strong?.textContent.trim()==='Дневни и месечни обобщения:'){
-      paragraph.innerHTML=`<strong>Дневни и месечни обобщения:</strong> ${statusText()}`;
+      const text=`Дневни и месечни обобщения: ${statusText()}`;
+      if(paragraph.textContent.trim()!==text){
+        paragraph.innerHTML=`<strong>Дневни и месечни обобщения:</strong> ${statusText()}`;
+      }
       return;
     }
     if(strong?.textContent.trim()==='Текущо зареждане:'){
-      paragraph.innerHTML='<strong>Текущо зареждане:</strong> до 10 000 подробни събития от всеки необходим storage source за избрания период.';
+      const text='Текущо зареждане: до 10 000 подробни събития от всеки необходим storage source за избрания период.';
+      if(paragraph.textContent.trim()!==text){
+        paragraph.innerHTML='<strong>Текущо зареждане:</strong> до 10 000 подробни събития от всеки необходим storage source за избрания период.';
+      }
       return;
     }
     if(paragraph.classList.contains('card-note')&&paragraph.textContent.includes('Старите обещания за 90 дни')){
-      paragraph.textContent='Retention/автоматичното изтриване още не е активирано. Дневните и месечните D1 обобщения се генерират автоматично от backend cron.';
+      const text='Retention/автоматичното изтриване още не е активирано. Дневните и месечните D1 обобщения се генерират автоматично от backend cron.';
+      if(paragraph.textContent!==text)paragraph.textContent=text;
     }
   });
 }
