@@ -40,6 +40,10 @@ function cityForProfile(profile) {
   return normalizeCity(profile.city) || normalizeCity(profile.label) || normalizeCity(profile.profile_key);
 }
 
+function businessCityForCard(city) {
+  return city === 'Лом EN' || city === 'Лом DE' ? 'Лом' : city;
+}
+
 function fmt(value) {
   return new Intl.NumberFormat('bg-BG', { maximumFractionDigits: 0 }).format(Math.round(Number(value || 0)));
 }
@@ -143,12 +147,13 @@ async function loadBusiness(shell) {
 
   for (const card of cards) {
     const city = card.querySelector('h2')?.textContent?.trim() || '';
-    const profile = profiles.find(item => cityForProfile(item) === city);
+    const profileCity = businessCityForCard(city);
+    const profile = profiles.find(item => cityForProfile(item) === profileCity);
     if (!profile) {
       setCardState(card, 'Няма профил', false);
       setCardMetrics(card, {}, false);
-      setCardNote(card, `Няма открит свързан Google Business профил за ${city}.`);
-      cityValues.set(city, { hasData: false, values: {} });
+      setCardNote(card, `Няма открит свързан Google Business профил за ${profileCity}.`);
+      cityValues.set(profileCity, { hasData: false, values: {} });
       continue;
     }
 
@@ -167,7 +172,7 @@ async function loadBusiness(shell) {
         ? `Google Business данни за ${period.from} – ${period.to}. Последният ден се появява след дневния backend sync.`
         : `Връзката е активна, но за ${period.from} – ${period.to} още няма синхронизирани Google Business дневни данни.`,
     );
-    cityValues.set(city, { hasData, values });
+    cityValues.set(profileCity, { hasData, values });
   }
 
   updateComparison(shell, cityValues);
