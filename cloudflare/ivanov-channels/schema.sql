@@ -80,6 +80,22 @@ CREATE TABLE IF NOT EXISTS analytics_events (
   form_id TEXT
 );
 
+CREATE TABLE IF NOT EXISTS analytics_daily_summaries (
+  day TEXT NOT NULL,
+  site TEXT NOT NULL,
+  summary_json TEXT NOT NULL DEFAULT '{}',
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (day, site)
+);
+
+CREATE TABLE IF NOT EXISTS analytics_monthly_summaries (
+  month TEXT NOT NULL,
+  site TEXT NOT NULL,
+  summary_json TEXT NOT NULL DEFAULT '{}',
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (month, site)
+);
+
 CREATE INDEX IF NOT EXISTS idx_channel_daily_lookup
   ON channel_daily(provider, profile_key, day);
 
@@ -91,3 +107,9 @@ CREATE INDEX IF NOT EXISTS idx_analytics_events_time
 
 CREATE INDEX IF NOT EXISTS idx_analytics_events_session
   ON analytics_events(session_id, received_at ASC);
+
+CREATE INDEX IF NOT EXISTS idx_analytics_daily_summary_lookup
+  ON analytics_daily_summaries(site, day);
+
+CREATE INDEX IF NOT EXISTS idx_analytics_monthly_summary_lookup
+  ON analytics_monthly_summaries(site, month);
