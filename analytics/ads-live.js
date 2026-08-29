@@ -1,4 +1,4 @@
-import{fetchAnalyticsEvents,clearAnalyticsEventCache}from'./event-source.js?v=20260829-stage5j';
+import{fetchAnalyticsEvents,clearAnalyticsEventCache}from'./event-source.js?v=20260829-stage5k';
 
 const view=document.querySelector('#view');
 const BUSINESS=new Set(['phone_click','viber_click','form_success']);

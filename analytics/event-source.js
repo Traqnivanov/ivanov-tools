@@ -15,8 +15,10 @@ function rangeKey(range) {
   return `${range.start.getTime()}:${range.end.getTime()}`;
 }
 
-function publishSourceHealth(firestoreResult, d1Result) {
+function publishSourceHealth(range, firestoreResult, d1Result) {
+  const key = rangeKey(range);
   const detail = {
+    rangeKey: key,
     firestore: firestoreResult.status === 'fulfilled',
     d1: d1Result.status === 'fulfilled',
     partial: firestoreResult.status !== d1Result.status,
@@ -25,7 +27,9 @@ function publishSourceHealth(firestoreResult, d1Result) {
     d1Error: d1Result.status === 'rejected' ? String(d1Result.reason?.message || 'd1_unavailable') : '',
     checkedAt: new Date().toISOString(),
   };
-  window.__ivanovAnalyticsSourceStatus = detail;
+  const statuses = window.__ivanovAnalyticsSourceStatuses || {};
+  statuses[key] = detail;
+  window.__ivanovAnalyticsSourceStatuses = statuses;
   window.dispatchEvent(new CustomEvent('ivanov:analytics-source-status', { detail }));
 }
 
@@ -93,7 +97,7 @@ async function loadRange(range) {
     fetchFirestoreEvents(range),
     fetchD1Events(range),
   ]);
-  publishSourceHealth(firestoreResult, d1Result);
+  publishSourceHealth(range, firestoreResult, d1Result);
   const firestore = firestoreResult.status === 'fulfilled' ? firestoreResult.value : [];
   const d1 = d1Result.status === 'fulfilled' ? d1Result.value : [];
   if (!firestore.length && !d1.length && firestoreResult.status === 'rejected' && d1Result.status === 'rejected') {

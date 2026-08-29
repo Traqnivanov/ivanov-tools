@@ -1,4 +1,4 @@
-import { fetchAnalyticsEvents } from './event-source.js?v=20260829-stage5j';
+import { fetchAnalyticsEvents } from './event-source.js?v=20260829-stage5k';
 
 window.__ivanovFetchAnalyticsEvents = fetchAnalyticsEvents;
 
