@@ -96,8 +96,8 @@ function selectedProfiles(profiles) {
     const root = profiles.filter(profile => classify(profile) === 'root');
     if (root.length) return [root[0]];
     const derived = profiles.filter(profile => DERIVED_PROFILE_KEYS.has(profile.profile_key));
-    if (derived.length === DERIVED_PROFILE_KEYS.size) return derived;
-    return profiles.length ? [profiles[0]] : [];
+    if (derived.length) return derived;
+    return [];
   }
   return profiles;
 }
