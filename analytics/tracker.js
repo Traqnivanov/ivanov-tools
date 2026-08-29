@@ -1,6 +1,6 @@
 import{normalizePath,siteFromPath}from'./sites.js?v=20260818-5';
 
-const VERSION='2.1.9';
+const VERSION='2.1.10';
 const INGEST_ENDPOINT='https://ivanov-channels.traqnivanov1.workers.dev/ingest';
 const GEO_ENDPOINT='https://ivanov-geo.traqnivanov1.workers.dev/';
 const EXCLUDE_KEY='ivanov_analytics_excluded';
@@ -313,6 +313,14 @@ if(!adminAction&&!excluded&&!isObviousBot()){
       markActivity();
     }
   });
+
+  const noteActivity=()=>{
+    ensureActiveSession();
+    markActivity();
+  };
+  document.addEventListener('keydown',noteActivity,{capture:true});
+  document.addEventListener('input',noteActivity,{capture:true});
+  document.addEventListener('pointerdown',noteActivity,{capture:true,passive:true});
 
   let scrollQueued=false;
   addEventListener('scroll',()=>{
