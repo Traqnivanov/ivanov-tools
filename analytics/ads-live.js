@@ -1,4 +1,4 @@
-import{fetchAnalyticsEvents}from'./event-source.js?v=20260827-stage3';
+import{fetchAnalyticsEvents,clearAnalyticsEventCache}from'./event-source.js?v=20260827-stage3';
 
 const view=document.querySelector('#view');
 const BUSINESS=new Set(['phone_click','viber_click','form_success']);
@@ -7,8 +7,9 @@ let runId=0;
 
 function currentRange(){return window.IvanovPeriods.rangeFromControls()}
 
-async function cachedEvents(){
-  return fetchAnalyticsEvents(currentRange());
+async function cachedEvents(force=false){
+  if(force)clearAnalyticsEventCache();
+  return fetchAnalyticsEvents(currentRange(),{force});
 }
 
 function groupSessions(items){
@@ -23,7 +24,7 @@ function groupSessions(items){
 
 function siteFiltered(sessions){
   const site=document.querySelector('#siteFilter')?.value||'all';
-  return site==='all'?sessions:sessions.filter(session=>session.events.some(event=>event.site===site));
+  return site==='all'?sessions:sessions.filter(session=>session.adView?.site===site);
 }
 
 function esc(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
@@ -49,7 +50,7 @@ function renderData(sessions){
   const status=shell.querySelector('.ads-overview .channel-state');if(status){status.textContent='Реални tracker данни';status.classList.remove('pending');status.classList.add('live')}
   const campaignCard=shell.querySelector('.channel-grid .channel-card:first-child');if(!campaignCard)return;
   const rows=campaignRows(sessions);
-  const old=campaignCard.querySelector('.channel-status');
+  const old=campaignCard.querySelector('.channel-status,.ads-live-list');
   const list=document.createElement('div');list.className='ads-live-list';
   list.innerHTML=rows.length?rows.map(row=>`<div><span><strong>${esc(row.term)}</strong><small>Кампания ${esc(row.campaign)} · Реклама ${esc(row.content)}</small></span><em>${row.clients} клиентски / ${row.sessions} сесии</em></div>`).join(''):'<p class="channel-status">Няма Google Ads сесии за избрания период.</p>';
   old?.replaceWith(list);
@@ -64,12 +65,12 @@ function renderError(error){
   console.warn('Ads tracker data unavailable.',error);
 }
 
-async function enhance(){
+async function enhance(force=false){
   if(!view?.querySelector('[data-external-shell="ads"]'))return;
   const id=++runId;
-  try{const sessions=siteFiltered(groupSessions(await cachedEvents()));if(id!==runId)return;renderData(sessions)}catch(error){if(id!==runId)return;renderError(error)}
+  try{const sessions=siteFiltered(groupSessions(await cachedEvents(force)));if(id!==runId)return;renderData(sessions)}catch(error){if(id!==runId)return;renderError(error)}
 }
 
-if(view){new MutationObserver(enhance).observe(view,{childList:true,subtree:true});enhance()}
-document.querySelector('#siteFilter')?.addEventListener('change',()=>setTimeout(enhance,0));
-document.querySelector('#periodFilter')?.addEventListener('change',()=>setTimeout(enhance,0));
+if(view){new MutationObserver(()=>enhance(false)).observe(view,{childList:true,subtree:true});enhance(false)}
+['siteFilter','periodFilter','dateFrom','dateTo'].forEach(id=>document.querySelector(`#${id}`)?.addEventListener('change',()=>setTimeout(()=>enhance(false),0)));
+document.querySelector('#refreshBtn')?.addEventListener('click',()=>setTimeout(()=>enhance(true),0));
