@@ -253,9 +253,26 @@ export async function refreshAnalyticsSummaries(env) {
   const nextMonthStart = new Date(Date.UTC(year, monthNumber, 1)).toISOString().slice(0, 10);
   const monthly = await summarizeRange(env, 'analytics_monthly_summaries', month, monthStart, nextMonthStart);
 
+  let previousMonthly = null;
+  const dayOfMonth = Number(today.slice(8, 10));
+  if (dayOfMonth <= 3) {
+    const previousMonthLastDay = shiftIsoDay(monthStart, -1);
+    const previousMonth = previousMonthLastDay.slice(0, 7);
+    const previousMonthStart = `${previousMonth}-01`;
+    const result = await summarizeRange(
+      env,
+      'analytics_monthly_summaries',
+      previousMonth,
+      previousMonthStart,
+      monthStart,
+    );
+    previousMonthly = { month: previousMonth, ...result };
+  }
+
   return {
     daily: { day: yesterday, ...daily },
     monthly: { month, ...monthly },
+    previousMonthly,
   };
 }
 
