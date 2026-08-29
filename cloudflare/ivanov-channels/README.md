@@ -44,6 +44,8 @@ The Worker recalculates the last 3 completed `Europe/Sofia` days on every cron r
 
 The current monthly summary is refreshed on every cron run. During the first 3 Sofia days of a new month, the Worker also recalculates the just-closed previous month so events recorded after the last cron on the final calendar day are not permanently omitted.
 
+The Firestore/D1 transition day `2026-08-29` is not a complete D1-only day. Summary generation therefore skips daily periods before `2026-08-30` and skips calendar months whose first day is before that complete-D1 boundary. In particular, no August 2026 monthly summary should be written from D1 alone; September 2026 is the first fully D1-covered calendar month.
+
 Summary day boundaries use `Europe/Sofia`.
 
 Summary engagement semantics match the dashboard: a session is engaged when it has at least 30 seconds of active time or at least 50% scroll depth.
