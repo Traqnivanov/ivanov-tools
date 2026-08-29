@@ -1,6 +1,6 @@
 import{normalizePath,siteFromPath}from'./sites.js?v=20260818-5';
 
-const VERSION='2.1.12';
+const VERSION='2.1.13';
 const INGEST_ENDPOINT='https://ivanov-channels.traqnivanov1.workers.dev/ingest';
 const GEO_ENDPOINT='https://ivanov-geo.traqnivanov1.workers.dev/';
 const EXCLUDE_KEY='ivanov_analytics_excluded';
@@ -8,12 +8,48 @@ const DASHBOARD_ORIGIN='https://traqnivanov.github.io';
 const SESSION_TIMEOUT_MS=30*60*1000;
 const SESSION_ID_KEY='ia_session';
 const SESSION_ACTIVITY_KEY='ia_session_last_activity_v2';
+const RETRY_QUEUE_KEY='ivanov_analytics_retry_v1';
+const RETRY_QUEUE_MAX=80;
+const RETRY_QUEUE_MAX_AGE_MS=48*60*60*1000;
+const RETRY_FLUSH_LIMIT=12;
 const params=new URLSearchParams(location.search);
 const adminAction=params.get('ivanov_device_action');
+const ingestHealth=params.get('ivanov_ingest_health')==='1';
 
 function isObviousBot(){
   const u=navigator.userAgent||'';
   return /bot|crawler|spider|slurp|bingpreview|facebookexternalhit|whatsapp|telegrambot|headlesschrome|lighthouse/i.test(u);
+}
+
+function postToDashboard(message){
+  try{
+    if(window.opener&&!window.opener.closed)window.opener.postMessage(message,DASHBOARD_ORIGIN);
+  }catch(e){}
+  try{
+    if(window.parent&&window.parent!==window)window.parent.postMessage(message,DASHBOARD_ORIGIN);
+  }catch(e){}
+}
+
+async function runIngestHealthProbe(){
+  const checkedAt=new Date().toISOString();
+  let result={type:'ivanov-analytics-ingest-health',ok:false,status:0,error:'probe_failed',checkedAt};
+  try{
+    const response=await fetch(INGEST_ENDPOINT,{
+      method:'POST',mode:'cors',cache:'no-store',credentials:'omit',referrerPolicy:'no-referrer',
+      headers:{'Content-Type':'text/plain;charset=UTF-8'},
+      body:JSON.stringify({eventType:'__ivanov_health_probe__'})
+    });
+    let body=null;
+    try{body=await response.json()}catch(e){}
+    const ok=response.status===400&&body?.error==='invalid_event_type';
+    result={
+      type:'ivanov-analytics-ingest-health',ok,status:response.status,
+      error:ok?'':String(body?.error||`http_${response.status}`),checkedAt
+    };
+  }catch(error){
+    result.error=String(error?.message||error||'network_error');
+  }
+  postToDashboard(result);
 }
 
 function getExcluded(){
@@ -36,11 +72,7 @@ function adminMessage(excluded,action){
 }
 
 function sendStatusToDashboard(excluded,action){
-  try{
-    if(window.opener&&!window.opener.closed){
-      window.opener.postMessage(adminMessage(excluded,action),DASHBOARD_ORIGIN);
-    }
-  }catch(e){}
+  postToDashboard(adminMessage(excluded,action));
 }
 
 function renderAdminResult(excluded,action){
@@ -88,7 +120,9 @@ function renderAdminResult(excluded,action){
 
 let excluded=getExcluded();
 
-if(adminAction==='exclude'){
+if(ingestHealth){
+  runIngestHealthProbe();
+}else if(adminAction==='exclude'){
   setExcluded(true);
   excluded=true;
   renderAdminResult(true,'exclude');
@@ -100,13 +134,14 @@ if(adminAction==='exclude'){
   renderAdminResult(excluded,'status');
 }
 
-if(!adminAction&&!excluded&&!isObviousBot()){
+if(!adminAction&&!ingestHealth&&!excluded&&!isObviousBot()){
   const path=normalizePath(location.pathname);
   const site=siteFromPath(path);
   const q=new URLSearchParams(location.search);
   let sessionStart=Date.now();
   let active=0,last=Date.now(),visible=!document.hidden,scrolls=new Set(),engagements=new Set();
   let lastActivityAt=Date.now();
+  let retryFlushRunning=false;
 
   function newSessionId(){
     return crypto.randomUUID?.()||Math.random().toString(36).slice(2);
@@ -198,6 +233,65 @@ if(!adminAction&&!excluded&&!isObviousBot()){
     };
   }
 
+  function readRetryQueue(){
+    try{
+      const parsed=JSON.parse(localStorage.getItem(RETRY_QUEUE_KEY)||'[]');
+      if(!Array.isArray(parsed))return[];
+      const cutoff=Date.now()-RETRY_QUEUE_MAX_AGE_MS;
+      return parsed.filter(item=>item&&item.data&&Number(item.queuedAt)>=cutoff).slice(-RETRY_QUEUE_MAX);
+    }catch(e){return[]}
+  }
+
+  function writeRetryQueue(items){
+    try{
+      if(items.length)localStorage.setItem(RETRY_QUEUE_KEY,JSON.stringify(items.slice(-RETRY_QUEUE_MAX)));
+      else localStorage.removeItem(RETRY_QUEUE_KEY);
+    }catch(e){}
+  }
+
+  function queueRetry(data){
+    const queue=readRetryQueue();
+    queue.push({data,queuedAt:Date.now(),attempts:0});
+    writeRetryQueue(queue);
+  }
+
+  async function retryQueuedItem(item){
+    try{
+      const response=await fetch(INGEST_ENDPOINT,{
+        method:'POST',mode:'cors',cache:'no-store',credentials:'omit',referrerPolicy:'no-referrer',
+        headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(item.data)
+      });
+      if(response.ok)return'sent';
+      if(response.status===429||response.status>=500)return'retry';
+      return'drop';
+    }catch(e){return'retry'}
+  }
+
+  async function flushRetryQueue(){
+    if(retryFlushRunning)return;
+    retryFlushRunning=true;
+    try{
+      const queue=readRetryQueue();
+      if(!queue.length)return;
+      const remaining=[];
+      let attempted=0;
+      for(let index=0;index<queue.length;index++){
+        const item=queue[index];
+        if(attempted>=RETRY_FLUSH_LIMIT){remaining.push(...queue.slice(index));break}
+        attempted++;
+        const result=await retryQueuedItem(item);
+        if(result==='retry'){
+          remaining.push({...item,attempts:Number(item.attempts||0)+1});
+          remaining.push(...queue.slice(index+1));
+          break;
+        }
+      }
+      writeRetryQueue(remaining);
+    }finally{
+      retryFlushRunning=false;
+    }
+  }
+
   function transmit(data,{beacon=false}={}){
     const body=JSON.stringify(data);
     if(beacon&&navigator.sendBeacon){
@@ -207,9 +301,12 @@ if(!adminAction&&!excluded&&!isObviousBot()){
       method:'POST',mode:'cors',cache:'no-store',credentials:'omit',referrerPolicy:'no-referrer',
       headers:{'Content-Type':'text/plain;charset=UTF-8'},body,keepalive:beacon
     }).then(response=>{
-      if(!response.ok)throw Error('ingest_http_'+response.status);
-      return true;
+      if(response.ok)return true;
+      if(response.status===429||response.status>=500)queueRetry(data);
+      console.warn('Analytics not saved','ingest_http_'+response.status);
+      return false;
     }).catch(error=>{
+      queueRetry(data);
       console.warn('Analytics not saved',error.message||error);
       return false;
     });
@@ -305,6 +402,8 @@ if(!adminAction&&!excluded&&!isObviousBot()){
   }
 
   markActivity();
+  flushRetryQueue();
+  addEventListener('online',flushRetryQueue);
   send('page_view',{}, {activity:false});
   loadGeoOnce();
 
@@ -324,6 +423,7 @@ if(!adminAction&&!excluded&&!isObviousBot()){
     if(visible){
       ensureActiveSession();
       markActivity();
+      flushRetryQueue();
     }
   });
 
