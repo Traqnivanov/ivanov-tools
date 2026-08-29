@@ -96,6 +96,7 @@ function normalizeRow(row) {
     country: row.country || 'unknown',
     city: row.city || 'unknown',
     activeSeconds: Number(row.active_seconds || 0),
+    scrollDepth: Number(row.scroll_depth || 0),
   };
 }
 
@@ -116,8 +117,9 @@ function aggregate(events) {
     const firstPage = ordered.find(event => event.eventType === 'page_view') || ordered[0];
     const end = ordered.findLast?.(event => event.eventType === 'session_end')
       || [...ordered].reverse().find(event => event.eventType === 'session_end');
-    const engaged = ordered.some(event => event.eventType === 'engagement' && event.activeSeconds >= 15)
-      || Number(end?.activeSeconds || 0) >= 15;
+    const engaged = ordered.some(event => event.eventType === 'engagement' && event.activeSeconds >= 30)
+      || Number(end?.activeSeconds || 0) >= 30
+      || ordered.some(event => event.eventType === 'scroll' && event.scrollDepth >= 50);
     const interested = ordered.some(event => INTEREST_EVENTS.has(event.eventType));
     const client = ordered.some(event => BUSINESS_EVENTS.has(event.eventType));
 
@@ -136,23 +138,28 @@ function aggregate(events) {
       || ordered.find(event => event.city && event.city !== 'unknown');
     increment(summary.geo, `${geoEvent?.city || 'unknown'}|${geoEvent?.country || 'unknown'}`);
 
-    const seenPages = new Set();
+    const pageViewsByPath = new Map();
     for (const event of ordered) {
       if (event.eventType !== 'page_view') continue;
-      const page = keyedBucket(summary.pages, event.pagePath, {
-        title: event.pageTitle || '',
+      const list = pageViewsByPath.get(event.pagePath) || [];
+      list.push(event);
+      pageViewsByPath.set(event.pagePath, list);
+    }
+    for (const [pagePath, pageViews] of pageViewsByPath) {
+      const pageEvents = ordered.filter(event => event.pagePath === pagePath);
+      const pageInterested = pageEvents.some(event => INTEREST_EVENTS.has(event.eventType));
+      const pageClient = pageEvents.some(event => BUSINESS_EVENTS.has(event.eventType));
+      const page = keyedBucket(summary.pages, pagePath, {
+        title: pageViews[0]?.pageTitle || '',
         sessions: 0,
         pageViews: 0,
         interestedSessions: 0,
         clientSessions: 0,
       });
-      page.pageViews++;
-      if (!seenPages.has(event.pagePath)) {
-        page.sessions++;
-        if (interested) page.interestedSessions++;
-        if (client) page.clientSessions++;
-        seenPages.add(event.pagePath);
-      }
+      page.pageViews += pageViews.length;
+      page.sessions++;
+      if (pageInterested) page.interestedSessions++;
+      if (pageClient) page.clientSessions++;
     }
 
     if (String(firstPage?.source || '').toLowerCase() === 'google'
@@ -196,7 +203,7 @@ async function eventsForSofiaRange(env, fromDay, toDayExclusive) {
   const rows = await env.DB.prepare(`
     SELECT id, event_type, site, page_path, page_title, session_id, received_at,
            source, medium, campaign, content, term, device, browser, os,
-           country, city, active_seconds
+           country, city, active_seconds, scroll_depth
     FROM analytics_events
     WHERE received_at>=? AND received_at<?
     ORDER BY received_at ASC
