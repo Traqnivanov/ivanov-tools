@@ -27,7 +27,7 @@ function siteFiltered(sessions){
   return site==='all'?sessions:sessions.filter(session=>session.adView?.site===site);
 }
 
-function esc(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[char]))}
+function esc(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
 function pct(value,total){return total?`${(value/total*100).toFixed(1)}%`:'0%'}
 
 function campaignRows(sessions){
