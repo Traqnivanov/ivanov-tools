@@ -31,6 +31,14 @@ function apply(root=document){
     const strong=paragraph.querySelector('strong');
     if(strong?.textContent.trim()==='Дневни и месечни обобщения:'){
       paragraph.innerHTML=`<strong>Дневни и месечни обобщения:</strong> ${statusText()}`;
+      return;
+    }
+    if(strong?.textContent.trim()==='Текущо зареждане:'){
+      paragraph.innerHTML='<strong>Текущо зареждане:</strong> до 10 000 подробни събития от всеки необходим storage source за избрания период.';
+      return;
+    }
+    if(paragraph.classList.contains('card-note')&&paragraph.textContent.includes('Старите обещания за 90 дни')){
+      paragraph.textContent='Retention/автоматичното изтриване още не е активирано. Дневните и месечните D1 обобщения се генерират автоматично от backend cron.';
     }
   });
 }
