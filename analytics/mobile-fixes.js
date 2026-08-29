@@ -5,6 +5,12 @@ let pendingView='';
 let suppressHistory=false;
 let labelsQueued=false;
 
+function newHistorySession(){
+  return`${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
+let historySession=newHistorySession();
+
 function isMobileUi(){
   return window.matchMedia?.(MOBILE_QUERY).matches
     || window.matchMedia?.('(display-mode: standalone)').matches
@@ -25,11 +31,12 @@ function syncMobileActive(viewName){
 }
 
 function currentDepth(){
-  return history.state?.ivanovAnalytics?Number(history.state.depth||0):0;
+  const state=history.state;
+  return state?.ivanovAnalytics&&state.historySession===historySession?Number(state.depth||0):0;
 }
 
 function historyState(kind,value,depth){
-  const state={ivanovAnalytics:true,kind,depth};
+  const state={ivanovAnalytics:true,historySession,kind,depth};
   if(kind==='view')state.view=value;
   if(kind==='external')state.channel=value;
   if(kind==='page')state.path=value;
@@ -39,18 +46,19 @@ function historyState(kind,value,depth){
 function updateBackButton(){
   const button=document.querySelector('#mobileBackBtn');
   if(!button)return;
-  const visible=isMobileUi()&&history.state?.ivanovAnalytics&&currentDepth()>0;
+  const visible=isMobileUi()&&currentDepth()>0;
   button.classList.toggle('hidden',!visible);
 }
 
-function resetHistoryRoot(){
+function resetHistoryRoot(renewSession=false){
+  if(renewSession)historySession=newHistorySession();
   history.replaceState(historyState('view','summary',0),'',location.href);
   updateBackButton();
 }
 
 function sameHistoryTarget(kind,value){
   const state=history.state;
-  if(!state?.ivanovAnalytics||state.kind!==kind)return false;
+  if(!state?.ivanovAnalytics||state.historySession!==historySession||state.kind!==kind)return false;
   if(kind==='view')return state.view===value;
   if(kind==='external')return state.channel===value;
   if(kind==='page')return state.path===value;
@@ -122,6 +130,10 @@ function openPageWhenReady(path,attempt=0){
 
 function restoreHistoryState(state){
   if(!state?.ivanovAnalytics)return;
+  if(state.historySession!==historySession){
+    history.back();
+    return;
+  }
   closeSheet();
   if(state.kind==='external'){
     activateExternalWhenReady(state.channel);
@@ -134,7 +146,8 @@ function restoreHistoryState(state){
 }
 
 function ensureHistoryRoot(){
-  if(!history.state?.ivanovAnalytics){
+  const state=history.state;
+  if(!state?.ivanovAnalytics||state.historySession!==historySession){
     resetHistoryRoot();
   }
   updateBackButton();
@@ -277,7 +290,7 @@ if(app){
   new MutationObserver(()=>{
     if(app.classList.contains('hidden')){
       closeSheet();
-      resetHistoryRoot();
+      resetHistoryRoot(true);
     }
   }).observe(app,{attributes:true,attributeFilter:['class']});
 }
