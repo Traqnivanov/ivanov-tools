@@ -43,6 +43,11 @@ function updateBackButton(){
   button.classList.toggle('hidden',!visible);
 }
 
+function resetHistoryRoot(){
+  history.replaceState(historyState('view','summary',0),'',location.href);
+  updateBackButton();
+}
+
 function sameHistoryTarget(kind,value){
   const state=history.state;
   if(!state?.ivanovAnalytics||state.kind!==kind)return false;
@@ -130,7 +135,7 @@ function restoreHistoryState(state){
 
 function ensureHistoryRoot(){
   if(!history.state?.ivanovAnalytics){
-    history.replaceState(historyState('view','summary',0),'',location.href);
+    resetHistoryRoot();
   }
   updateBackButton();
 }
@@ -270,7 +275,10 @@ window.addEventListener('ivanov:analytics-loader-fallback',()=>{
 const app=document.querySelector('#app');
 if(app){
   new MutationObserver(()=>{
-    if(app.classList.contains('hidden'))closeSheet();
+    if(app.classList.contains('hidden')){
+      closeSheet();
+      resetHistoryRoot();
+    }
   }).observe(app,{attributes:true,attributeFilter:['class']});
 }
 
