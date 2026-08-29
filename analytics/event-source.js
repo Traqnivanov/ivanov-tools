@@ -6,6 +6,9 @@ import { normalizePath } from './sites.js?v=20260818-5';
 
 const CACHE_MS = 3000;
 const cache = new Map();
+// Stage 3 switched analytics storage on 29.08.2026. Keep the whole Sofia day as a safe overlap.
+const CUTOVER_DAY_START_UTC = Date.parse('2026-08-28T21:00:00.000Z');
+const POST_CUTOVER_DAY_START_UTC = Date.parse('2026-08-29T21:00:00.000Z');
 
 function app() {
   return getApps()[0] || null;
@@ -92,11 +95,18 @@ function mergeEvents(firestore, d1) {
   return [...firestore, ...d1].sort((a, b) => b.date - a.date);
 }
 
+function needsFirestore(range) {
+  return range.start.getTime() < POST_CUTOVER_DAY_START_UTC;
+}
+
+function needsD1(range) {
+  return range.end.getTime() >= CUTOVER_DAY_START_UTC;
+}
+
 async function loadRange(range) {
-  const [firestoreResult, d1Result] = await Promise.allSettled([
-    fetchFirestoreEvents(range),
-    fetchD1Events(range),
-  ]);
+  const firestoreTask = needsFirestore(range) ? fetchFirestoreEvents(range) : Promise.resolve([]);
+  const d1Task = needsD1(range) ? fetchD1Events(range) : Promise.resolve([]);
+  const [firestoreResult, d1Result] = await Promise.allSettled([firestoreTask, d1Task]);
   publishSourceHealth(range, firestoreResult, d1Result);
   const firestore = firestoreResult.status === 'fulfilled' ? firestoreResult.value : [];
   const d1 = d1Result.status === 'fulfilled' ? d1Result.value : [];
