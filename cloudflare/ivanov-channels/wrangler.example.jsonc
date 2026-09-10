@@ -19,7 +19,9 @@
       "OWNER_UID",
       "GOOGLE_CLIENT_ID",
       "GOOGLE_CLIENT_SECRET",
-      "TOKEN_ENCRYPTION_KEY"
+      "TOKEN_ENCRYPTION_KEY",
+      "FACEBOOK_APP_ID",
+      "FACEBOOK_APP_SECRET"
     ]
   },
   "d1_databases": [

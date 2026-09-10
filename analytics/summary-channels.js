@@ -13,7 +13,7 @@ const CHANNELS=[
 
 function liveStatusFor(key,status){
   if(!status)return null;
-  const provider=key==='business'?'google_business':key==='search'?'search_console':null;
+  const provider=key==='business'?'google_business':key==='search'?'search_console':key==='facebook'?'facebook':null;
   if(!provider)return null;
   const connection=(status.connections||[]).find(item=>item.provider===provider);
   let profiles=(status.profiles||[]).filter(item=>item.provider===provider);

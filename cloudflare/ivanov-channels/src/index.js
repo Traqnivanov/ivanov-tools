@@ -5,7 +5,13 @@ import {
   storeGoogleRefreshToken,
   discoverGoogleProfiles,
 } from './google.js';
-import { syncConnectedGoogleChannels } from './sync.js';
+import { syncConnectedChannels } from './sync.js';
+import {
+  facebookAuthorizationUrl,
+  exchangeFacebookCode,
+  storeFacebookUserToken,
+  discoverFacebookPages,
+} from './facebook.js';
 import {
   enforceAnalyticsRateLimit,
   listAnalyticsEvents,
@@ -95,12 +101,15 @@ async function ownerOrResponse(request, env, origin) {
 }
 
 async function startOAuth(request, env, provider, origin) {
-  if (!GOOGLE_PROVIDERS.has(provider)) return json(env, { error: 'provider_not_supported_yet' }, 400, origin);
+  if (!GOOGLE_PROVIDERS.has(provider) && provider !== 'facebook') return json(env, { error: 'provider_not_supported_yet' }, 400, origin);
   const auth = await ownerOrResponse(request, env, origin);
   if (auth.response) return auth.response;
   const state = randomState();
   await saveState(env, provider, state);
-  return json(env, { authorizationUrl: googleAuthorizationUrl(env, provider, state) }, 200, origin);
+  const authorizationUrl = provider === 'facebook'
+    ? facebookAuthorizationUrl(env, state)
+    : googleAuthorizationUrl(env, provider, state);
+  return json(env, { authorizationUrl }, 200, origin);
 }
 
 function oauthPreparationMessage(provider, error) {
@@ -133,6 +142,25 @@ async function finishGoogleOAuth(request, env, provider) {
   } catch (error) {
     console.error('OAuth callback failed', provider, error);
     return callbackHtml(env, false, oauthPreparationMessage(provider, error));
+  }
+}
+
+async function finishFacebookOAuth(request, env) {
+  const url = new URL(request.url);
+  const state = url.searchParams.get('state');
+  const code = url.searchParams.get('code');
+  const oauthError = url.searchParams.get('error');
+  if (!await consumeState(env, 'facebook', state)) return callbackHtml(env, false, 'Невалидна или изтекла OAuth заявка.');
+  if (oauthError) return callbackHtml(env, false, `Facebook отказа разрешението: ${oauthError}`);
+  if (!code) return callbackHtml(env, false, 'Facebook не върна authorization code.');
+  try {
+    const token = await exchangeFacebookCode(env, code);
+    await storeFacebookUserToken(env, token);
+    const pages = await discoverFacebookPages(env);
+    return callbackHtml(env, true, `Намерени страници: ${pages.length}. Данните ще се синхронизират автоматично.`);
+  } catch (error) {
+    console.error('OAuth callback failed', 'facebook', error);
+    return callbackHtml(env, false, `Facebook разрешението спря с: ${String(error?.message || error)}.`);
   }
 }
 
@@ -201,10 +229,14 @@ async function handleFetch(request, env) {
 
   if (request.method === 'GET' && url.pathname === '/health') return json(env, { ok: true, service: 'ivanov-channels' }, 200, origin);
 
-  const callbackMatch = url.pathname.match(/^\/oauth\/callback\/(google_business|search_console)$/);
-  if (request.method === 'GET' && callbackMatch) return finishGoogleOAuth(request, env, callbackMatch[1]);
+  const callbackMatch = url.pathname.match(/^\/oauth\/callback\/(google_business|search_console|facebook)$/);
+  if (request.method === 'GET' && callbackMatch) {
+    return callbackMatch[1] === 'facebook'
+      ? finishFacebookOAuth(request, env)
+      : finishGoogleOAuth(request, env, callbackMatch[1]);
+  }
 
-  const startMatch = url.pathname.match(/^\/oauth\/start\/(google_business|search_console)$/);
+  const startMatch = url.pathname.match(/^\/oauth\/start\/(google_business|search_console|facebook)$/);
   if (request.method === 'POST' && startMatch) return startOAuth(request, env, startMatch[1], origin);
 
   if (request.method === 'GET' && url.pathname === '/api/status') {
@@ -246,7 +278,7 @@ async function handleFetch(request, env) {
   if (request.method === 'POST' && url.pathname === '/api/sync') {
     const auth = await ownerOrResponse(request, env, origin);
     if (auth.response) return auth.response;
-    return json(env, { results: await syncConnectedGoogleChannels(env) }, 200, origin);
+    return json(env, { results: await syncConnectedChannels(env) }, 200, origin);
   }
 
   return json(env, { error: 'not_found' }, 404, origin, origins);
@@ -268,7 +300,7 @@ export default {
   },
   async scheduled(controller, env) {
     await cleanup(env);
-    const results = await syncConnectedGoogleChannels(env);
+    const results = await syncConnectedChannels(env);
     const summaries = await refreshAnalyticsSummaries(env);
     console.log('ivanov-channels scheduled sync', controller.cron, { google: results, analyticsSummaries: summaries });
   },

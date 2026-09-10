@@ -7,6 +7,12 @@ import {
   loadChannelStatus,
 } from './channel-api.js?v=20260829-stage5e';
 
+function providerForType(type) {
+  if (type === 'business') return 'google_business';
+  if (type === 'facebook') return 'facebook';
+  return 'search_console';
+}
+
 function providerInfo(status, provider) {
   const connection = (status?.connections || []).find(item => item.provider === provider) || null;
   let profiles = (status?.profiles || []).filter(item => item.provider === provider);
@@ -21,10 +27,10 @@ async function startOAuth(provider, button) {
   const popup = window.open('about:blank', `ivanov-${provider}-oauth`);
   const original = button.textContent;
   button.disabled = true;
-  button.textContent = 'Отварям Google…';
+  button.textContent = 'Отварям…';
   try {
     const data = await channelOwnerFetch(`/oauth/start/${provider}`, { method: 'POST' });
-    if (!data.authorizationUrl) throw new Error('Google authorization URL липсва.');
+    if (!data.authorizationUrl) throw new Error('Authorization URL липсва.');
     if (popup) popup.location.href = data.authorizationUrl;
     else window.location.href = data.authorizationUrl;
   } catch (error) {
@@ -48,22 +54,30 @@ function showMessage(panel, text, isError = false) {
 }
 
 function statusText(type, info) {
-  if (!info.connection) return type === 'business' ? 'Google Business още не е свързан.' : 'Search Console още не е свързан.';
+  if (!info.connection) {
+    if (type === 'business') return 'Google Business още не е свързан.';
+    if (type === 'facebook') return 'Facebook още не е свързан.';
+    return 'Search Console още не е свързан.';
+  }
   if (info.profiles.length) return `Свързано: ${info.profiles.length} профил${info.profiles.length === 1 ? '' : 'а'}. Данните се обновяват автоматично от дневния backend cron.`;
   if (type === 'business') return 'Google разрешението е записано. Чака се достъпът до Business Profile API; след одобрение профилите и данните ще се открият от автоматичния backend cron.';
+  if (type === 'facebook') return 'Facebook разрешението е записано, но още няма открити страници. Данните се обновяват автоматично от backend cron.';
   return 'Google разрешението е записано, но още няма открити Search Console сайтове. Данните се обновяват автоматично от backend cron.';
 }
 
 function buildPanel(type, info) {
-  const provider = type === 'business' ? 'google_business' : 'search_console';
+  const provider = providerForType(type);
   const connected = Boolean(info.connection);
   const panel = document.createElement('section');
   panel.className = 'card channel-live-panel';
   panel.dataset.channelLive = type;
 
-  const title = type === 'business' ? 'Google Business връзка' : 'Search Console връзка';
-  const action = type === 'business' ? 'Свържи Google Business' : 'Свържи Search Console';
-  const reconnect = type === 'business' ? 'Разреши Google Business отново' : 'Разреши Search Console отново';
+  const titles = { business: 'Google Business връзка', facebook: 'Facebook връзка', search: 'Search Console връзка' };
+  const actions = { business: 'Свържи Google Business', facebook: 'Свържи Facebook', search: 'Свържи Search Console' };
+  const reconnects = { business: 'Разреши Google Business отново', facebook: 'Разреши Facebook отново', search: 'Разреши Search Console отново' };
+  const title = titles[type];
+  const action = actions[type];
+  const reconnect = reconnects[type];
 
   panel.innerHTML = `
     <div class="channel-live-head">
@@ -82,7 +96,7 @@ function buildPanel(type, info) {
 
 async function decorateShell(shell) {
   const type = shell.dataset.externalShell;
-  if (type !== 'business' && type !== 'search') return;
+  if (type !== 'business' && type !== 'search' && type !== 'facebook') return;
   if (shell.querySelector('[data-channel-live]')) return;
 
   const placeholder = document.createElement('section');
@@ -93,8 +107,7 @@ async function decorateShell(shell) {
 
   try {
     const status = await loadChannelStatus();
-    const provider = type === 'business' ? 'google_business' : 'search_console';
-    placeholder.replaceWith(buildPanel(type, providerInfo(status, provider)));
+    placeholder.replaceWith(buildPanel(type, providerInfo(status, providerForType(type))));
   } catch (error) {
     placeholder.classList.remove('channel-live-loading');
     placeholder.textContent = `Не мога да проверя връзката: ${error.message}`;

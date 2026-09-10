@@ -1,4 +1,5 @@
 import { googleAccessToken, searchConsoleQuery } from './google.js';
+import { syncFacebookPages } from './facebook.js';
 
 const BUSINESS_METRICS = [
   'BUSINESS_IMPRESSIONS_DESKTOP_MAPS',
@@ -357,9 +358,9 @@ export async function syncSearchConsole(env, days = 10) {
   };
 }
 
-export async function syncConnectedGoogleChannels(env) {
+export async function syncConnectedChannels(env) {
   const results = [];
-  for (const task of [syncGoogleBusiness, syncSearchConsole]) {
+  for (const task of [syncGoogleBusiness, syncSearchConsole, syncFacebookPages]) {
     try {
       results.push(await task(env));
     } catch (error) {

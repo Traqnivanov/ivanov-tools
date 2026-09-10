@@ -64,7 +64,7 @@ No retention cleanup should be activated without a separate explicit production 
 - Search Console: connected and cron-driven.
 - Google Business: OAuth authorization exists, but Business Profile API location access is currently waiting on Google API approval/quota.
 - Google Ads: dashboard attribution is based on tracker/UTM data; it is not presented as a direct Google Ads API integration.
-- Facebook/Meta: future work; no production Meta API integration is active.
+- Facebook/Meta: OAuth app created (Pages API, `pages_show_list`/`pages_read_engagement`/`read_insights`, test mode). Connect from „Система и настройки" or the Facebook channel view; daily sync runs from the same backend cron once connected. Page-level "website clicks" metric is not wired yet.
 
 ## App installation
 
