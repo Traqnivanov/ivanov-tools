@@ -1,0 +1,47 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "ivanov-channels",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-26",
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.1
+  },
+  "vars": {
+    "PUBLIC_BASE_URL": "https://ivanov-channels.traqnivanov1.workers.dev",
+    "DASHBOARD_URL": "https://traqnivanov.github.io/ivanov-tools/analytics/",
+    "ALLOWED_ORIGINS": "https://traqnivanov.github.io",
+    "PUBLIC_ANALYTICS_ORIGINS": "https://ivanov-remonti.com,https://www.ivanov-remonti.com,https://traqnivanov.github.io"
+  },
+  "secrets": {
+    "required": [
+      "OWNER_UID",
+      "FIREBASE_PROJECT_ID",
+      "GOOGLE_CLIENT_ID",
+      "GOOGLE_CLIENT_SECRET",
+      "TOKEN_ENCRYPTION_KEY",
+      "FACEBOOK_APP_ID",
+      "FACEBOOK_APP_SECRET"
+    ]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ivanov-channels",
+      "database_id": "5f2a4a2e-b64e-494e-9ff2-d45ba030f04c"
+    }
+  ],
+  "ratelimits": [
+    {
+      "name": "ANALYTICS_RATE_LIMITER",
+      "namespace_id": "2026082701",
+      "simple": {
+        "limit": 60,
+        "period": 60
+      }
+    }
+  ],
+  "triggers": {
+    "crons": ["17 3 * * *"]
+  }
+}
