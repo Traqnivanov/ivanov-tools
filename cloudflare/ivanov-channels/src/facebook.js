@@ -127,6 +127,16 @@ function metricKey(name) {
   return name.toUpperCase();
 }
 
+async function fetchPageMetric(pageId, metric, pageToken, since, until) {
+  const url = new URL(`https://graph.facebook.com/${GRAPH_VERSION}/${pageId}/insights`);
+  url.searchParams.set('metric', metric);
+  url.searchParams.set('period', 'day');
+  url.searchParams.set('since', String(since));
+  url.searchParams.set('until', String(until));
+  url.searchParams.set('access_token', pageToken);
+  return graphJson(url.toString());
+}
+
 export async function syncFacebookPages(env, days = 7) {
   const pages = await connectedFacebookPages(env);
   if (!pages.length) return { provider: 'facebook', profiles: 0, points: 0 };
@@ -134,31 +144,35 @@ export async function syncFacebookPages(env, days = 7) {
   const until = Math.floor(Date.now() / 1000);
   const since = until - days * 86400;
   let points = 0;
+  const metricErrors = {};
 
   for (const page of pages) {
     const metadata = JSON.parse(page.metadata_json || '{}');
     if (!metadata.pageToken) continue;
     const pageToken = await decryptText(metadata.pageToken.ciphertext, metadata.pageToken.iv, env.TOKEN_ENCRYPTION_KEY);
 
-    const url = new URL(`https://graph.facebook.com/${GRAPH_VERSION}/${page.external_id}/insights`);
-    url.searchParams.set('metric', PAGE_METRICS.join(','));
-    url.searchParams.set('period', 'day');
-    url.searchParams.set('since', String(since));
-    url.searchParams.set('until', String(until));
-    url.searchParams.set('access_token', pageToken);
-
-    const body = await graphJson(url.toString());
     const statements = [];
-    for (const series of body.data || []) {
-      for (const point of series.values || []) {
-        const day = String(point.end_time || '').slice(0, 10);
-        if (!day) continue;
-        statements.push(dailyUpsertStatement(env, page.profile_key, day, metricKey(series.name), point.value));
-        points++;
+    for (const metric of PAGE_METRICS) {
+      let body;
+      try {
+        body = await fetchPageMetric(page.external_id, metric, pageToken, since, until);
+      } catch (error) {
+        metricErrors[metric] = String(error?.message || error);
+        continue;
+      }
+      for (const series of body.data || []) {
+        for (const point of series.values || []) {
+          const day = String(point.end_time || '').slice(0, 10);
+          if (!day) continue;
+          statements.push(dailyUpsertStatement(env, page.profile_key, day, metricKey(series.name), point.value));
+          points++;
+        }
       }
     }
     if (statements.length) await env.DB.batch(statements);
   }
 
-  return { provider: 'facebook', profiles: pages.length, points };
+  const result = { provider: 'facebook', profiles: pages.length, points };
+  if (Object.keys(metricErrors).length) result.metricErrors = metricErrors;
+  return result;
 }
