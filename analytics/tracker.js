@@ -1,6 +1,6 @@
 import{normalizePath,siteFromPath}from'./sites.js?v=20260818-5';
 
-const VERSION='2.1.14';
+const VERSION='2.1.15';
 const INGEST_ENDPOINT='https://ivanov-channels.traqnivanov1.workers.dev/ingest';
 const GEO_ENDPOINT='https://ivanov-geo.traqnivanov1.workers.dev/';
 const EXCLUDE_KEY='ivanov_analytics_excluded';
@@ -191,15 +191,28 @@ if(!adminAction&&!ingestHealth&&!excluded&&!isObviousBot()){
   function ref(){
     try{return document.referrer?new URL(document.referrer).hostname:''}catch{return''}
   }
+  function normalizedCampaignSource(value){
+    const raw=String(value||'').trim();
+    const lower=raw.toLowerCase();
+    if(lower==='facebook'||lower==='fb'||lower.includes('facebook'))return'facebook';
+    if(lower==='instagram'||lower==='ig'||lower.includes('instagram'))return'instagram';
+    return raw.slice(0,180);
+  }
+  function isFacebookReferrer(host){
+    const r=String(host||'').toLowerCase();
+    return r==='facebook.com'||r.endsWith('.facebook.com')||r==='fb.com'||r.endsWith('.fb.com')||r==='messenger.com'||r.endsWith('.messenger.com');
+  }
   function detectedSource(){
-    if(q.get('utm_source'))return q.get('utm_source').slice(0,180);
+    const utmSource=normalizedCampaignSource(q.get('utm_source'));
+    if(utmSource)return utmSource;
     if(q.get('gclid'))return'google';
+    if(q.get('fbclid'))return'facebook';
     let r=ref();
     if(!r)return'direct';
     if(r==='ivanov-remonti.com'||r.endsWith('.ivanov-remonti.com'))return'direct';
     if(r.includes('google.'))return'google';
-    if(r.includes('facebook.')||r.includes('fb.'))return'facebook';
-    if(r.includes('instagram.'))return'instagram';
+    if(isFacebookReferrer(r))return'facebook';
+    if(r==='instagram.com'||r.endsWith('.instagram.com'))return'instagram';
     return r;
   }
   function saveAttribution(value){
@@ -215,8 +228,9 @@ if(!adminAction&&!ingestHealth&&!excluded&&!isObviousBot()){
       const saved=JSON.parse(sessionStorage.getItem(key)||'null');
       if(saved?.sessionId===sessionId&&saved.value)return saved.value;
     }catch(e){}
+    const source=detectedSource();
     const value={
-      source:detectedSource(),medium:(q.get('utm_medium')||(q.get('gclid')?'cpc':'')).slice(0,100),
+      source,medium:(q.get('utm_medium')||(q.get('gclid')?'cpc':(source==='facebook'||source==='instagram')?'social':'')).slice(0,100),
       campaign:(q.get('utm_campaign')||'').slice(0,180),content:(q.get('utm_content')||'').slice(0,180),
       term:(q.get('utm_term')||'').slice(0,180)
     };
