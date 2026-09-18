@@ -25,17 +25,25 @@ function currentRange(){return window.IvanovPeriods.rangeFromControls()}
 function previousRange(r){return window.IvanovPeriods.previousRange(r)}
 async function cachedEvents(r){return fetchAnalyticsEvents(r)}
 
+function sourceFromEvent(event){
+  const raw=String(event?.source||'').trim();
+  if(raw&&raw!=='direct'&&!SELF_SOURCE.test(raw))return raw;
+  const referrer=String(event?.referrerDomain||'').toLowerCase();
+  if(referrer==='facebook.com'||referrer.endsWith('.facebook.com')||referrer==='fb.com'||referrer.endsWith('.fb.com')||referrer==='messenger.com'||referrer.endsWith('.messenger.com'))return'facebook';
+  return raw&&!SELF_SOURCE.test(raw)?raw:'direct';
+}
+
 function sessionsFrom(items){
   const grouped=new Map();
   items.forEach(e=>{const id=e.sessionId||e.id;if(!grouped.has(id))grouped.set(id,[]);grouped.get(id).push(e)});
   return[...grouped.entries()].map(([id,raw])=>{
     const events=[...raw].sort((a,b)=>a.date-b.date),views=events.filter(e=>e.eventType==='page_view');
-    const external=views.find(e=>e.source&&!SELF_SOURCE.test(e.source)),first=external||views[0]||events[0],geo=events.find(e=>e.eventType==='session_geo'&&e.country&&e.country!=='unknown');
+    const external=views.find(e=>sourceFromEvent(e)!=='direct'),first=external||views[0]||events[0],geo=events.find(e=>e.eventType==='session_geo'&&e.country&&e.country!=='unknown');
     const business=events.filter(e=>BUSINESS.has(e.eventType)),interest=events.filter(e=>INTEREST.has(e.eventType));
     const active=Math.max(0,...events.filter(e=>e.eventType==='engagement'||e.eventType==='session_end').map(e=>+e.activeSeconds||0));
     const scroll=Math.max(0,...events.filter(e=>e.eventType==='scroll').map(e=>+e.scrollDepth||0));
     const pages=[...new Set(views.map(e=>e.pagePath).filter(Boolean))],span=views.length>1?views[views.length-1].date-views[0].date:0;
-    const source=first?.source&&!SELF_SOURCE.test(first.source)?String(first.source):'direct',medium=String(first?.medium||'').toLowerCase();
+    const source=sourceFromEvent(first),medium=String(first?.medium||'').toLowerCase();
     const browser=first?.browser||'Неизвестно',os=first?.os||'Неизвестно';
     const technical=views.length>=4&&pages.length>=3&&span<=30000&&!business.length&&!interest.length&&active<10&&scroll<25&&(String(os).toLowerCase()==='other'||String(browser).toLowerCase()==='other');
     return{id,events,views,pages,business,interest,engaged:active>=30||scroll>=50,source,medium,city:geo?.city||'unknown',country:geo?.country||'unknown',browser,os,technical,opened:(views[0]||events[0])?.date||new Date()};
