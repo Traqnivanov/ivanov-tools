@@ -122,14 +122,26 @@ async function load(){
   }
 }
 
+function sourceFromEvent(event){
+  const raw=String(event?.source||'').trim();
+  if(raw&&raw!=='direct'&&!SELF_SOURCE.test(raw))return raw;
+  const referrer=String(event?.referrerDomain||'').toLowerCase();
+  if(
+    referrer==='facebook.com'||referrer.endsWith('.facebook.com')||
+    referrer==='fb.com'||referrer.endsWith('.fb.com')||
+    referrer==='messenger.com'||referrer.endsWith('.messenger.com')
+  )return'facebook';
+  return raw&&!SELF_SOURCE.test(raw)?raw:'direct';
+}
+
 function normalizeAttribution(items){
   const sessions=group(items,event=>event.sessionId||event.id);
   sessions.forEach(([,sessionEvents])=>{
     const ordered=[...sessionEvents].sort((a,b)=>a.date-b.date);
     const pageViews=ordered.filter(event=>event.eventType==='page_view');
-    const external=pageViews.find(event=>event.source&&!SELF_SOURCE.test(event.source));
+    const external=pageViews.find(event=>sourceFromEvent(event)!=='direct');
     const first=external||pageViews[0]||ordered[0];
-    const source=first?.source&&!SELF_SOURCE.test(first.source)?first.source:'direct';
+    const source=sourceFromEvent(first);
     const geo=ordered.find(event=>event.eventType==='session_geo'&&event.country&&event.country!=='unknown');
     const sessionCity=geo?.city||'unknown';
     const sessionCountry=geo?.country||'unknown';
