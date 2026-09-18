@@ -1,4 +1,4 @@
-const CACHE_NAME = "ivanov-analytics-v84-stage5bi";
+const CACHE_NAME = "ivanov-analytics-v85-sync-health";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -20,16 +20,16 @@ const APP_SHELL = [
   "./summary-final.js?v=20260829-stage5bb",
   "./navigation.js?v=20260827-stage1d",
   "./mobile-fixes.js?v=20260829-stage5ay",
-  "./summary-channels.js?v=20260829-stage5al",
+  "./summary-channels.js?v=20260918-sync1",
   "./summary-storage.js?v=20260829-stage5bg",
   "./summary-completeness.js?v=20260829-stage5bh",
   "./ads-live.js?v=20260829-stage5az",
   "./channel-config.js?v=20260827-stage1f",
   "./channel-api.js?v=20260829-stage5e",
-  "./channels-live.js?v=20260829-stage5e",
-  "./business-live.js?v=20260829-stage5ai",
-  "./facebook-live.js?v=20260829-stage5bi",
-  "./search-console-live.js?v=20260829-stage5ag",
+  "./channels-live.js?v=20260918-sync1",
+  "./business-live.js?v=20260918-sync1",
+  "./facebook-live.js?v=20260918-sync1",
+  "./search-console-live.js?v=20260918-sync1",
   "./firebase-config.js?v=20260818-5",
   "./sites.js?v=20260818-5",
   "./manifest.webmanifest",
