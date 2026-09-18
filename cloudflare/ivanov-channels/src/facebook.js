@@ -1,4 +1,5 @@
 import { encryptText, decryptText } from './crypto.js';
+import { recordSyncOutcome, syncErrorText } from './sync-health.js';
 
 const GRAPH_VERSION = 'v21.0';
 const SCOPE = 'pages_show_list,pages_read_engagement,read_insights,business_management';
@@ -100,6 +101,18 @@ export async function discoverFacebookPages(env) {
   for (const page of pages) {
     found.push(await upsertFacebookPage(env, page));
   }
+
+  const now = new Date().toISOString();
+  if (found.length) {
+    const placeholders = found.map(() => '?').join(',');
+    await env.DB.prepare(
+      `UPDATE channel_profiles SET status='stale', updated_at=? WHERE provider='facebook' AND profile_key NOT IN (${placeholders})`,
+    ).bind(now, ...found).run();
+  } else {
+    await env.DB.prepare(
+      "UPDATE channel_profiles SET status='stale', updated_at=? WHERE provider='facebook'",
+    ).bind(now).run();
+  }
   return found;
 }
 
@@ -138,41 +151,88 @@ async function fetchPageMetric(pageId, metric, pageToken, since, until) {
 }
 
 export async function syncFacebookPages(env, days = 7) {
+  const provider = 'facebook';
   const pages = await connectedFacebookPages(env);
-  if (!pages.length) return { provider: 'facebook', profiles: 0, points: 0 };
+  if (!pages.length) return { provider, profiles: 0, successfulProfiles: 0, points: 0, errors: [] };
 
   const until = Math.floor(Date.now() / 1000);
   const since = until - days * 86400;
   let points = 0;
-  const metricErrors = {};
+  let successfulProfiles = 0;
+  const errors = [];
 
   for (const page of pages) {
-    const metadata = JSON.parse(page.metadata_json || '{}');
-    if (!metadata.pageToken) continue;
-    const pageToken = await decryptText(metadata.pageToken.ciphertext, metadata.pageToken.iv, env.TOKEN_ENCRYPTION_KEY);
+    let pagePoints = 0;
+    const pageErrors = [];
+    try {
+      const metadata = JSON.parse(page.metadata_json || '{}');
+      if (!metadata.pageToken) throw new Error('facebook_page_token_missing');
+      const pageToken = await decryptText(
+        metadata.pageToken.ciphertext,
+        metadata.pageToken.iv,
+        env.TOKEN_ENCRYPTION_KEY,
+      );
 
-    const statements = [];
-    for (const metric of PAGE_METRICS) {
-      let body;
-      try {
-        body = await fetchPageMetric(page.external_id, metric, pageToken, since, until);
-      } catch (error) {
-        metricErrors[metric] = String(error?.message || error);
-        continue;
-      }
-      for (const series of body.data || []) {
-        for (const point of series.values || []) {
-          const day = String(point.end_time || '').slice(0, 10);
-          if (!day) continue;
-          statements.push(dailyUpsertStatement(env, page.profile_key, day, metricKey(series.name), point.value));
-          points++;
+      const statements = [];
+      for (const metric of PAGE_METRICS) {
+        try {
+          const body = await fetchPageMetric(page.external_id, metric, pageToken, since, until);
+          for (const series of body.data || []) {
+            for (const point of series.values || []) {
+              const day = String(point.end_time || '').slice(0, 10);
+              if (!day) continue;
+              statements.push(dailyUpsertStatement(env, page.profile_key, day, metricKey(series.name), point.value));
+              pagePoints++;
+            }
+          }
+        } catch (error) {
+          pageErrors.push({ metric, error: syncErrorText(error) });
         }
       }
+
+      if (statements.length) await env.DB.batch(statements);
+      points += pagePoints;
+
+      if (pageErrors.length === PAGE_METRICS.length) {
+        const error = pageErrors.map(item => `${item.metric}: ${item.error}`).join(' | ');
+        errors.push({ profileKey: page.profile_key, error });
+        await recordSyncOutcome(env, provider, page.profile_key, {
+          status: 'error',
+          error,
+          points: pagePoints,
+          metadata: { since, until, metricErrors: pageErrors },
+        });
+        continue;
+      }
+
+      successfulProfiles++;
+      if (pageErrors.length) {
+        const error = pageErrors.map(item => `${item.metric}: ${item.error}`).join(' | ');
+        errors.push({ profileKey: page.profile_key, error });
+        await recordSyncOutcome(env, provider, page.profile_key, {
+          status: 'partial',
+          error,
+          points: pagePoints,
+          metadata: { since, until, metricErrors: pageErrors },
+        });
+      } else {
+        await recordSyncOutcome(env, provider, page.profile_key, {
+          status: 'ok',
+          points: pagePoints,
+          metadata: { since, until },
+        });
+      }
+    } catch (error) {
+      const message = syncErrorText(error);
+      errors.push({ profileKey: page.profile_key, error: message });
+      await recordSyncOutcome(env, provider, page.profile_key, {
+        status: 'error',
+        error: message,
+        points: pagePoints,
+        metadata: { since, until },
+      });
     }
-    if (statements.length) await env.DB.batch(statements);
   }
 
-  const result = { provider: 'facebook', profiles: pages.length, points };
-  if (Object.keys(metricErrors).length) result.metricErrors = metricErrors;
-  return result;
+  return { provider, profiles: pages.length, successfulProfiles, points, errors };
 }

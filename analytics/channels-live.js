@@ -5,7 +5,9 @@ import {
   channelOwnerFetch,
   invalidateChannelStatus,
   loadChannelStatus,
-} from './channel-api.js?v=20260829-stage5e';
+  syncHealthFor,
+  syncHealthSummary,
+} from './channel-api.js?v=20260918-sync1';
 
 function providerForType(type) {
   if (type === 'business') return 'google_business';
@@ -15,12 +17,12 @@ function providerForType(type) {
 
 function providerInfo(status, provider) {
   const connection = (status?.connections || []).find(item => item.provider === provider) || null;
-  let profiles = (status?.profiles || []).filter(item => item.provider === provider);
+  let profiles = (status?.profiles || []).filter(item => item.provider === provider && item.status === 'connected');
   if (provider === 'search_console') {
     const siteProfiles = profiles.filter(item => String(item.profile_key || '').startsWith('sc-city:'));
     if (siteProfiles.length >= 5) profiles = siteProfiles;
   }
-  return { connection, profiles };
+  return { connection, profiles, health: syncHealthFor(status, provider) };
 }
 
 async function startOAuth(provider, button) {
@@ -59,15 +61,24 @@ function statusText(type, info) {
     if (type === 'facebook') return 'Facebook още не е свързан.';
     return 'Search Console още не е свързан.';
   }
-  if (info.profiles.length) return `Свързано: ${info.profiles.length} профил${info.profiles.length === 1 ? '' : 'а'}. Данните се обновяват автоматично от дневния backend cron.`;
-  if (type === 'business') return 'Google разрешението е записано. Чака се достъпът до Business Profile API; след одобрение профилите и данните ще се открият от автоматичния backend cron.';
-  if (type === 'facebook') return 'Facebook разрешението е записано, но още няма открити страници. Данните се обновяват автоматично от backend cron.';
-  return 'Google разрешението е записано, но още няма открити Search Console сайтове. Данните се обновяват автоматично от backend cron.';
+  const health = syncHealthSummary(info.health);
+  let base;
+  if (info.profiles.length) {
+    base = `Свързано: ${info.profiles.length} профил${info.profiles.length === 1 ? '' : 'а'}. Данните се обновяват автоматично от дневния backend cron.`;
+  } else if (type === 'business') {
+    base = 'Google разрешението е записано. Чака се достъпът до Business Profile API; след одобрение профилите и данните ще се открият от автоматичния backend cron.';
+  } else if (type === 'facebook') {
+    base = 'Facebook разрешението е записано, но още няма открити активни страници. Данните се обновяват автоматично от backend cron.';
+  } else {
+    base = 'Google разрешението е записано, но още няма открити активни Search Console сайтове. Данните се обновяват автоматично от backend cron.';
+  }
+  return health ? `${base} ${health}.` : base;
 }
 
 function buildPanel(type, info) {
   const provider = providerForType(type);
   const connected = Boolean(info.connection);
+  const syncProblem = connected && ['error', 'partial'].includes(info.health?.last_status);
   const panel = document.createElement('section');
   panel.className = 'card channel-live-panel';
   panel.dataset.channelLive = type;
@@ -82,7 +93,7 @@ function buildPanel(type, info) {
   panel.innerHTML = `
     <div class="channel-live-head">
       <div><span class="channel-eyebrow">Връзка</span><h2>${title}</h2></div>
-      <span class="channel-state ${connected ? 'connected' : 'pending'}">${connected ? 'Разрешено' : 'Не е свързано'}</span>
+      <span class="channel-state ${connected && !syncProblem ? 'connected' : 'pending'}">${!connected ? 'Не е свързано' : syncProblem ? (info.health?.last_status === 'partial' ? 'Частичен sync' : 'Sync проблем') : 'Разрешено'}</span>
     </div>
     <p class="channel-live-status"></p>
     <div class="channel-live-actions">

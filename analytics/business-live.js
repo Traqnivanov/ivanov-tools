@@ -1,7 +1,7 @@
 import { getApps } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import { CHANNEL_WORKER_BASE } from './channel-config.js?v=20260827-stage1f';
-import { loadChannelStatus } from './channel-api.js?v=20260829-stage5e';
+import { loadChannelStatus, syncHealthFor, syncHealthSummary } from './channel-api.js?v=20260918-sync1';
 
 let renderToken = 0;
 let loadSequence = 0;
@@ -130,6 +130,7 @@ async function loadBusiness(shell) {
   if (token !== renderToken || !document.contains(shell)) return;
 
   const connected = (status.connections || []).some(item => item.provider === 'google_business');
+  const providerHealth = syncHealthFor(status, 'google_business');
   const profiles = (status.profiles || []).filter(item => item.provider === 'google_business' && item.status === 'connected');
   const cards = [...shell.querySelectorAll('.business-profile-card')];
 
@@ -164,13 +165,21 @@ async function loadBusiness(shell) {
     const values = totals(rows);
     const hasData = rows.length > 0;
 
-    setCardState(card, 'Свързано', true);
+    const health = syncHealthFor(status, 'google_business', profile.profile_key) || providerHealth;
+    const syncProblem = ['error', 'partial'].includes(health?.last_status);
+    const healthText = syncHealthSummary(health);
+    setCardState(
+      card,
+      syncProblem ? (health.last_status === 'partial' ? 'Частичен sync' : 'Sync проблем') : 'Свързано',
+      !syncProblem,
+    );
     setCardMetrics(card, values, hasData);
     setCardNote(
       card,
-      hasData
+      (hasData
         ? `Google Business данни за ${period.from} – ${period.to}. Последният ден се появява след дневния backend sync.`
-        : `Връзката е активна, но за ${period.from} – ${period.to} още няма синхронизирани Google Business дневни данни.`,
+        : `Връзката е активна, но за ${period.from} – ${period.to} още няма синхронизирани Google Business дневни данни.`) +
+        (healthText ? ` ${healthText}.` : ''),
     );
     cityValues.set(profileCity, { hasData, values });
   }

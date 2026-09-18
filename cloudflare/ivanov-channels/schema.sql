@@ -54,6 +54,19 @@ CREATE TABLE IF NOT EXISTS channel_rankings (
   PRIMARY KEY (provider, profile_key, period_start, period_end, dimension, dimension_value)
 );
 
+CREATE TABLE IF NOT EXISTS channel_sync_status (
+  provider TEXT NOT NULL,
+  profile_key TEXT NOT NULL DEFAULT '',
+  last_status TEXT NOT NULL DEFAULT 'error',
+  last_attempt_at TEXT NOT NULL,
+  last_success_at TEXT,
+  last_error TEXT NOT NULL DEFAULT '',
+  last_points INTEGER NOT NULL DEFAULT 0,
+  metadata_json TEXT NOT NULL DEFAULT '{}',
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (provider, profile_key)
+);
+
 CREATE TABLE IF NOT EXISTS analytics_events (
   id TEXT PRIMARY KEY,
   event_type TEXT NOT NULL,
@@ -101,6 +114,9 @@ CREATE INDEX IF NOT EXISTS idx_channel_daily_lookup
 
 CREATE INDEX IF NOT EXISTS idx_rankings_lookup
   ON channel_rankings(provider, profile_key, period_start, period_end, dimension);
+
+CREATE INDEX IF NOT EXISTS idx_channel_sync_status_provider
+  ON channel_sync_status(provider, profile_key);
 
 CREATE INDEX IF NOT EXISTS idx_analytics_events_time
   ON analytics_events(received_at DESC);

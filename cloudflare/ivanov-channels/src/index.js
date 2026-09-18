@@ -19,6 +19,7 @@ import {
   storeAnalyticsEvent,
 } from './analytics.js';
 import { listAnalyticsSummaries, refreshAnalyticsSummaries } from './summaries.js';
+import { listSyncHealth } from './sync-health.js';
 
 const GOOGLE_PROVIDERS = new Set(['google_business', 'search_console']);
 
@@ -165,9 +166,16 @@ async function finishFacebookOAuth(request, env) {
 }
 
 async function connectionStatus(env) {
-  const tokens = await env.DB.prepare('SELECT provider, updated_at, granted_scopes FROM oauth_tokens ORDER BY provider').all();
-  const profiles = await env.DB.prepare('SELECT provider, profile_key, label, city, status, updated_at FROM channel_profiles ORDER BY provider, label').all();
-  return { connections: tokens.results || [], profiles: profiles.results || [] };
+  const [tokens, profiles, syncHealth] = await Promise.all([
+    env.DB.prepare('SELECT provider, updated_at, granted_scopes FROM oauth_tokens ORDER BY provider').all(),
+    env.DB.prepare('SELECT provider, profile_key, label, city, status, updated_at FROM channel_profiles ORDER BY provider, label').all(),
+    listSyncHealth(env),
+  ]);
+  return {
+    connections: tokens.results || [],
+    profiles: profiles.results || [],
+    syncHealth,
+  };
 }
 
 async function channelData(env, url) {
