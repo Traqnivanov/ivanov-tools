@@ -126,6 +126,20 @@ async function upsertProfile(env, provider, profile) {
   ).run();
 }
 
+async function markMissingProfilesStale(env, provider, profileKeys, { keepDerived = false } = {}) {
+  const now = new Date().toISOString();
+  const filters = ["provider=?", "status='connected'"];
+  const bindings = [provider];
+  if (keepDerived) filters.push("profile_key NOT LIKE 'sc-city:%'");
+  if (profileKeys.length) {
+    filters.push(`profile_key NOT IN (${profileKeys.map(() => '?').join(',')})`);
+    bindings.push(...profileKeys);
+  }
+  await env.DB.prepare(
+    `UPDATE channel_profiles SET status='stale', updated_at=? WHERE ${filters.join(' AND ')}`,
+  ).bind(now, ...bindings).run();
+}
+
 export async function discoverGoogleBusinessProfiles(env) {
   const accessToken = await googleAccessToken(env, 'google_business');
   const locations = await googleJson(
@@ -151,6 +165,7 @@ export async function discoverGoogleBusinessProfiles(env) {
     await upsertProfile(env, 'google_business', profile);
     found.push(profile);
   }
+  await markMissingProfilesStale(env, 'google_business', found.map(profile => profile.profileKey));
   return found;
 }
 
@@ -170,6 +185,7 @@ export async function discoverSearchConsoleProfiles(env) {
     await upsertProfile(env, 'search_console', profile);
     found.push(profile);
   }
+  await markMissingProfilesStale(env, 'search_console', found.map(profile => profile.profileKey), { keepDerived: true });
   return found;
 }
 
