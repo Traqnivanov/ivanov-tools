@@ -1,4 +1,4 @@
-import { loadChannelStatus } from './channel-api.js?v=20260829-stage5e';
+import { loadChannelStatus, syncHealthFor } from './channel-api.js?v=20260918-sync1';
 
 const view=document.querySelector('#view');
 let latestChannelStatus=null;
@@ -16,7 +16,8 @@ function liveStatusFor(key,status){
   const provider=key==='business'?'google_business':key==='search'?'search_console':key==='facebook'?'facebook':null;
   if(!provider)return null;
   const connection=(status.connections||[]).find(item=>item.provider===provider);
-  let profiles=(status.profiles||[]).filter(item=>item.provider===provider);
+  const health=syncHealthFor(status,provider);
+  let profiles=(status.profiles||[]).filter(item=>item.provider===provider&&item.status==='connected');
   let partialSearch=false;
   if(provider==='search_console'){
     const siteProfiles=profiles.filter(item=>String(item.profile_key||'').startsWith('sc-city:'));
@@ -26,6 +27,8 @@ function liveStatusFor(key,status){
     }
   }
   if(!connection)return 'Свързването предстои';
+  if(health?.last_status==='error')return 'Свързано · sync грешка';
+  if(health?.last_status==='partial')return 'Свързано · частичен sync';
   if(profiles.length){
     if(provider==='search_console'&&partialSearch)return `Свързано · частично · ${profiles.length}/5 профила`;
     return `Свързано · ${profiles.length} профила`;
@@ -42,7 +45,7 @@ function applyLiveStatuses(root=document){
 }
 
 function applyUnavailable(root=document){
-  root.querySelectorAll('[data-summary-channel="business"],[data-summary-channel="search"]').forEach(button=>{
+  root.querySelectorAll('[data-summary-channel="business"],[data-summary-channel="facebook"],[data-summary-channel="search"]').forEach(button=>{
     const status=button.querySelector('em');
     if(status)status.textContent='Статусът временно не е достъпен';
   });
