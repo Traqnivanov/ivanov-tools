@@ -1,5 +1,6 @@
 import { googleAccessToken, searchConsoleQuery } from './google.js';
 import { syncFacebookPages } from './facebook.js';
+import { recordSyncOutcome, syncErrorText } from './sync-health.js';
 
 const BUSINESS_METRICS = [
   'BUSINESS_IMPRESSIONS_DESKTOP_MAPS',
@@ -172,29 +173,53 @@ function googleDate(value) {
 }
 
 export async function syncGoogleBusiness(env, days = 7) {
-  const profiles = await connectedProfiles(env, 'google_business');
-  if (!profiles.length) return { provider: 'google_business', profiles: 0, points: 0 };
-  const accessToken = await googleAccessToken(env, 'google_business');
+  const provider = 'google_business';
+  const profiles = await connectedProfiles(env, provider);
+  if (!profiles.length) return { provider, profiles: 0, successfulProfiles: 0, points: 0, errors: [] };
+  const accessToken = await googleAccessToken(env, provider);
   const range = backfillRange(days);
   let points = 0;
+  let successfulProfiles = 0;
+  const errors = [];
+
   for (const profile of profiles) {
-    const response = await fetch(businessPerformanceUrl(profile.external_id, range.start, range.end), {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    if (!response.ok) throw new Error(`business_performance_${response.status}`);
-    const body = await response.json();
-    for (const multi of body.multiDailyMetricTimeSeries || []) {
-      for (const series of multi.dailyMetricTimeSeries || []) {
-        for (const point of series.timeSeries?.datedValues || []) {
-          const day = googleDate(point.date);
-          if (!day) continue;
-          await upsertDaily(env, 'google_business', profile.profile_key, day, series.dailyMetric, Number(point.value || 0));
-          points++;
+    let profilePoints = 0;
+    try {
+      const response = await fetch(businessPerformanceUrl(profile.external_id, range.start, range.end), {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!response.ok) throw new Error(`business_performance_${response.status}`);
+      const body = await response.json();
+      for (const multi of body.multiDailyMetricTimeSeries || []) {
+        for (const series of multi.dailyMetricTimeSeries || []) {
+          for (const point of series.timeSeries?.datedValues || []) {
+            const day = googleDate(point.date);
+            if (!day) continue;
+            await upsertDaily(env, provider, profile.profile_key, day, series.dailyMetric, Number(point.value || 0));
+            profilePoints++;
+            points++;
+          }
         }
       }
+      successfulProfiles++;
+      await recordSyncOutcome(env, provider, profile.profile_key, {
+        status: 'ok',
+        points: profilePoints,
+        metadata: { range },
+      });
+    } catch (error) {
+      const message = syncErrorText(error);
+      errors.push({ profileKey: profile.profile_key, error: message });
+      await recordSyncOutcome(env, provider, profile.profile_key, {
+        status: 'error',
+        error: message,
+        points: profilePoints,
+        metadata: { range },
+      });
     }
   }
-  return { provider: 'google_business', profiles: profiles.length, points };
+
+  return { provider, profiles: profiles.length, successfulProfiles, points, errors };
 }
 
 async function replaceRankings(env, profileKey, start, end, dimension, rows) {
@@ -321,51 +346,136 @@ async function syncDerivedSiteProfile(env, accessToken, sourceProfile, config, d
 }
 
 export async function syncSearchConsole(env, days = 10) {
-  const profiles = await connectedProfiles(env, 'search_console');
+  const provider = 'search_console';
+  const profiles = await connectedProfiles(env, provider);
   const sourceProfiles = profiles.filter(profile => !String(profile.profile_key || '').startsWith('sc-city:'));
-  if (!sourceProfiles.length) return { provider: 'search_console', profiles: 0, points: 0 };
+  if (!sourceProfiles.length) return { provider, profiles: 0, successfulProfiles: 0, derivedProfiles: 0, points: 0, errors: [] };
   const dailyRange = backfillRange(days);
   const rankingRange = backfillRange(28);
   let points = 0;
+  let successfulProfiles = 0;
+  let successfulDerivedProfiles = 0;
+  const errors = [];
 
   for (const profile of sourceProfiles) {
-    const daily = await searchConsoleQuery(env, profile.external_id, dailyRange.start, dailyRange.end, ['date']);
-    points += await batchDailyRows(env, 'search_console', profile.profile_key, daily.rows || []);
+    let profilePoints = 0;
+    try {
+      const daily = await searchConsoleQuery(env, profile.external_id, dailyRange.start, dailyRange.end, ['date']);
+      profilePoints += await batchDailyRows(env, provider, profile.profile_key, daily.rows || []);
 
-    const [queries, pages] = await Promise.all([
-      searchConsoleQuery(env, profile.external_id, rankingRange.start, rankingRange.end, ['query']),
-      searchConsoleQuery(env, profile.external_id, rankingRange.start, rankingRange.end, ['page']),
-    ]);
-    await Promise.all([
-      replaceRankings(env, profile.profile_key, rankingRange.start, rankingRange.end, 'query', queries.rows || []),
-      replaceRankings(env, profile.profile_key, rankingRange.start, rankingRange.end, 'page', pages.rows || []),
-    ]);
+      const [queries, pages] = await Promise.all([
+        searchConsoleQuery(env, profile.external_id, rankingRange.start, rankingRange.end, ['query']),
+        searchConsoleQuery(env, profile.external_id, rankingRange.start, rankingRange.end, ['page']),
+      ]);
+      await Promise.all([
+        replaceRankings(env, profile.profile_key, rankingRange.start, rankingRange.end, 'query', queries.rows || []),
+        replaceRankings(env, profile.profile_key, rankingRange.start, rankingRange.end, 'page', pages.rows || []),
+      ]);
+      points += profilePoints;
+      successfulProfiles++;
+      await recordSyncOutcome(env, provider, profile.profile_key, {
+        status: 'ok',
+        points: profilePoints,
+        metadata: { dailyRange, rankingRange, derived: false },
+      });
+    } catch (error) {
+      const message = syncErrorText(error);
+      errors.push({ profileKey: profile.profile_key, error: message });
+      await recordSyncOutcome(env, provider, profile.profile_key, {
+        status: 'error',
+        error: message,
+        points: profilePoints,
+        metadata: { dailyRange, rankingRange, derived: false },
+      });
+    }
   }
 
   const root = rootIvanovProfile(sourceProfiles);
   if (root) {
-    const accessToken = await googleAccessToken(env, 'search_console');
-    for (const config of SEARCH_SITE_PROFILES) {
-      points += await syncDerivedSiteProfile(env, accessToken, root, config, dailyRange, rankingRange);
+    try {
+      const accessToken = await googleAccessToken(env, provider);
+      for (const config of SEARCH_SITE_PROFILES) {
+        const profileKey = `sc-city:${config.slug}`;
+        try {
+          const derivedPoints = await syncDerivedSiteProfile(env, accessToken, root, config, dailyRange, rankingRange);
+          points += derivedPoints;
+          successfulDerivedProfiles++;
+          await recordSyncOutcome(env, provider, profileKey, {
+            status: 'ok',
+            points: derivedPoints,
+            metadata: { dailyRange, rankingRange, derived: true, sourceProfileKey: root.profile_key },
+          });
+        } catch (error) {
+          const message = syncErrorText(error);
+          errors.push({ profileKey, error: message });
+          await recordSyncOutcome(env, provider, profileKey, {
+            status: 'error',
+            error: message,
+            metadata: { dailyRange, rankingRange, derived: true, sourceProfileKey: root.profile_key },
+          });
+        }
+      }
+    } catch (error) {
+      const message = syncErrorText(error);
+      errors.push({ profileKey: 'derived_profiles', error: message });
+      for (const config of SEARCH_SITE_PROFILES) {
+        await recordSyncOutcome(env, provider, `sc-city:${config.slug}`, {
+          status: 'error',
+          error: message,
+          metadata: { dailyRange, rankingRange, derived: true, sourceProfileKey: root.profile_key },
+        });
+      }
     }
   }
 
   return {
-    provider: 'search_console',
+    provider,
     profiles: sourceProfiles.length,
+    successfulProfiles,
     derivedProfiles: root ? SEARCH_SITE_PROFILES.length : 0,
+    successfulDerivedProfiles,
     points,
+    errors,
   };
 }
 
 export async function syncConnectedChannels(env) {
+  const tasks = [
+    ['google_business', syncGoogleBusiness],
+    ['search_console', syncSearchConsole],
+    ['facebook', syncFacebookPages],
+  ];
   const results = [];
-  for (const task of [syncGoogleBusiness, syncSearchConsole, syncFacebookPages]) {
+
+  for (const [provider, task] of tasks) {
     try {
-      results.push(await task(env));
+      const result = await task(env);
+      const errors = Array.isArray(result.errors) ? result.errors : [];
+      const successfulProfiles =
+        Number(result.successfulProfiles || 0) +
+        Number(result.successfulDerivedProfiles || 0);
+      const status = errors.length
+        ? (successfulProfiles > 0 ? 'partial' : 'error')
+        : 'ok';
+      const error = errors.map(item => `${item.profileKey || 'provider'}: ${item.error}`).join(' | ');
+      await recordSyncOutcome(env, provider, '', {
+        status,
+        error,
+        points: result.points || 0,
+        metadata: {
+          profiles: result.profiles || 0,
+          successfulProfiles: result.successfulProfiles || 0,
+          derivedProfiles: result.derivedProfiles || 0,
+          successfulDerivedProfiles: result.successfulDerivedProfiles || 0,
+          errorCount: errors.length,
+        },
+      });
+      results.push(result);
     } catch (error) {
-      console.error('channel sync failed', error);
-      results.push({ error: String(error?.message || error) });
+      const message = syncErrorText(error);
+      console.error('channel sync failed', provider, error);
+      await recordSyncOutcome(env, provider, '', { status: 'error', error: message });
+      results.push({ provider, error: message, errors: [{ profileKey: 'provider', error: message }] });
     }
   }
   return results;
