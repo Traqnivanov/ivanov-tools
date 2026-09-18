@@ -268,6 +268,12 @@ async function upsertDerivedSearchProfile(env, profileKey, externalId, label, ci
   `).bind(profileKey, externalId, label, city, JSON.stringify({ derived: true, sourceProfileKey, site }), now).run();
 }
 
+async function markDerivedSearchProfilesStale(env) {
+  await env.DB.prepare(
+    "UPDATE channel_profiles SET status='stale', updated_at=? WHERE provider='search_console' AND profile_key LIKE 'sc-city:%' AND status='connected'",
+  ).bind(new Date().toISOString()).run();
+}
+
 async function searchConsoleFilteredQuery(accessToken, siteUrl, startDate, endDate, dimensions = [], pageFilters = [], rowLimit = 250) {
   const url = `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`;
   const body = { startDate, endDate, dimensions, rowLimit };
@@ -349,7 +355,10 @@ export async function syncSearchConsole(env, days = 10) {
   const provider = 'search_console';
   const profiles = await connectedProfiles(env, provider);
   const sourceProfiles = profiles.filter(profile => !String(profile.profile_key || '').startsWith('sc-city:'));
-  if (!sourceProfiles.length) return { provider, profiles: 0, successfulProfiles: 0, derivedProfiles: 0, points: 0, errors: [] };
+  if (!sourceProfiles.length) {
+    await markDerivedSearchProfilesStale(env);
+    return { provider, profiles: 0, successfulProfiles: 0, derivedProfiles: 0, successfulDerivedProfiles: 0, points: 0, errors: [] };
+  }
   const dailyRange = backfillRange(days);
   const rankingRange = backfillRange(28);
   let points = 0;
@@ -391,6 +400,7 @@ export async function syncSearchConsole(env, days = 10) {
   }
 
   const root = rootIvanovProfile(sourceProfiles);
+  if (!root) await markDerivedSearchProfilesStale(env);
   if (root) {
     try {
       const accessToken = await googleAccessToken(env, provider);
