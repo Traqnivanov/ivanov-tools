@@ -862,16 +862,19 @@ async function generateDigitalPDF(id) {
   let y = 52;
   const digitalFooterArea = pdfAreaText(r);
   const digitalFooterAreaLines = digitalFooterArea ? doc.splitTextToSize(digitalFooterArea,95) : [];
-  const digitalFooterLineY = 280-digitalFooterAreaLines.length*4.5;
+  const digitalFooterStep = 4.8;
+  const digitalFooterAreaEndY = 278;
+  const digitalFooterLineY = 272-Math.max(0,digitalFooterAreaLines.length-1)*digitalFooterStep;
   const digitalFooterContentBottom = digitalFooterLineY-8;
   const digitalFooter = () => {
     fill(GOLD_MID); doc.rect(M,digitalFooterLineY,cW,0.5,'F');
-    doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED);
     if (digitalFooterAreaLines.length) {
-      const areaStartY=280-(digitalFooterAreaLines.length-1)*4.5;
-      digitalFooterAreaLines.forEach((line,i)=>doc.text(line,W-M,areaStartY+i*4.5,{align:'right'}));
+      doc.setFont(F,'normal'); doc.setFontSize(8); col('#3d5166');
+      const areaStartY=digitalFooterAreaEndY-(digitalFooterAreaLines.length-1)*digitalFooterStep;
+      digitalFooterAreaLines.forEach((line,i)=>doc.text(line,W-M,areaStartY+i*digitalFooterStep,{align:'right'}));
     }
-    doc.text(receiptWebsite(r),W-M,285,{align:'right'});
+    doc.setFont(F,'normal'); doc.setFontSize(7.5); col(MUTED);
+    doc.text(receiptWebsite(r),W-M,286,{align:'right'});
   };
   const nextDigitalPage = () => {
     const previousFont=doc.getFont(), previousSize=doc.getFontSize(), previousColor=doc.getTextColor();
@@ -1070,17 +1073,21 @@ async function generateOfficialPDF(id) {
   let y=metaBottom+9;
   const officialFooterArea = pdfAreaText(r);
   const officialFooterAreaLines = officialFooterArea ? doc.splitTextToSize(officialFooterArea,90) : [];
-  const officialFooterLineY = 280-officialFooterAreaLines.length*4.5;
+  const officialFooterStep = 4.8;
+  const officialFooterAreaEndY = 278;
+  const officialFooterLineY = 272-Math.max(0,officialFooterAreaLines.length-1)*officialFooterStep;
   const officialFooterContentBottom = officialFooterLineY-8;
   const officialFooter = () => {
     drw(BORDER); lw(0.3); doc.line(M,officialFooterLineY,W-M,officialFooterLineY);
-    doc.setFont(F,'normal'); doc.setFontSize(7); col(LIGHT);
-    doc.text('IVANOV REMONTI  ·  0877 810 418',M,285);
+    doc.setFont(F,'normal'); doc.setFontSize(7.5); col(LIGHT);
+    doc.text('IVANOV REMONTI  ·  0877 810 418',M,286);
     if (officialFooterAreaLines.length) {
-      const areaStartY=280-(officialFooterAreaLines.length-1)*4.5;
-      officialFooterAreaLines.forEach((line,i)=>doc.text(line,W-M,areaStartY+i*4.5,{align:'right'}));
+      doc.setFont(F,'normal'); doc.setFontSize(8); col(MID);
+      const areaStartY=officialFooterAreaEndY-(officialFooterAreaLines.length-1)*officialFooterStep;
+      officialFooterAreaLines.forEach((line,i)=>doc.text(line,W-M,areaStartY+i*officialFooterStep,{align:'right'}));
     }
-    doc.text(receiptWebsite(r),W-M,285,{align:'right'});
+    doc.setFont(F,'normal'); doc.setFontSize(7.5); col(MID);
+    doc.text(receiptWebsite(r),W-M,286,{align:'right'});
   };
   const nextOfficialPage = () => {
     const previousFont=doc.getFont(), previousSize=doc.getFontSize(), previousColor=doc.getTextColor();
