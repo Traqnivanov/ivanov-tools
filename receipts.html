@@ -152,6 +152,14 @@ textarea{resize:vertical;min-height:68px;}
 .view-desc-box{background:#f8fafc;border-left:3px solid var(--mid);border-radius:0 10px 10px 0;padding:10px 14px;margin-bottom:14px;}
 .view-note-box{background:var(--gold-lite);border-left:3px solid var(--gold);border-radius:0 10px 10px 0;padding:10px 14px;margin-bottom:14px;font-size:.86rem;color:var(--dark);}
 .divider{height:1px;background:var(--border);margin:16px 0;}
+@media(max-width:600px){
+  .header{padding:18px;gap:12px;flex-wrap:wrap;}
+  .form-panel{padding:18px;}
+  .form-grid,.view-grid{grid-template-columns:minmax(0,1fr);}
+  .form-grid .fg{grid-column:1/-1;}
+  .amount-row{grid-template-columns:minmax(0,1fr) 64px;}
+  .action-row>button{flex:1 1 100%;}
+}
 
 /* EMPTY */
 .empty-state{padding:60px 24px;text-align:center;}
