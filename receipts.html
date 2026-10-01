@@ -354,6 +354,12 @@ function areaText(r) {
   if (r.serviceArea === 'Друго') return (r.customArea || '').trim();
   return r.serviceArea === 'София' ? 'СОФИЯ И РЕГИОНА' : '';
 }
+function pdfAreaText(r) {
+  if (r.serviceArea === 'Лом') return 'Лом и региона';
+  if (r.serviceArea === 'Монтана') return 'Монтана и региона';
+  if (r.serviceArea === 'София') return 'София и региона';
+  return r.serviceArea === 'Друго' ? (r.customArea || '').trim() : '';
+}
 function receiptFootnotes(r) {
   const notes = [];
   if (hasContract(r)) notes.push('Този документ е към посочения договор.');
@@ -854,7 +860,8 @@ async function generateDigitalPDF(id) {
   doc.text(r.number+'  ·  '+r.date, W-M, 42.5, {align:'right'});
 
   let y = 52;
-  const digitalFooterAreaLines = areaText(r) ? doc.splitTextToSize(areaText(r),95) : [];
+  const digitalFooterArea = pdfAreaText(r);
+  const digitalFooterAreaLines = digitalFooterArea ? doc.splitTextToSize(digitalFooterArea,95) : [];
   const digitalFooterLineY = 280-digitalFooterAreaLines.length*4.5;
   const digitalFooterContentBottom = digitalFooterLineY-8;
   const digitalFooter = () => {
@@ -1061,7 +1068,8 @@ async function generateOfficialPDF(id) {
   drw(BORDER); lw(0.3); doc.line(M,metaBottom,W-M,metaBottom);
 
   let y=metaBottom+9;
-  const officialFooterAreaLines = areaText(r) ? doc.splitTextToSize(areaText(r),90) : [];
+  const officialFooterArea = pdfAreaText(r);
+  const officialFooterAreaLines = officialFooterArea ? doc.splitTextToSize(officialFooterArea,90) : [];
   const officialFooterLineY = 280-officialFooterAreaLines.length*4.5;
   const officialFooterContentBottom = officialFooterLineY-8;
   const officialFooter = () => {
