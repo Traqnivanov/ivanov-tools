@@ -37,8 +37,17 @@ Owner одобри една ограничена PDF корекция:
 - offer.html и contract.html: преди промени прочети реалния PDF код и твърдо зададените адреси/валути/условия.
 - calculator.html, kalkulator-combined.html, room.html, services.js, profiles.html, naruchnik.html, naruchnik-ai.html и analytics/ не са част от текущата корекция.
 
+## Проверки на текущия branch
+- App JavaScript parse PASS.
+- Direct resolver/preview tests PASS за София, Лом, Монтана, Друго.
+- Изолиран collectFormData PASS: websiteKey се определя само от района; required validations остават.
+- Legacy de/en се пазят за view/PDF; mismatch warning PASS.
+- Няма manual website radio/state/handler.
+- PDF секцията е byte-identical с main след #127.
+- Няма Firebase write/rules/schema промяна и няма физически телефонен тест на новия flow.
+
 ## Точен NEXT
-Реализирай само автоматичния район → сайт flow: махни 5-те radio избора; нов/редактиран запис изчислява websiteKey от района; свободен район → основния сайт; English/Deutsch не се предлагат за нов избор. Запази историческите websiteKey при view/PDF на стари записи; при edit+save нормализирай по района и покажи предупреждение при legacy mismatch. PDF layout не се пипа. После изолирано QA → draft PR → Owner преглед → отделно merge разрешение.
+Draft PR → Owner преглед → отделно merge разрешение → след merge кратък реален телефонен тест. PDF layout не се пипа.
 
 След финализиране на текущата работа има едно записано, но НЕодобрено за реализация UX предложение: смяната на тип бележка по време на попълване прерисува формата и може да загуби непазени данни. Разгледай го отделно след текущия flow; не го смесвай с #127.
 
