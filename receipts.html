@@ -250,7 +250,7 @@ const TYPES = {
   },
   'РЕ': {
     label: 'Разписка за завършен етап',
-    descField: true, termField: false, totalField: true,
+    descField: true, termField: false, totalField: false,
     descLabel: 'Описание на приетата дейност',
     descPlaceholder: 'напр. шпакловка на хол завършена, монтаж ГК таван...',
     sumLabel: 'Стойност на приетия етап',
@@ -572,7 +572,11 @@ function renderForm() {
         <div class="amount-row"><input type="number" id="fTotal" placeholder="0.00" min="0" step="0.01" oninput="updateRemaining()"><span style="padding:10px 8px;font-size:.85rem;color:var(--muted);">EUR</span></div>
       </div>
       <div class="fg">
-        <label>Остатък за доплащане</label>
+        <label>Получени предишни плащания <span class="opt-badge">ако има</span></label>
+        <div class="amount-row"><input type="number" id="fPriorPaid" placeholder="0.00" min="0" step="0.01" oninput="updateRemaining()"><span style="padding:10px 8px;font-size:.85rem;color:var(--muted);">EUR</span></div>
+      </div>
+      <div class="fg">
+        <label>Остатък след този аванс</label>
         <div class="amount-row"><input type="number" id="fRemaining" placeholder="—" readonly style="background:var(--bg2);color:var(--green);font-weight:700;"><span style="padding:10px 8px;font-size:.85rem;color:var(--muted);">EUR</span></div>
       </div>` : ""}
       ${currentType === 'РМ' ? `<div class="fg full"><label class="check-row"><input type="checkbox" id="fReceiptsAttached"> Касовите бележки са приложени към тази разписка</label></div>` : ''}
@@ -600,9 +604,10 @@ function updateContract() {
 
 function updateRemaining() {
   const total = parseFloat(document.getElementById('fTotal')?.value) || 0;
+  const prior = parseFloat(document.getElementById('fPriorPaid')?.value) || 0;
   const amount = parseFloat(document.getElementById('fAmount')?.value) || 0;
   const rem = document.getElementById('fRemaining');
-  if (rem) rem.value = total > 0 ? (total - amount).toFixed(2) : '';
+  if (rem) rem.value = total > 0 ? (total - prior - amount).toFixed(2) : '';
 }
 
 function editReceipt(id) {
@@ -631,6 +636,7 @@ function editReceipt(id) {
     }
     if (tc.totalField && document.getElementById('fTotal')) {
       document.getElementById('fTotal').value = r.contractTotal || '';
+      document.getElementById('fPriorPaid').value = r.priorPaid || '';
       document.getElementById('fRemaining').value = r.remaining || '';
     }
     document.getElementById('fNote').value = r.note || '';
@@ -686,7 +692,9 @@ function collectFormData() {
   if (tc.termField) data.term = fromInputDate(document.getElementById('fTerm').value);
   if (tc.totalField) {
     const tot = parseFloat(document.getElementById('fTotal')?.value) || 0;
-    if (tot > 0) { data.contractTotal = tot; data.remaining = parseFloat((tot - data.amount).toFixed(2)); }
+    const prior = parseFloat(document.getElementById('fPriorPaid')?.value) || 0;
+    if (tot > 0 && prior + amount > tot) { showToast('⚠ Плащанията надвишават общата стойност!'); return null; }
+    if (tot > 0) { data.contractTotal = tot; data.priorPaid = prior; data.remaining = parseFloat((tot - prior - amount).toFixed(2)); }
   }
   return data;
 }
@@ -806,7 +814,7 @@ async function generateDigitalPDF(id) {
 
   // AMOUNT
   const wordLines = doc.splitTextToSize('С думи: '+wordsEUR(r),cW-16);
-  const amountH = amountEUR(r)>0 ? Math.max(30,24+(wordLines.length-1)*4+5) : 30;
+  const amountH = amountEUR(r)>0 ? Math.max(31,25+(wordLines.length-1)*5+5) : 30;
   fill(GOLD_LITE); drw(GOLD_MID); lw(0.4); doc.roundedRect(M,y,cW,amountH,2,2,'FD');
   fill(GOLD_MID); doc.roundedRect(M,y,3,amountH,1,1,'F');
   doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED);
@@ -814,8 +822,8 @@ async function generateDigitalPDF(id) {
   doc.setFont(F,'bold'); doc.setFontSize(16); col(DARK);
   if(amountEUR(r)>0){
     doc.text(fmtNum(amountEUR(r))+' EUR',M+8,y+17);
-    doc.setFont(F,'italic'); doc.setFontSize(7.5); col(MUTED);
-    doc.text(wordLines,M+8,y+24);
+    doc.setFont(F,'italic'); doc.setFontSize(8.5); col(DARK);
+    doc.text(wordLines,M+8,y+25);
   } else {
     // Празно поле за ръчно попълване
     lw(0.5); col(GOLD_MID);
@@ -826,18 +834,22 @@ async function generateDigitalPDF(id) {
   y+=amountH+6;
 
   // REMAINING
-  if (r.contractTotal) {
-    fill('#e6f7ef'); drw('#1a7a52'); lw(0.4); doc.roundedRect(M,y,cW,18,2,2,'FD');
-    fill('#1a7a52'); doc.roundedRect(M,y,3,18,1,1,'F');
+  if (r.type === 'АВ' && r.contractTotal && Number.isFinite(r.priorPaid)) {
+    fill('#e6f7ef'); drw('#1a7a52'); lw(0.4); doc.roundedRect(M,y,cW,31,2,2,'FD');
+    fill('#1a7a52'); doc.roundedRect(M,y,3,31,1,1,'F');
     doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED);
     doc.text('ОБЩА СТОЙНОСТ НА РАБОТАТА',M+8,y+6);
     doc.setFont(F,'normal'); doc.setFontSize(8.5); col(DARK);
     doc.text(fmtNum(r.contractTotal)+' EUR',M+8,y+13);
     doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED);
-    doc.text('ОСТАТЪК ЗА ДОПЛАЩАНЕ',M+cW/2,y+6);
+    doc.text('ПОЛУЧЕНИ ПРЕДИШНИ ПЛАЩАНИЯ',M+cW/2,y+6);
+    doc.setFont(F,'normal'); doc.setFontSize(8.5); col(DARK);
+    doc.text(fmtNum(r.priorPaid)+' EUR',M+cW/2,y+13);
+    doc.setFont(F,'bold'); doc.setFontSize(8); col(MUTED);
+    doc.text('ОСТАТЪК СЛЕД ТОЗИ АВАНС',M+8,y+24);
     doc.setFont(F,'bold'); doc.setFontSize(10); col('#1a7a52');
-    doc.text(fmtNum(r.remaining)+' EUR',M+cW/2,y+13);
-    y+=24;
+    doc.text(fmtNum(r.remaining)+' EUR',W-M-8,y+24,{align:'right'});
+    y+=37;
   }
 
   // TERM
@@ -872,6 +884,8 @@ async function generateDigitalPDF(id) {
   fill(LIGHT); drw(BORDER); lw(0.3); doc.roundedRect(M,sigY,sigW,sigH,2,2,'FD');
   fill(tColor); doc.roundedRect(M,sigY,3,sigH,1,1,'F');
   doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED); doc.text(tc.sigLeft,M+8,sigY+7);
+  doc.setFont(F,'bold'); doc.setFontSize(9); col(DARK);
+  doc.text(doc.splitTextToSize(r.client||'—',sigW-15).slice(0,2),M+8,sigY+14);
   drw(DARK); lw(0.4); doc.line(M+8,sigY+24,M+sigW-6,sigY+24);
   doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED); doc.text('Подпис',M+8,sigY+29);
   doc.setFont(F,'bold'); col(DARK); doc.text(r.date||'',M+sigW-6,sigY+29,{align:'right'});
@@ -1000,6 +1014,19 @@ async function generateOfficialPDF(id) {
     }
   }
 
+  if (r.type==='АВ' && r.contractTotal && Number.isFinite(r.priorPaid)) {
+    y+=4;
+    drw(BORDER); lw(0.3); doc.line(M,y,W-M,y); y+=7;
+    doc.setFont(F,'normal'); doc.setFontSize(9); col(MID);
+    doc.text('Обща стойност на работата:',M,y);
+    doc.text(fmtNum(r.contractTotal)+' EUR',W-M,y,{align:'right'}); y+=6;
+    doc.text('Получени предишни плащания:',M,y);
+    doc.text(fmtNum(r.priorPaid)+' EUR',W-M,y,{align:'right'}); y+=6;
+    doc.setFont(F,'bold'); col(DARK);
+    doc.text('Остатък след този аванс:',M,y);
+    doc.text(fmtNum(r.remaining)+' EUR',W-M,y,{align:'right'}); y+=8;
+  }
+
   // NOTE
   if (r.note && r.note.trim()) {
     y+=4;
@@ -1022,9 +1049,10 @@ async function generateOfficialPDF(id) {
   const colW=(cW-10)/2;
   doc.setFont(F,'bold'); doc.setFontSize(8); col(DARK);
   doc.text(tc.sigLeft+':',M,y); doc.text(tc.sigRight+':',M+colW+10,y); y+=8;
-  doc.setFont(F,'normal'); doc.setFontSize(9); col(MID);
-  doc.text('.........................................',M,y);
-  doc.setFont(F,'bold'); col(DARK); doc.text('Траян Иванов Първанов',M+colW+10,y); y+=8;
+  doc.setFont(F,'bold'); doc.setFontSize(9); col(DARK);
+  const signerLines=doc.splitTextToSize(r.client||'—',colW-4);
+  doc.text(signerLines,M,y);
+  doc.text('Траян Иванов Първанов',M+colW+10,y); y+=Math.max(8,signerLines.length*5+2);
   doc.setFont(F,'normal'); doc.setFontSize(8); col(MID);
   doc.text('Подпис: .................................',M,y);
   doc.text('Подпис: .................................',M+colW+10,y); y+=7;
