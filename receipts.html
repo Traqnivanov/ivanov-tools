@@ -307,8 +307,11 @@ function amountInWords(amount, currency) {
 
 // Existing records keep their original values in Firestore. Convert only on display/export.
 function amountEUR(r) {
-  const value = Number(r.amount) || 0;
-  return r.currency === 'BGN' ? Math.round(value / EUR_BGN * 100) / 100 : value;
+  return moneyEUR(r.amount, r);
+}
+function moneyEUR(value, r) {
+  const n = Number(value) || 0;
+  return r.currency === 'BGN' ? Math.round(n / EUR_BGN * 100) / 100 : n;
 }
 function wordsEUR(r) { return amountInWords(amountEUR(r), 'EUR'); }
 function hasContract(r) { return r.hasContract === true || (r.hasContract == null && !!r.contractNo); }
@@ -328,6 +331,10 @@ function fmtNum(n) { return parseFloat(n).toFixed(2).replace('.', ','); }
 function today() {
   const d = new Date();
   return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear();
+}
+function todayInput() {
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 function fromInputDate(d) {
   if (!d) return '';
@@ -553,7 +560,7 @@ function renderForm() {
       </div>
       <div class="fg">
         <label>Дата</label>
-        <input type="date" id="fDate" value="${new Date().toISOString().slice(0,10)}">
+        <input type="date" id="fDate" value="${todayInput()}">
       </div>
       ${tc.descField ? '<div class="fg"></div>' : '<div class="fg"></div>'}
       ${descField}
@@ -635,9 +642,9 @@ function editReceipt(id) {
       document.getElementById('fTerm').value = r.term ? r.term.split('.').reverse().join('-') : '';
     }
     if (tc.totalField && document.getElementById('fTotal')) {
-      document.getElementById('fTotal').value = r.contractTotal || '';
-      document.getElementById('fPriorPaid').value = r.priorPaid || '';
-      document.getElementById('fRemaining').value = r.remaining || '';
+      document.getElementById('fTotal').value = r.contractTotal ? moneyEUR(r.contractTotal, r) : '';
+      document.getElementById('fPriorPaid').value = r.priorPaid ? moneyEUR(r.priorPaid, r) : '';
+      updateRemaining();
     }
     document.getElementById('fNote').value = r.note || '';
     updateWords();
@@ -781,6 +788,37 @@ async function generateDigitalPDF(id) {
   doc.text(r.number+'  ·  '+r.date, W-M, 42.5, {align:'right'});
 
   let y = 52;
+  const digitalFooter = () => {
+    fill(GOLD_MID); doc.rect(M,280,cW,0.5,'F');
+    doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED);
+    doc.text('ivanov-remonti.com',W-M,285,{align:'right'});
+  };
+  const nextDigitalPage = () => {
+    digitalFooter();
+    doc.addPage();
+    doc.setFont(F,'bold'); doc.setFontSize(9); col(DARK);
+    doc.text('IVANOV REMONTI  ·  '+tc.officialTitle,M,17);
+    doc.setFont(F,'normal'); doc.setFontSize(8); col(MUTED);
+    doc.text(r.number+'  ·  '+r.date,W-M,17,{align:'right'});
+    drw(BORDER); lw(0.3); doc.line(M,20,W-M,20);
+    y=28;
+  };
+  const ensureDigitalSpace = h => { if (y+h>270) nextDigitalPage(); };
+  const digitalTextCard = (lines,label,bg,edge) => {
+    let pos=0;
+    while (pos<lines.length) {
+      if (y+25>270) nextDigitalPage();
+      const count=Math.min(lines.length-pos,Math.floor((270-y-20)/5));
+      const part=lines.slice(pos,pos+count), h=14+part.length*5;
+      fill(bg); drw(edge); lw(0.3); doc.roundedRect(M,y,cW,h,2,2,'FD');
+      fill(edge); doc.roundedRect(M,y,3,h,1,1,'F');
+      doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED);
+      doc.text(label+(pos?' (продължение)':''),M+8,y+6);
+      doc.setFont(F,'normal'); doc.setFontSize(8.5); col(DARK);
+      part.forEach((line,i)=>doc.text(line,M+8,y+11+i*5));
+      y+=h+6; pos+=count;
+    }
+  };
 
   // INFO
   const infoH = areaText(r) ? 32 : 24;
@@ -802,19 +840,13 @@ async function generateDigitalPDF(id) {
   // DESCRIPTION
   if (tc.descField && r.description) {
     const dLines = doc.splitTextToSize(r.description, cW-16);
-    const dH = 12 + dLines.length*5;
-    fill('#f0f4f8'); drw(BORDER); lw(0.3); doc.roundedRect(M,y,cW,dH,2,2,'FD');
-    fill(MUTED); doc.roundedRect(M,y,3,dH,1,1,'F');
-    doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED);
-    doc.text(tc.descLabel.toUpperCase(),M+8,y+6);
-    doc.setFont(F,'normal'); doc.setFontSize(8.5); col(DARK);
-    doc.text(dLines,M+8,y+11);
-    y += dH+6;
+    digitalTextCard(dLines,tc.descLabel.toUpperCase(),'#f0f4f8',MUTED);
   }
 
   // AMOUNT
   const wordLines = doc.splitTextToSize('С думи: '+wordsEUR(r),cW-16);
   const amountH = amountEUR(r)>0 ? Math.max(31,25+(wordLines.length-1)*5+5) : 30;
+  ensureDigitalSpace(amountH+6);
   fill(GOLD_LITE); drw(GOLD_MID); lw(0.4); doc.roundedRect(M,y,cW,amountH,2,2,'FD');
   fill(GOLD_MID); doc.roundedRect(M,y,3,amountH,1,1,'F');
   doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED);
@@ -835,6 +867,7 @@ async function generateDigitalPDF(id) {
 
   // REMAINING
   if (r.type === 'АВ' && r.contractTotal && Number.isFinite(r.priorPaid)) {
+    ensureDigitalSpace(37);
     fill('#e6f7ef'); drw('#1a7a52'); lw(0.4); doc.roundedRect(M,y,cW,31,2,2,'FD');
     fill('#1a7a52'); doc.roundedRect(M,y,3,31,1,1,'F');
     doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED);
@@ -854,6 +887,7 @@ async function generateDigitalPDF(id) {
 
   // TERM
   if (tc.termField && r.term) {
+    ensureDigitalSpace(16);
     fill(LIGHT); drw(BORDER); lw(0.3); doc.roundedRect(M,y,cW,10,2,2,'FD');
     doc.setFont(F,'normal'); doc.setFontSize(7.5); col(MUTED); doc.text('КРАЕН СРОК',M+8,y+7);
     doc.setFont(F,'bold'); col(DARK); doc.text(r.term,M+50,y+7);
@@ -863,22 +897,18 @@ async function generateDigitalPDF(id) {
   // NOTE
   if (r.note && r.note.trim()) {
     const nLines = doc.splitTextToSize(r.note, cW-16);
-    const nH = 10+nLines.length*5+4;
-    fill(GOLD_LITE); drw(GOLD_MID); lw(0.3); doc.roundedRect(M,y,cW,nH,2,2,'FD');
-    fill(GOLD_MID); doc.roundedRect(M,y,3,nH,1,1,'F');
-    doc.setFont(F,'bold'); doc.setFontSize(7); col(MUTED); doc.text('ЗАБЕЛЕЖКА',M+8,y+6);
-    doc.setFont(F,'normal'); doc.setFontSize(8.5); col(DARK); doc.text(nLines,M+8,y+11);
-    y+=nH+6;
+    digitalTextCard(nLines,'ЗАБЕЛЕЖКА',GOLD_LITE,GOLD_MID);
   }
 
   const digitalNotes = receiptFootnotes(r);
   if (digitalNotes.length) {
     doc.setFont(F,'italic'); doc.setFontSize(7.5); col(MUTED);
-    for (const note of digitalNotes) { doc.text(note,M,y+3); y+=5; }
+    for (const note of digitalNotes) { ensureDigitalSpace(9); doc.text(note,M,y+3); y+=5; }
     y+=4;
   }
 
   // SIGNATURES
+  ensureDigitalSpace(50);
   const sigW=(cW-10)/2, sigH=32, sigY=y;
   // LEFT
   fill(LIGHT); drw(BORDER); lw(0.3); doc.roundedRect(M,sigY,sigW,sigH,2,2,'FD');
@@ -954,6 +984,32 @@ async function generateOfficialPDF(id) {
   drw(BORDER); lw(0.3); doc.line(M,62,W-M,62);
 
   let y=71;
+  const officialFooter = () => {
+    drw(BORDER); lw(0.3); doc.line(M,280,W-M,280);
+    doc.setFont(F,'normal'); doc.setFontSize(7); col(LIGHT);
+    doc.text('IVANOV REMONTI  ·  0877 810 418  ·  ivanovremontibg@gmail.com',W/2,285,{align:'center'});
+  };
+  const nextOfficialPage = () => {
+    const previousFont=doc.getFont(), previousSize=doc.getFontSize(), previousColor=doc.getTextColor();
+    officialFooter();
+    doc.addPage();
+    doc.setFont(F,'bold'); doc.setFontSize(9); col(DARK);
+    doc.text('IVANOV REMONTI  ·  '+tc.officialTitle,M,17);
+    doc.setFont(F,'normal'); doc.setFontSize(8); col(LIGHT);
+    doc.text(r.number+'  ·  '+r.date,W-M,17,{align:'right'});
+    drw(BORDER); lw(0.3); doc.line(M,20,W-M,20);
+    doc.setFont(previousFont.fontName,previousFont.fontStyle);
+    doc.setFontSize(previousSize); col(previousColor);
+    y=30;
+  };
+  const ensureOfficialSpace = h => { if (y+h>270) nextOfficialPage(); };
+  const officialLines = (lines,step) => {
+    for (const line of lines) {
+      ensureOfficialSpace(step+3);
+      doc.text(line,M,y);
+      y+=step;
+    }
+  };
 
   if (r.type==='АВ' || r.type==='РМ') {
     const verb = r.type==='АВ'
@@ -963,21 +1019,23 @@ async function generateOfficialPDF(id) {
     doc.text('Получил: Траян Иванов Първанов',M,y); y+=8;
     doc.setFont(F,'bold'); col(DARK);
     const clientLines=doc.splitTextToSize('Предал: '+r.client,cW);
-    doc.text(clientLines,M,y); y+=clientLines.length*6+3;
+    officialLines(clientLines,6); y+=3;
+    ensureOfficialSpace(44);
     doc.setFont(F,'normal'); doc.setFontSize(9); col(MID); doc.text('сумата от:',M,y); y+=9;
     if(amountEUR(r)>0){
       doc.setFont(F,'bold'); doc.setFontSize(18); col(DARK);
       doc.text(fmtNum(amountEUR(r))+' EUR',M,y); y+=8;
       doc.setFont(F,'italic'); doc.setFontSize(8.5); col(MID);
-      doc.text('(с думи: '+wordsEUR(r)+')',M,y); y+=10;
+      officialLines(doc.splitTextToSize('(с думи: '+wordsEUR(r)+')',cW),5); y+=5;
     } else {
       lw(0.6); col(DARK); doc.line(M,y+2,M+cW,y+2); y+=8;
       doc.setFont(F,'italic'); doc.setFontSize(8); col(MID);
       doc.text('(попълва се на ръка)',M,y); y+=10;
     }
     doc.setFont(F,'normal'); doc.setFontSize(10); col(DARK);
+    ensureOfficialSpace(20);
     doc.text(verb,M,y); y+=7;
-    doc.setFont(F,'bold'); doc.text(r.object,M,y); y+=8;
+    doc.setFont(F,'bold'); officialLines(doc.splitTextToSize(r.object,cW),6); y+=2;
 
   } else if (r.type==='РЕ') {
     doc.setFont(F,'normal'); doc.setFontSize(10); col(MID); doc.text('Клиент:',M,y);
@@ -987,12 +1045,13 @@ async function generateOfficialPDF(id) {
     doc.setFont(F,'bold'); doc.setFontSize(8); col(MID); doc.text('ПРИЕТА ДЕЙНОСТ:',M,y); y+=6;
     doc.setFont(F,'normal'); doc.setFontSize(10); col(DARK);
     const dL=doc.splitTextToSize(r.description||'',cW);
-    doc.text(dL,M,y); y+=dL.length*6+8;
+    officialLines(dL,6); y+=8;
+    ensureOfficialSpace(35);
     doc.setFont(F,'bold'); doc.setFontSize(8); col(MID); doc.text('СТОЙНОСТ:',M,y); y+=6;
     doc.setFont(F,'bold'); doc.setFontSize(16); col(DARK);
     doc.text(fmtNum(amountEUR(r))+' EUR',M,y); y+=8;
     doc.setFont(F,'italic'); doc.setFontSize(8.5); col(MID);
-    doc.text('(с думи: '+wordsEUR(r)+')',M,y); y+=8;
+    officialLines(doc.splitTextToSize('(с думи: '+wordsEUR(r)+')',cW),5); y+=3;
 
   } else if (r.type==='ДР') {
     doc.setFont(F,'normal'); doc.setFontSize(10); col(MID); doc.text('Клиент:',M,y);
@@ -1002,12 +1061,13 @@ async function generateOfficialPDF(id) {
     doc.setFont(F,'bold'); doc.setFontSize(8); col(MID); doc.text('ДОПЪЛНИТЕЛНА ДЕЙНОСТ:',M,y); y+=6;
     doc.setFont(F,'normal'); doc.setFontSize(10); col(DARK);
     const dL2=doc.splitTextToSize(r.description||'',cW);
-    doc.text(dL2,M,y); y+=dL2.length*6+8;
+    officialLines(dL2,6); y+=8;
+    ensureOfficialSpace(35);
     doc.setFont(F,'bold'); doc.setFontSize(8); col(MID); doc.text('ДОГОВОРЕНА ЦЕНА:',M,y); y+=6;
     doc.setFont(F,'bold'); doc.setFontSize(16); col(DARK);
     doc.text(fmtNum(amountEUR(r))+' EUR',M,y); y+=8;
     doc.setFont(F,'italic'); doc.setFontSize(8.5); col(MID);
-    doc.text('(с думи: '+wordsEUR(r)+')',M,y); y+=10;
+    officialLines(doc.splitTextToSize('(с думи: '+wordsEUR(r)+')',cW),5); y+=5;
     if (r.term) {
       doc.setFont(F,'normal'); doc.setFontSize(10); col(DARK);
       doc.text('Да се изпълни до:  '+r.term,M,y); y+=8;
@@ -1015,6 +1075,7 @@ async function generateOfficialPDF(id) {
   }
 
   if (r.type==='АВ' && r.contractTotal && Number.isFinite(r.priorPaid)) {
+    ensureOfficialSpace(35);
     y+=4;
     drw(BORDER); lw(0.3); doc.line(M,y,W-M,y); y+=7;
     doc.setFont(F,'normal'); doc.setFontSize(9); col(MID);
@@ -1032,16 +1093,18 @@ async function generateOfficialPDF(id) {
     y+=4;
     doc.setFont(F,'italic'); doc.setFontSize(8.5); col(MID);
     const nL=doc.splitTextToSize('Забележка: '+r.note,cW);
-    doc.text(nL,M,y); y+=nL.length*5+6;
+    officialLines(nL,5); y+=6;
   }
 
   // FOOTNOTES
   y+=4;
   receiptFootnotes(r).forEach(fn=>{
+    ensureOfficialSpace(8);
     doc.setFont(F,'italic'); doc.setFontSize(7.5); col(LIGHT);
     doc.text('* '+fn,M,y); y+=5;
   });
 
+  ensureOfficialSpace(45);
   y+=10;
   drw(BORDER); lw(0.3); doc.line(M,y,W-M,y); y+=12;
 
@@ -1060,9 +1123,7 @@ async function generateOfficialPDF(id) {
   doc.text('Дата:    '+r.date,M+colW+10,y);
 
   // PAGE FOOTER
-  drw(BORDER); lw(0.3); doc.line(M,280,W-M,280);
-  doc.setFont(F,'normal'); doc.setFontSize(7); col(LIGHT);
-  doc.text('IVANOV REMONTI  ·  0877 810 418  ·  ivanovremontibg@gmail.com',W/2,285,{align:'center'});
+  officialFooter();
 
   const safe=(r.client||'klient').replace(/\s+/g,'_').replace(/[^\u0400-\u04FFa-zA-Z0-9_-]/g,'');
   doc.save(r.number+'_'+safe+'_oficial.pdf');
