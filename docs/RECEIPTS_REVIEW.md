@@ -73,11 +73,11 @@ Firebase: текущите нови стойности се добавят ка�
 ## Реализация и QA на CURRENT OVERRIDE
 
 Branch: fix/receipts-auto-site-by-area.
-receipts.html blob: 3b7a577a3c34c1a6cbdf526c31bf6b9dccb49f9e.
+receipts.html blob: 9bde06ebb630ffb675bc534c71e03b42d6f3b87b.
 
 Реализирано:
 - 5-те radio избора за сайт са премахнати.
-- Формата показва само read-only preview „В PDF: …“, автоматично от района.
+- Формата показва само label „Сайт в PDF“ и read-only preview „В PDF: …“, определен от района. Badge „Автоматично“ е премахнат, за да няма двусмислие.
 - autoSiteKey(serviceArea) е единственият resolver за нов/редактиран Save.
 - websiteKey остава в същия Firestore record shape за съвместимост.
 - receiptSiteKey() уважава запазен legacy websiteKey при view/PDF.
