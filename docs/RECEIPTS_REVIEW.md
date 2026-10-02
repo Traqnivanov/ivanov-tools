@@ -48,3 +48,52 @@ NEXT: Owner преглед на двата PDF примера и draft PR → о
 Firebase: текущите нови стойности се добавят като полета в съществуващите `receipts` документи. Не е установена repo-side схема или миграция, която да изисква промяна. След финално одобрение/merge се прави само една контролирана реална save/edit проба. Ако тя мине, Firebase не се променя. При failure заради permissions/rules се спира, анализира се причината и се иска отделно Owner разрешение преди промяна.
 
 „Авансов отчет“ вече има клиент, обща стойност, плащания/аванси и остатък. Не предлагай тези функции като липсващи. „Авансов отчет“ и „Бележки“ са отделни колекции; автоматична връзка между тях не е одобрена.
+
+
+## CURRENT OVERRIDE — автоматичен сайт по район (01.10.2026)
+
+След реалния телефонен тест Owner отмени отделния ръчен избор „Сайт върху документа“.
+
+Одобрена логика преди код:
+- София → ivanov-remonti.com
+- Лом → ivanov-remonti.com/lom/
+- Монтана → ivanov-remonti.com/montana/
+- „Въведи свой район“ → ivanov-remonti.com
+- English/Deutsch не се предлагат за нов избор в „Бележки“; районът не е надежден сигнал за език.
+- websiteKey остава съществуващото поле за съвместимост, но нов/редактиран запис го изчислява автоматично.
+- Preview и Save трябва да използват една и съща resolver функция.
+- Стар запис при view/PDF запазва записания websiteKey. При edit+save сайтът се нормализира по района; ако legacy websiteKey се различава, интерфейсът трябва да покаже предупреждение преди запис.
+- Не се разпознава район от свободния адрес.
+- PDF дизайнът от #127 не се променя.
+- Firebase rules/schema/реални данни не се променят като част от тази задача.
+
+Текущ branch: fix/receipts-auto-site-by-area. Merge чака отделно Owner разрешение.
+
+
+## Реализация и QA на CURRENT OVERRIDE
+
+Branch: fix/receipts-auto-site-by-area.
+receipts.html blob: 9bde06ebb630ffb675bc534c71e03b42d6f3b87b.
+
+Реализирано:
+- 5-те radio избора за сайт са премахнати.
+- Формата показва само label „Сайт в PDF“ и read-only preview „В PDF: …“, определен от района. Badge „Автоматично“ е премахнат, за да няма двусмислие.
+- autoSiteKey(serviceArea) е единственият resolver за нов/редактиран Save.
+- websiteKey остава в същия Firestore record shape за съвместимост.
+- receiptSiteKey() уважава запазен legacy websiteKey при view/PDF.
+- При edit на legacy mismatch се показва ясно предупреждение: стар сайт → сайт след Save.
+- Не се прави inference от свободния адрес.
+- English/Deutsch маршрутите остават в legacy map, но няма UI за нов избор.
+
+QA:
+- JavaScript parse PASS.
+- Direct function execution: София→sofia, Лом→lom, Монтана→montana, Друго→sofia.
+- Preview execution: точен URL за четирите района; custom input visibility PASS.
+- Isolated collectFormData execution: точен automatic websiteKey + EUR; missing area и empty custom area се блокират.
+- Legacy de/en view/PDF compatibility PASS.
+- Legacy mismatch warning PASS.
+- Manual picker remnants (receiptWebsite radio, siteManuallyChosen, chooseWebsite) липсват.
+- Цялата PDF секция от DIGITAL PDF нататък е byte-identical с main след #127; PDF layout не е променян.
+- Няма Firebase write/rules/schema промяна и няма физически телефонен тест на новия flow.
+
+Merge чака отделно Owner разрешение.

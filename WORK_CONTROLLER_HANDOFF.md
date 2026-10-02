@@ -37,11 +37,20 @@ Owner одобри една ограничена PDF корекция:
 - offer.html и contract.html: преди промени прочети реалния PDF код и твърдо зададените адреси/валути/условия.
 - calculator.html, kalkulator-combined.html, room.html, services.js, profiles.html, naruchnik.html, naruchnik-ai.html и analytics/ не са част от текущата корекция.
 
+## Проверки на текущия branch
+- App JavaScript parse PASS.
+- Direct resolver/preview tests PASS за София, Лом, Монтана, Друго.
+- Изолиран collectFormData PASS: websiteKey се определя само от района; required validations остават.
+- Legacy de/en се пазят за view/PDF; mismatch warning PASS.
+- Няма manual website radio/state/handler. UI е опростен до label „Сайт в PDF“ + read-only адрес; badge „Автоматично“ е премахнат, за да не създава впечатление, че районът се избира автоматично.
+- PDF секцията е byte-identical с main след #127.
+- Няма Firebase write/rules/schema промяна и няма физически телефонен тест на новия flow.
+
 ## Точен NEXT
-Owner преглед на двата PDF примера + draft PR → отделно разрешение за merge → публикувана версия → реална телефонна проба → отделна EUR задача за Авансов отчет.
+Draft PR → Owner преглед → отделно merge разрешение → след merge кратък реален телефонен тест. PDF layout не се пипа.
 
 След финализиране на текущата работа има едно записано, но НЕодобрено за реализация UX предложение: смяната на тип бележка по време на попълване прерисува формата и може да загуби непазени данни. Разгледай го отделно след текущия flow; не го смесвай с #127.
 
-Firebase правило: не прави профилактични промени. `serviceArea`, `customArea` и `websiteKey` се записват в съществуващите `receipts` документи и няма repo-side schema migration. След final merge направи една контролирана реална проба. Ако save/edit работят, Firebase остава без промяна. Ако има rules/permissions проблем, първо доклад и конкретно предложение, после отделно Owner разрешение.
+Firebase правило: не прави профилактични промени. `websiteKey` остава същото поле, но за нов/редактиран запис се изчислява автоматично от `serviceArea`; няма repo-side schema migration. След final merge направи една контролирана реална проба. Ако save/edit работят, Firebase остава без промяна. Ако има rules/permissions проблем, първо доклад и конкретно предложение, после отделно Owner разрешение.
 
 Няма разрешение за автоматично счетоводно обвързване на Бележки и Авансов отчет.

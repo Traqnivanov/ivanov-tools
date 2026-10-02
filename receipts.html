@@ -118,15 +118,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--dark);min
 .fg{display:flex;flex-direction:column;gap:5px;}
 .fg.full{grid-column:1/-1;}
 .fg[hidden]{display:none;}
-.site-picker{border:0;padding:0;margin:0;min-width:0;}
-.site-picker legend{font-size:.82rem;font-weight:700;color:var(--mid);margin-bottom:8px;}
-.site-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
-.site-option{display:flex;align-items:center;gap:8px;border:1.5px solid var(--border);border-radius:10px;padding:12px;min-height:48px;font-size:.88rem;color:var(--dark);text-transform:none;letter-spacing:0;cursor:pointer;}
-.site-option:has(input:checked){background:var(--gold-lite);border-color:var(--gold-dim);}
-.site-option:focus-within{outline:2px solid var(--gold-dim);outline-offset:2px;}
-.site-option input{width:18px;height:18px;margin:0;flex-shrink:0;accent-color:var(--gold-dim);}
-.site-option small{display:block;font-size:.75rem;font-weight:400;margin-top:3px;}
-.field-help{font-size:.82rem;line-height:1.5;color:var(--mid);margin-top:6px;overflow-wrap:anywhere;}
+.auto-site-box{border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;background:var(--bg2);font-size:.88rem;line-height:1.45;color:var(--dark);overflow-wrap:anywhere;}
+.field-warning{font-size:.8rem;line-height:1.45;color:#8a5a00;background:#fff8e1;border-left:3px solid var(--gold-dim);border-radius:0 8px 8px 0;padding:8px 10px;margin-top:6px;overflow-wrap:anywhere;}
+.field-warning[hidden]{display:none;}
 .check-row{display:flex;align-items:center;gap:9px;font-size:.85rem;color:var(--dark);text-transform:none;letter-spacing:0;}
 .check-row input{width:auto;flex-shrink:0;}
 label{font-size:.76rem;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.05em;}
@@ -168,8 +162,6 @@ textarea{resize:vertical;min-height:68px;}
   .form-grid .fg{grid-column:1/-1;}
   .amount-row{grid-template-columns:minmax(0,1fr) 64px;}
   .action-row>button{flex:1 1 100%;}
-  .site-options{grid-template-columns:repeat(2,minmax(0,1fr));}
-  .site-option{padding:12px 10px;}
   input,textarea,select{font-size:1rem;}
 }
 
@@ -300,12 +292,14 @@ const RECEIPT_SITES = {
   en: {label:'Лом и Монтана', language:'English', address:'ivanov-remonti.com/en/lom/'},
   de: {label:'Лом и Монтана', language:'Deutsch', address:'ivanov-remonti.com/de/lom/'}
 };
-function suggestedSite(area) { return ({София:'sofia', Лом:'lom', Монтана:'montana'})[area] || ''; }
+function autoSiteKey(area) {
+  return ({София:'sofia', Лом:'lom', Монтана:'montana', Друго:'sofia'})[area] || '';
+}
 function receiptSiteKey(r) {
-  return Object.hasOwn(RECEIPT_SITES,r.websiteKey) ? r.websiteKey : suggestedSite(r.serviceArea) || 'sofia';
+  // Historical compatibility: existing records keep their saved site for view/PDF.
+  return Object.hasOwn(RECEIPT_SITES,r.websiteKey) ? r.websiteKey : autoSiteKey(r.serviceArea) || 'sofia';
 }
 function receiptWebsite(r) { return RECEIPT_SITES[receiptSiteKey(r)].address; }
-let siteManuallyChosen = false;
 
 // ── NUMBER TO WORDS (BG) ──
 function numToWordsBG(n) {
@@ -540,7 +534,6 @@ function showForm(type) {
 }
 
 function renderForm() {
-  siteManuallyChosen = false;
   const tc = TYPES[currentType];
   const nextNum = nextNumber(currentType);
 
@@ -587,13 +580,9 @@ function renderForm() {
         <input type="text" id="fCustomArea" maxlength="120" placeholder="напр. Видин и околните села">
       </div>
       <div class="fg full">
-        <fieldset class="site-picker">
-          <legend>Сайт върху документа</legend>
-          <div class="site-options">
-            ${Object.entries(RECEIPT_SITES).map(([key,site])=>`<label class="site-option"><input type="radio" name="receiptWebsite" value="${key}" onchange="chooseWebsite()"><span>${site.label}${site.language ? `<small>${site.language}</small>` : ''}</span></label>`).join('')}
-          </div>
-        </fieldset>
-        <div class="field-help" id="websitePreview" aria-live="polite">Избери район, за да предложим сайт. Можеш да го смениш.</div>
+        <label>Сайт в PDF</label>
+        <div class="auto-site-box" id="websitePreview" aria-live="polite">Избери район — сайтът ще се попълни автоматично.</div>
+        <div class="field-warning" id="legacySiteWarning" hidden></div>
       </div>
       <div class="fg">
         <label>Работа с договор?</label>
@@ -657,21 +646,28 @@ function switchType(t) { currentType = t; renderForm(); }
 function updateArea() {
   const area = document.getElementById('fArea').value;
   document.getElementById('customAreaField').hidden = area !== 'Друго';
-  if (!siteManuallyChosen) setWebsiteChoice(suggestedSite(area));
-}
-function setWebsiteChoice(key) {
-  document.querySelectorAll('input[name="receiptWebsite"]').forEach(input=>{input.checked=input.value===key;});
-  updateWebsitePreview();
-}
-function chooseWebsite() {
-  siteManuallyChosen = true;
   updateWebsitePreview();
 }
 function updateWebsitePreview() {
-  const key = document.querySelector('input[name="receiptWebsite"]:checked')?.value;
+  const area = document.getElementById('fArea')?.value || '';
+  const key = autoSiteKey(area);
   document.getElementById('websitePreview').textContent = key
     ? 'В PDF: '+RECEIPT_SITES[key].address
-    : 'Избери сайта, който да се изпише в PDF.';
+    : 'Избери район — сайтът ще се попълни автоматично.';
+}
+function showLegacySiteWarning(r) {
+  const el = document.getElementById('legacySiteWarning');
+  if (!el) return;
+  const savedKey = Object.hasOwn(RECEIPT_SITES,r.websiteKey) ? r.websiteKey : '';
+  const automaticKey = autoSiteKey(r.serviceArea);
+  if (savedKey && automaticKey && savedKey !== automaticKey) {
+    el.hidden = false;
+    el.textContent = 'Старият запис е със сайт '+RECEIPT_SITES[savedKey].address+
+      '. При запазване ще стане '+RECEIPT_SITES[automaticKey].address+' според района.';
+  } else {
+    el.hidden = true;
+    el.textContent = '';
+  }
 }
 function updateContract() {
   document.getElementById('contractField').hidden = document.getElementById('fHasContract').value !== 'yes';
@@ -704,8 +700,7 @@ function editReceipt(id) {
     document.getElementById('fCustomArea').value = r.customArea || '';
     document.getElementById('fHasContract').value = hasContract(r) ? 'yes' : 'no';
     updateArea(); updateContract();
-    setWebsiteChoice(receiptSiteKey(r));
-    siteManuallyChosen = true;
+    showLegacySiteWarning(r);
     if (currentType === 'РМ') document.getElementById('fReceiptsAttached').checked = r.receiptsAttached === true;
     if (tc.descField && document.getElementById('fDesc')) document.getElementById('fDesc').value = r.description || '';
     if (tc.termField && document.getElementById('fTerm')) {
@@ -748,12 +743,12 @@ function collectFormData() {
   const amount = parseFloat(amtStr) || 0;
   const serviceArea = document.getElementById('fArea').value;
   const customArea = document.getElementById('fCustomArea').value.trim();
-  const websiteKey = document.querySelector('input[name="receiptWebsite"]:checked')?.value;
+  const websiteKey = autoSiteKey(serviceArea);
   const withContract = document.getElementById('fHasContract').value === 'yes';
   const contractNo = document.getElementById('fContract').value.trim();
   if (!serviceArea) { showToast('⚠ Избери район на работа!'); return null; }
   if (serviceArea === 'Друго' && !customArea) { showToast('⚠ Въведи мястото!'); return null; }
-  if (!Object.hasOwn(RECEIPT_SITES,websiteKey)) { showToast('⚠ Избери сайт за документа!'); return null; }
+  if (!Object.hasOwn(RECEIPT_SITES,websiteKey)) { showToast('⚠ Сайтът не може да се определи от района!'); return null; }
   if (withContract && !contractNo) { showToast('⚠ Въведи номер на договора!'); return null; }
   const data = {
     type: currentType,
