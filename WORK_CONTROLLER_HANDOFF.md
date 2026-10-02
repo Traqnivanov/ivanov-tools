@@ -42,7 +42,7 @@ Owner одобри една ограничена PDF корекция:
 - Direct resolver/preview tests PASS за София, Лом, Монтана, Друго.
 - Изолиран collectFormData PASS: websiteKey се определя само от района; required validations остават.
 - Legacy de/en се пазят за view/PDF; mismatch warning PASS.
-- Няма manual website radio/state/handler.
+- Няма manual website radio/state/handler. UI е опростен до label „Сайт в PDF“ + read-only адрес; badge „Автоматично“ е премахнат, за да не създава впечатление, че районът се избира автоматично.
 - PDF секцията е byte-identical с main след #127.
 - Няма Firebase write/rules/schema промяна и няма физически телефонен тест на новия flow.
 
