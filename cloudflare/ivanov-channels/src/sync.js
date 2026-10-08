@@ -460,27 +460,19 @@ export async function syncConnectedChannels(env) {
   for (const [provider, task, discover] of tasks) {
     try {
       let discoveredProfiles = null;
+      let discoveryError = '';
       try {
         discoveredProfiles = await discover();
       } catch (error) {
-        const message = syncErrorText(error);
+        discoveryError = syncErrorText(error);
         console.error('channel discovery failed', provider, error);
-        await recordSyncOutcome(env, provider, '', {
-          status: 'error',
-          error: `discovery: ${message}`,
-          metadata: { phase: 'discovery' },
-        });
-        results.push({
-          provider,
-          phase: 'discovery',
-          error: message,
-          errors: [{ profileKey: 'provider', error: `discovery: ${message}` }],
-        });
-        continue;
       }
 
       const result = await task(env);
-      const errors = Array.isArray(result.errors) ? result.errors : [];
+      const errors = Array.isArray(result.errors) ? [...result.errors] : [];
+      if (discoveryError) {
+        errors.unshift({ profileKey: 'discovery', error: discoveryError });
+      }
       const successfulProfiles =
         Number(result.successfulProfiles || 0) +
         Number(result.successfulDerivedProfiles || 0);
@@ -499,11 +491,13 @@ export async function syncConnectedChannels(env) {
           successfulDerivedProfiles: result.successfulDerivedProfiles || 0,
           errorCount: errors.length,
           discoveredProfiles: Array.isArray(discoveredProfiles) ? discoveredProfiles.length : null,
+          discoveryError: discoveryError || '',
         },
       });
       results.push({
         ...result,
         discoveredProfiles: Array.isArray(discoveredProfiles) ? discoveredProfiles.length : null,
+        discoveryError: discoveryError || '',
       });
     } catch (error) {
       const message = syncErrorText(error);
