@@ -1,7 +1,7 @@
 import { getApps } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import { CHANNEL_WORKER_BASE } from './channel-config.js?v=20260827-stage1f';
-import { loadChannelStatus } from './channel-api.js?v=20260829-stage5e';
+import { loadChannelStatus, syncHealthFor, syncHealthSummary } from './channel-api.js?v=20261008-sync2';
 
 let renderToken = 0;
 let loadSequence = 0;
@@ -130,6 +130,7 @@ async function loadFacebook(shell) {
   if (token !== renderToken || !document.contains(shell)) return;
 
   const connected = (status.connections || []).some(item => item.provider === 'facebook');
+  const providerHealth = syncHealthFor(status, 'facebook');
   const profiles = (status.profiles || []).filter(item => item.provider === 'facebook' && item.status === 'connected');
   const cards = [...shell.querySelectorAll('.facebook-page-card')];
 
@@ -162,9 +163,16 @@ async function loadFacebook(shell) {
     const values = totals(rows);
     const hasData = rows.length > 0;
 
-    setCardState(card, 'Свързано', true);
+    const health = syncHealthFor(status, 'facebook', profile.profile_key) || providerHealth;
+    const syncProblem = ['error', 'partial'].includes(health?.last_status);
+    const healthText = syncHealthSummary(health);
+    setCardState(
+      card,
+      syncProblem ? (health.last_status === 'partial' ? 'Частичен sync' : 'Sync проблем') : 'Свързано',
+      !syncProblem,
+    );
     setCardMetrics(card, values, hasData);
-    setCardNote(card, facebookDataNote(values, period, hasData));
+    setCardNote(card, facebookDataNote(values, period, hasData) + (healthText ? ` ${healthText}.` : ''));
     cityValues.set(city, { hasData, values });
   }
 
