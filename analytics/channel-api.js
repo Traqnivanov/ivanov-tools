@@ -37,6 +37,39 @@ function publishStatus(data) {
   window.dispatchEvent(new CustomEvent('ivanov:channel-status', { detail: data }));
 }
 
+export function syncHealthFor(status, provider, profileKey = '') {
+  return (status?.syncHealth || []).find(item =>
+    item.provider === provider && String(item.profile_key || '') === String(profileKey || '')
+  ) || null;
+}
+
+function formatSyncTime(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('bg-BG', {
+    timeZone: 'Europe/Sofia',
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+export function syncHealthSummary(row) {
+  if (!row) return '';
+  const attempt = formatSyncTime(row.last_attempt_at);
+  const success = formatSyncTime(row.last_success_at);
+  if (row.last_status === 'ok') {
+    return success ? `Последно успешно: ${success}` : (attempt ? `Последна проверка: ${attempt}` : '');
+  }
+  const problem = row.last_status === 'partial' ? 'Частичен sync' : 'Sync грешка';
+  const error = String(row.last_error || '').trim();
+  const suffix = attempt ? ` · ${attempt}` : '';
+  const successSuffix = success ? ` · последно успешно ${success}` : '';
+  return `${problem}${suffix}${successSuffix}${error ? ` · ${error}` : ''}`;
+}
+
 export function invalidateChannelStatus() {
   statusCache = null;
   statusCachedAt = 0;

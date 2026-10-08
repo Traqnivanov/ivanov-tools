@@ -1,7 +1,7 @@
 import { getApps } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import { CHANNEL_WORKER_BASE } from './channel-config.js?v=20260827-stage1f';
-import { loadChannelStatus } from './channel-api.js?v=20260829-stage5e';
+import { loadChannelStatus, syncHealthFor, syncHealthSummary } from './channel-api.js?v=20260918-sync1';
 
 const RANKING_CACHE_MS = 60000;
 const rankingCache = new Map();
@@ -261,13 +261,16 @@ async function loadSearch(shell) {
     return;
   }
 
-  const all = (status.profiles || []).filter(item => item.provider === 'search_console');
+  const providerHealth = syncHealthFor(status, 'search_console');
+  const all = (status.profiles || []).filter(item => item.provider === 'search_console' && item.status === 'connected');
   const profiles = selectedProfiles(all);
   if (!profiles.length) {
-    setState(shell, 'Свързано', true);
+    const syncProblem = ['error', 'partial'].includes(providerHealth?.last_status);
+    setState(shell, syncProblem ? (providerHealth.last_status === 'partial' ? 'Частичен sync' : 'Sync проблем') : 'Свързано', !syncProblem);
     clearMetrics(shell);
     clearRankingLists(shell, 'За този сайт още няма backend snapshot.');
-    note(shell, 'Връзката е активна, но този сайт още няма backend snapshot. Данните ще се появят след автоматичния дневен sync.');
+    const healthText = syncHealthSummary(providerHealth);
+    note(shell, `Връзката е активна, но този сайт още няма backend snapshot. Данните ще се появят след автоматичния дневен sync.${healthText ? ` ${healthText}.` : ''}`);
     return;
   }
 
@@ -290,7 +293,12 @@ async function loadSearch(shell) {
     clearMetrics(shell);
   }
 
-  setState(shell, partialAll ? 'Свързано · частично' : 'Свързано', true);
+  const syncProblem = ['error', 'partial'].includes(providerHealth?.last_status);
+  setState(
+    shell,
+    syncProblem ? (providerHealth.last_status === 'partial' ? 'Частичен sync' : 'Sync проблем') : (partialAll ? 'Свързано · частично' : 'Свързано'),
+    !syncProblem,
+  );
   const cards = shell.querySelectorAll('.channel-grid .channel-card');
   const querySnapshot = latestRankingSnapshot(queryRows);
   const pageSnapshot = latestRankingSnapshot(pageRows);
@@ -298,11 +306,13 @@ async function loadSearch(shell) {
   if (cards[1]) renderList(cards[1], pageSnapshot, 'page');
 
   const partialPrefix = partialAll ? `Частични данни: налични са ${profiles.length} от ${DERIVED_PROFILE_KEYS.size} профила. ` : '';
+  const healthText = syncHealthSummary(providerHealth);
   note(
     shell,
     partialPrefix + (data.length
       ? `KPI са от записаните Search Console данни за ${period.from} – ${period.to}. Таблиците са последният наличен 28-дневен snapshot. Обновяването е автоматично от backend cron.`
-      : `За ${period.from} – ${period.to} още няма синхронизирани дневни KPI. Таблиците са последният наличен snapshot; frontend-ът не стартира ръчен Google sync.`),
+      : `За ${period.from} – ${period.to} още няма синхронизирани дневни KPI. Таблиците са последният наличен snapshot; frontend-ът не стартира ръчен Google sync.`) +
+      (healthText ? ` ${healthText}.` : ''),
   );
 }
 

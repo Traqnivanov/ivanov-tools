@@ -56,3 +56,24 @@
 1. Draft PR for the Facebook visibility-only fix → Owner visual review → separate merge permission.
 2. Then create a fresh current-main sync-health branch using the reviewed concepts from #124, not a direct merge of #124.
 3. With sync-health available, identify exact Google Business discovery error and Search Console sync error before proposing any production/API change.
+
+
+## Analytics sync-health branch — 08.10.2026
+- Branch: `fix/analytics-sync-health-20261008`, based on main after merged PR #129.
+- Reimplemented the useful sync-health subset from old PR #124 on current main instead of merging the diverged PR.
+- Added additive `channel_sync_status` schema/migration and owner-only status exposure.
+- Provider/profile sync results now preserve last attempt, last success, last error and points.
+- Daily channel sync now retries profile discovery before syncing Google Business, Search Console and Facebook.
+- Important root cause found for Google Business: production cron previously synced only already-discovered profiles. With OAuth token present but zero google_business profiles, later API approval could never be picked up automatically without a new OAuth flow. The new branch retries discovery during scheduled/manual sync.
+- Google Business discovery continues to use the documented `accounts/-/locations` Business Information API path.
+- Dashboard channel views expose sync error/partial state instead of only "connected".
+- Facebook visible-metrics behavior from merged PR #129 is preserved and augmented with sync-health text.
+- No D1 migration, Worker deployment, manual sync, production data change, binding/secret/cron change has been performed yet.
+- Static JS parse PASS for sync-health.js, sync.js, facebook.js, google.js and all modified analytics modules; service-worker parse PASS. Migration SQL validated in isolated SQLite.
+- `index.js` is module syntax and was inspected separately; no production execution has been attempted.
+
+## Analytics sync-health NEXT
+1. Draft PR and final branch diff review.
+2. Owner approval required before any production migration/deploy.
+3. If approved: apply only additive D1 migration → deploy Worker/dashboard → verify /health/status → run one owner-only sync.
+4. Read exact Google Business discovery error and Search Console sync error from sync health; only then decide any Google/API remediation.
