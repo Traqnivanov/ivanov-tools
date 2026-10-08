@@ -237,9 +237,6 @@ async function handleFetch(request, env) {
 
   if (request.method === 'GET' && url.pathname === '/health') return json(env, { ok: true, service: 'ivanov-channels' }, 200, origin);
 
-  if (request.method === 'GET' && url.pathname === '/__diag/facebook-current-metrics-4d91c7') {
-    return json(env, { results: await syncConnectedChannels(env) }, 200, null);
-  }
 
   const callbackMatch = url.pathname.match(/^\/oauth\/callback\/(google_business|search_console|facebook)$/);
   if (request.method === 'GET' && callbackMatch) {
