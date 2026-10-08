@@ -1,7 +1,7 @@
 import { getApps } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import { CHANNEL_WORKER_BASE } from './channel-config.js?v=20260827-stage1f';
-import { loadChannelStatus, syncHealthFor, syncHealthSummary } from './channel-api.js?v=20261008-sync2';
+import { loadChannelStatus, syncHealthFor, syncHealthSummary } from './channel-api.js?v=20261008-correct1';
 
 let renderToken = 0;
 let loadSequence = 0;
