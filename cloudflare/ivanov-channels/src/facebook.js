@@ -19,10 +19,23 @@ export function facebookAuthorizationUrl(env, state) {
   return url.toString();
 }
 
+function compactApiDetail(value, max = 500) {
+  return String(value || '').replace(/\s+/g, ' ').trim().slice(0, max);
+}
+
 async function graphJson(url) {
   const response = await fetch(url);
   const body = await response.json().catch(() => ({}));
-  if (!response.ok || body.error) throw new Error(`facebook_api_${body.error?.code || response.status}`);
+  if (!response.ok || body.error) {
+    const metaError = body?.error || {};
+    const code = metaError.code || response.status;
+    const subcode = metaError.error_subcode ? `subcode_${metaError.error_subcode}` : '';
+    const type = compactApiDetail(metaError.type);
+    const message = compactApiDetail(metaError.message);
+    throw new Error(
+      [`facebook_api_${code}`, subcode, type, message].filter(Boolean).join(' | ')
+    );
+  }
   return body;
 }
 
@@ -90,28 +103,43 @@ async function upsertFacebookPage(env, page) {
   return profileKey;
 }
 
+async function connectedFacebookPageCount(env) {
+  const row = await env.DB.prepare(
+    "SELECT COUNT(*) AS count FROM channel_profiles WHERE provider='facebook' AND status='connected'",
+  ).first();
+  return Number(row?.count || 0);
+}
+
 export async function discoverFacebookPages(env) {
   const userToken = await storedUserToken(env);
-  const url = new URL(`https://graph.facebook.com/${GRAPH_VERSION}/me/accounts`);
-  url.searchParams.set('fields', 'id,name,access_token,category');
-  url.searchParams.set('access_token', userToken);
-  const body = await graphJson(url.toString());
-  const pages = body.data || [];
+  const existingConnected = await connectedFacebookPageCount(env);
+  let nextUrl = new URL(`https://graph.facebook.com/${GRAPH_VERSION}/me/accounts`);
+  nextUrl.searchParams.set('fields', 'id,name,access_token,category');
+  nextUrl.searchParams.set('limit', '100');
+  nextUrl.searchParams.set('access_token', userToken);
+
+  const pages = [];
+  while (nextUrl) {
+    const body = await graphJson(nextUrl.toString());
+    pages.push(...(body.data || []));
+    nextUrl = body?.paging?.next ? new URL(body.paging.next) : null;
+  }
+
   const found = [];
   for (const page of pages) {
     found.push(await upsertFacebookPage(env, page));
   }
 
-  const now = new Date().toISOString();
+  if (!found.length && existingConnected > 0) {
+    throw new Error(`facebook_empty_discovery_existing_${existingConnected}`);
+  }
+
   if (found.length) {
+    const now = new Date().toISOString();
     const placeholders = found.map(() => '?').join(',');
     await env.DB.prepare(
       `UPDATE channel_profiles SET status='stale', updated_at=? WHERE provider='facebook' AND profile_key NOT IN (${placeholders})`,
     ).bind(now, ...found).run();
-  } else {
-    await env.DB.prepare(
-      "UPDATE channel_profiles SET status='stale', updated_at=? WHERE provider='facebook'",
-    ).bind(now).run();
   }
   return found;
 }
