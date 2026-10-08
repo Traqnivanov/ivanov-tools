@@ -77,3 +77,28 @@
 2. Owner approval required before any production migration/deploy.
 3. If approved: apply only additive D1 migration → deploy Worker/dashboard → verify /health/status → run one owner-only sync.
 4. Read exact Google Business discovery error and Search Console sync error from sync health; only then decide any Google/API remediation.
+
+
+## Analytics channel correctness repair — 08.10.2026
+- Branch: `fix/analytics-channel-correctness-20261008`, based on main after PR #130.
+- Scope: Facebook + Google Business correctness, plus shared channel status/cache consistency only.
+- Fixed detailed Google/Meta API error preservation instead of status-code-only errors.
+- Added Google Business and Facebook discovery pagination.
+- Added protection against empty discovery wiping/staling all known profiles.
+- Missing profiles now require two consecutive discovery misses before being marked stale.
+- Discovery failure no longer prevents syncing already-known connected profiles.
+- Google Business discovery now requests/stores serviceArea and resolves known cities from storefront locality, title, website URI or service-area data using boundary-safe matching.
+- Google Business missing-profile UI now shows provider sync-health/error details.
+- Summary channel cards now use sync-health and count only connected profiles, not stale ones.
+- Facebook refreshed metric ranges delete/rebuild the refreshed days so stale values are not presented as newly confirmed data.
+- Google Business refreshed range is replaced atomically after a successful Performance API response.
+- Channel frontend modules now share one channel-api module version/cache key.
+- Static parse QA PASS for all modified JavaScript files.
+- Facebook metric names are intentionally NOT guessed/changed yet. Production currently proves only ENGAGEMENTS is stored; exact replacement metrics must be decided from a live Meta response with the new detailed error text.
+- No production/deploy/database mutation was performed in this repair branch.
+
+## Analytics channel correctness NEXT
+1. Draft PR review/Owner approval.
+2. If approved, deploy this repair.
+3. Run one normal channel sync and inspect exact Facebook metric errors + Google Business discovery result.
+4. Only then change Facebook metric names if Meta confirms deprecation/unavailability; re-run QA before final merge/deploy completion.

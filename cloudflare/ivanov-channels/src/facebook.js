@@ -19,10 +19,23 @@ export function facebookAuthorizationUrl(env, state) {
   return url.toString();
 }
 
+function compactApiDetail(value, max = 500) {
+  return String(value || '').replace(/\s+/g, ' ').trim().slice(0, max);
+}
+
 async function graphJson(url) {
   const response = await fetch(url);
   const body = await response.json().catch(() => ({}));
-  if (!response.ok || body.error) throw new Error(`facebook_api_${body.error?.code || response.status}`);
+  if (!response.ok || body.error) {
+    const metaError = body?.error || {};
+    const code = metaError.code || response.status;
+    const subcode = metaError.error_subcode ? `subcode_${metaError.error_subcode}` : '';
+    const type = compactApiDetail(metaError.type);
+    const message = compactApiDetail(metaError.message);
+    throw new Error(
+      [`facebook_api_${code}`, subcode, type, message].filter(Boolean).join(' | ')
+    );
+  }
   return body;
 }
 
@@ -90,28 +103,62 @@ async function upsertFacebookPage(env, page) {
   return profileKey;
 }
 
+async function connectedFacebookPageCount(env) {
+  const row = await env.DB.prepare(
+    "SELECT COUNT(*) AS count FROM channel_profiles WHERE provider='facebook' AND status='connected'",
+  ).first();
+  return Number(row?.count || 0);
+}
+
+async function markMissingFacebookPages(env, foundKeys) {
+  if (!foundKeys.length) return;
+  const placeholders = foundKeys.map(() => '?').join(',');
+  const missing = await env.DB.prepare(
+    `SELECT profile_key, metadata_json FROM channel_profiles
+     WHERE provider='facebook' AND status='connected'
+       AND profile_key NOT IN (${placeholders})`,
+  ).bind(...foundKeys).all();
+
+  const now = new Date().toISOString();
+  for (const row of missing.results || []) {
+    let metadata = {};
+    try { metadata = JSON.parse(row.metadata_json || '{}'); } catch (_) {}
+    const misses = Number(metadata.discoveryMisses || 0) + 1;
+    metadata.discoveryMisses = misses;
+    metadata.lastDiscoveryMissAt = now;
+    const status = misses >= 2 ? 'stale' : 'connected';
+    await env.DB.prepare(
+      "UPDATE channel_profiles SET status=?, metadata_json=?, updated_at=? WHERE provider='facebook' AND profile_key=?",
+    ).bind(status, JSON.stringify(metadata), now, row.profile_key).run();
+  }
+}
+
 export async function discoverFacebookPages(env) {
   const userToken = await storedUserToken(env);
-  const url = new URL(`https://graph.facebook.com/${GRAPH_VERSION}/me/accounts`);
-  url.searchParams.set('fields', 'id,name,access_token,category');
-  url.searchParams.set('access_token', userToken);
-  const body = await graphJson(url.toString());
-  const pages = body.data || [];
+  const existingConnected = await connectedFacebookPageCount(env);
+  let nextUrl = new URL(`https://graph.facebook.com/${GRAPH_VERSION}/me/accounts`);
+  nextUrl.searchParams.set('fields', 'id,name,access_token,category');
+  nextUrl.searchParams.set('limit', '100');
+  nextUrl.searchParams.set('access_token', userToken);
+
+  const pages = [];
+  while (nextUrl) {
+    const body = await graphJson(nextUrl.toString());
+    pages.push(...(body.data || []));
+    nextUrl = body?.paging?.next ? new URL(body.paging.next) : null;
+  }
+
   const found = [];
   for (const page of pages) {
     found.push(await upsertFacebookPage(env, page));
   }
 
-  const now = new Date().toISOString();
+  if (!found.length && existingConnected > 0) {
+    throw new Error(`facebook_empty_discovery_existing_${existingConnected}`);
+  }
+
   if (found.length) {
-    const placeholders = found.map(() => '?').join(',');
-    await env.DB.prepare(
-      `UPDATE channel_profiles SET status='stale', updated_at=? WHERE provider='facebook' AND profile_key NOT IN (${placeholders})`,
-    ).bind(now, ...found).run();
-  } else {
-    await env.DB.prepare(
-      "UPDATE channel_profiles SET status='stale', updated_at=? WHERE provider='facebook'",
-    ).bind(now).run();
+    await markMissingFacebookPages(env, found);
   }
   return found;
 }
@@ -131,6 +178,14 @@ function dailyUpsertStatement(env, profileKey, day, metric, value) {
       value=excluded.value,
       updated_at=excluded.updated_at
   `).bind(profileKey, day, metric, Number(value) || 0, new Date().toISOString());
+}
+
+function deleteMetricRangeStatement(env, profileKey, metric, since, until) {
+  const from = new Date(since * 1000).toISOString().slice(0, 10);
+  const to = new Date(until * 1000).toISOString().slice(0, 10);
+  return env.DB.prepare(
+    "DELETE FROM channel_daily WHERE provider='facebook' AND profile_key=? AND metric=? AND day>=? AND day<=?",
+  ).bind(profileKey, metric, from, to);
 }
 
 function metricKey(name) {
@@ -175,6 +230,8 @@ export async function syncFacebookPages(env, days = 7) {
 
       const statements = [];
       for (const metric of PAGE_METRICS) {
+        const storageMetric = metricKey(metric);
+        statements.push(deleteMetricRangeStatement(env, page.profile_key, storageMetric, since, until));
         try {
           const body = await fetchPageMetric(page.external_id, metric, pageToken, since, until);
           for (const series of body.data || []) {

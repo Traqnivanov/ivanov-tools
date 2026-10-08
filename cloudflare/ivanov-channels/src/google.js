@@ -40,7 +40,12 @@ async function tokenRequest(params) {
     body: new URLSearchParams(params),
   });
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(`google_token_${response.status}_${body.error || 'unknown'}`);
+  if (!response.ok) {
+    const detail = String(body.error_description || '').replace(/\s+/g, ' ').trim().slice(0, 400);
+    throw new Error(
+      [`google_token_${response.status}_${body.error || 'unknown'}`, detail].filter(Boolean).join(' | ')
+    );
+  }
   return body;
 }
 
@@ -87,6 +92,10 @@ export async function googleAccessToken(env, provider) {
   return token.access_token;
 }
 
+function compactApiDetail(value, max = 500) {
+  return String(value || '').replace(/\s+/g, ' ').trim().slice(0, max);
+}
+
 async function googleJson(url, accessToken, options = {}) {
   const response = await fetch(url, {
     ...options,
@@ -96,12 +105,55 @@ async function googleJson(url, accessToken, options = {}) {
     },
   });
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(`google_api_${response.status}`);
+  if (!response.ok) {
+    const googleError = body?.error || {};
+    const status = compactApiDetail(googleError.status);
+    const message = compactApiDetail(googleError.message);
+    const details = compactApiDetail(JSON.stringify(googleError.details || []), 300);
+    throw new Error(
+      [`google_api_${response.status}`, status, message, details].filter(Boolean).join(' | ')
+    );
+  }
   return body;
 }
 
+function normalizeKnownCity(value) {
+  const text = String(value || '').trim().toLowerCase();
+  if (!text) return null;
+  if (/(^|[^a-zа-я])(?:лом|lom)(?=$|[^a-zа-я])/iu.test(text)) return 'Лом';
+  if (/(^|[^a-zа-я])(?:софия|sofia)(?=$|[^a-zа-я])/iu.test(text)) return 'София';
+  if (/(^|[^a-zа-я])(?:монтана|montana)(?=$|[^a-zа-я])/iu.test(text)) return 'Монтана';
+  return null;
+}
+
 function cityFromLocation(location) {
-  return location?.storefrontAddress?.locality || null;
+  return normalizeKnownCity(location?.storefrontAddress?.locality)
+    || normalizeKnownCity(location?.title)
+    || normalizeKnownCity(location?.websiteUri)
+    || normalizeKnownCity(JSON.stringify(location?.serviceArea || {}))
+    || null;
+}
+
+async function connectedProfileCount(env, provider) {
+  const row = await env.DB.prepare(
+    "SELECT COUNT(*) AS count FROM channel_profiles WHERE provider=? AND status='connected'",
+  ).bind(provider).first();
+  return Number(row?.count || 0);
+}
+
+async function listGoogleBusinessLocations(accessToken) {
+  const found = [];
+  let pageToken = '';
+  do {
+    const url = new URL('https://mybusinessbusinessinformation.googleapis.com/v1/accounts/-/locations');
+    url.searchParams.set('readMask', 'name,title,storefrontAddress,serviceArea,websiteUri,metadata');
+    url.searchParams.set('pageSize', '100');
+    if (pageToken) url.searchParams.set('pageToken', pageToken);
+    const body = await googleJson(url.toString(), accessToken);
+    found.push(...(body.locations || []));
+    pageToken = String(body.nextPageToken || '');
+  } while (pageToken);
+  return found;
 }
 
 async function upsertProfile(env, provider, profile) {
@@ -127,7 +179,6 @@ async function upsertProfile(env, provider, profile) {
 }
 
 async function markMissingProfilesStale(env, provider, profileKeys, { keepDerived = false } = {}) {
-  const now = new Date().toISOString();
   const filters = ["provider=?", "status='connected'"];
   const bindings = [provider];
   if (keepDerived) filters.push("profile_key NOT LIKE 'sc-city:%'");
@@ -135,19 +186,38 @@ async function markMissingProfilesStale(env, provider, profileKeys, { keepDerive
     filters.push(`profile_key NOT IN (${profileKeys.map(() => '?').join(',')})`);
     bindings.push(...profileKeys);
   }
-  await env.DB.prepare(
-    `UPDATE channel_profiles SET status='stale', updated_at=? WHERE ${filters.join(' AND ')}`,
-  ).bind(now, ...bindings).run();
+
+  const missing = await env.DB.prepare(
+    `SELECT profile_key, metadata_json FROM channel_profiles WHERE ${filters.join(' AND ')}`,
+  ).bind(...bindings).all();
+
+  const now = new Date().toISOString();
+  for (const row of missing.results || []) {
+    let metadata = {};
+    try { metadata = JSON.parse(row.metadata_json || '{}'); } catch (_) {}
+    const misses = Number(metadata.discoveryMisses || 0) + 1;
+    metadata.discoveryMisses = misses;
+    metadata.lastDiscoveryMissAt = now;
+
+    if (misses >= 2) {
+      await env.DB.prepare(
+        "UPDATE channel_profiles SET status='stale', metadata_json=?, updated_at=? WHERE provider=? AND profile_key=?",
+      ).bind(JSON.stringify(metadata), now, provider, row.profile_key).run();
+    } else {
+      await env.DB.prepare(
+        "UPDATE channel_profiles SET metadata_json=?, updated_at=? WHERE provider=? AND profile_key=?",
+      ).bind(JSON.stringify(metadata), now, provider, row.profile_key).run();
+    }
+  }
 }
 
 export async function discoverGoogleBusinessProfiles(env) {
-  const accessToken = await googleAccessToken(env, 'google_business');
-  const locations = await googleJson(
-    'https://mybusinessbusinessinformation.googleapis.com/v1/accounts/-/locations?readMask=name,title,storefrontAddress,websiteUri,metadata',
-    accessToken,
-  );
+  const provider = 'google_business';
+  const accessToken = await googleAccessToken(env, provider);
+  const existingConnected = await connectedProfileCount(env, provider);
+  const locations = await listGoogleBusinessLocations(accessToken);
   const found = [];
-  for (const location of locations.locations || []) {
+  for (const location of locations) {
     const externalId = location.name;
     const id = String(externalId || '').split('/').pop();
     if (!id) continue;
@@ -160,12 +230,27 @@ export async function discoverGoogleBusinessProfiles(env) {
       metadata: {
         websiteUri: location.websiteUri || null,
         placeId: location.metadata?.placeId || null,
+        serviceArea: location.serviceArea || null,
+        citySource: normalizeKnownCity(location?.storefrontAddress?.locality)
+          ? 'storefrontAddress.locality'
+          : normalizeKnownCity(location?.title)
+            ? 'title'
+            : normalizeKnownCity(location?.websiteUri)
+              ? 'websiteUri'
+              : normalizeKnownCity(JSON.stringify(location?.serviceArea || {}))
+                ? 'serviceArea'
+                : 'unresolved',
       },
     };
     await upsertProfile(env, 'google_business', profile);
     found.push(profile);
   }
-  await markMissingProfilesStale(env, 'google_business', found.map(profile => profile.profileKey));
+  if (!found.length && existingConnected > 0) {
+    throw new Error(`google_business_empty_discovery_existing_${existingConnected}`);
+  }
+  if (found.length) {
+    await markMissingProfilesStale(env, provider, found.map(profile => profile.profileKey));
+  }
   return found;
 }
 

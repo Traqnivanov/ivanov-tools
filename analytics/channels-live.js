@@ -7,7 +7,7 @@ import {
   loadChannelStatus,
   syncHealthFor,
   syncHealthSummary,
-} from './channel-api.js?v=20260918-sync1';
+} from './channel-api.js?v=20261008-correct1';
 
 function providerForType(type) {
   if (type === 'business') return 'google_business';

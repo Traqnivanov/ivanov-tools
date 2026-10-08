@@ -188,19 +188,36 @@ export async function syncGoogleBusiness(env, days = 7) {
       const response = await fetch(businessPerformanceUrl(profile.external_id, range.start, range.end), {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-      if (!response.ok) throw new Error(`business_performance_${response.status}`);
-      const body = await response.json();
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const apiError = body?.error || {};
+        const detail = [
+          `business_performance_${response.status}`,
+          apiError.status,
+          apiError.message,
+        ].filter(Boolean).join(' | ');
+        throw new Error(detail);
+      }
+
+      const statements = [
+        env.DB.prepare(
+          'DELETE FROM channel_daily WHERE provider=? AND profile_key=? AND day>=? AND day<=?',
+        ).bind(provider, profile.profile_key, range.start, range.end),
+      ];
       for (const multi of body.multiDailyMetricTimeSeries || []) {
         for (const series of multi.dailyMetricTimeSeries || []) {
           for (const point of series.timeSeries?.datedValues || []) {
             const day = googleDate(point.date);
             if (!day) continue;
-            await upsertDaily(env, provider, profile.profile_key, day, series.dailyMetric, Number(point.value || 0));
+            statements.push(
+              dailyUpsertStatement(env, provider, profile.profile_key, day, series.dailyMetric, Number(point.value || 0)),
+            );
             profilePoints++;
-            points++;
           }
         }
       }
+      await env.DB.batch(statements);
+      points += profilePoints;
       successfulProfiles++;
       await recordSyncOutcome(env, provider, profile.profile_key, {
         status: 'ok',
@@ -460,27 +477,19 @@ export async function syncConnectedChannels(env) {
   for (const [provider, task, discover] of tasks) {
     try {
       let discoveredProfiles = null;
+      let discoveryError = '';
       try {
         discoveredProfiles = await discover();
       } catch (error) {
-        const message = syncErrorText(error);
+        discoveryError = syncErrorText(error);
         console.error('channel discovery failed', provider, error);
-        await recordSyncOutcome(env, provider, '', {
-          status: 'error',
-          error: `discovery: ${message}`,
-          metadata: { phase: 'discovery' },
-        });
-        results.push({
-          provider,
-          phase: 'discovery',
-          error: message,
-          errors: [{ profileKey: 'provider', error: `discovery: ${message}` }],
-        });
-        continue;
       }
 
       const result = await task(env);
-      const errors = Array.isArray(result.errors) ? result.errors : [];
+      const errors = Array.isArray(result.errors) ? [...result.errors] : [];
+      if (discoveryError) {
+        errors.unshift({ profileKey: 'discovery', error: discoveryError });
+      }
       const successfulProfiles =
         Number(result.successfulProfiles || 0) +
         Number(result.successfulDerivedProfiles || 0);
@@ -499,11 +508,13 @@ export async function syncConnectedChannels(env) {
           successfulDerivedProfiles: result.successfulDerivedProfiles || 0,
           errorCount: errors.length,
           discoveredProfiles: Array.isArray(discoveredProfiles) ? discoveredProfiles.length : null,
+          discoveryError: discoveryError || '',
         },
       });
       results.push({
         ...result,
         discoveredProfiles: Array.isArray(discoveredProfiles) ? discoveredProfiles.length : null,
+        discoveryError: discoveryError || '',
       });
     } catch (error) {
       const message = syncErrorText(error);
