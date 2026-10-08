@@ -120,9 +120,9 @@ async function googleJson(url, accessToken, options = {}) {
 function normalizeKnownCity(value) {
   const text = String(value || '').trim().toLowerCase();
   if (!text) return null;
-  if (text === 'лом' || text === 'lom' || text.includes(' лом') || text.includes('/lom')) return 'Лом';
-  if (text === 'софия' || text === 'sofia' || text.includes(' софия') || text.includes(' sofia')) return 'София';
-  if (text === 'монтана' || text === 'montana' || text.includes(' монтана') || text.includes(' montana') || text.includes('/montana')) return 'Монтана';
+  if (/(^|[^a-zа-я])(?:лом|lom)(?=$|[^a-zа-я])/iu.test(text)) return 'Лом';
+  if (/(^|[^a-zа-я])(?:софия|sofia)(?=$|[^a-zа-я])/iu.test(text)) return 'София';
+  if (/(^|[^a-zа-я])(?:монтана|montana)(?=$|[^a-zа-я])/iu.test(text)) return 'Монтана';
   return null;
 }
 
