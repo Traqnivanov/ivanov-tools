@@ -95,3 +95,12 @@ Firebase правило: не прави профилактични промен
 - Google Business is confirmed working independently: 2 profiles, 98 points, both `ok`.
 - Temporary diagnostic route is removed. Production was restored to stable Worker version 112 after validation.
 - Do not merge this branch until Owner explicitly approves the clean PR.
+
+
+## Analytics Facebook/Business final validation — 08.10.2026
+- Facebook current metrics were live-validated successfully: page_media_view, page_post_engagements, page_daily_follows, page_views_total.
+- Both Facebook pages synced OK with no metric errors; completed-day alignment ends at 07.10 for an 08.10 run.
+- Google Business is now fully discovered and syncing: 2 profiles (Lom and Sofia), both OK.
+- Search Console remains separate: 403 insufficient permission.
+- Final branch: `fix/facebook-current-metrics-20261008`. It contains no diagnostic endpoint.
+- Before declaring done: merge branch, deploy clean build, verify /health + cron + D1 health.
