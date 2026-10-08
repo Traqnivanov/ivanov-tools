@@ -1,5 +1,5 @@
-import { googleAccessToken, searchConsoleQuery } from './google.js';
-import { syncFacebookPages } from './facebook.js';
+import { googleAccessToken, searchConsoleQuery, discoverGoogleProfiles } from './google.js';
+import { syncFacebookPages, discoverFacebookPages } from './facebook.js';
 import { recordSyncOutcome, syncErrorText } from './sync-health.js';
 
 const BUSINESS_METRICS = [
@@ -451,14 +451,34 @@ export async function syncSearchConsole(env, days = 10) {
 
 export async function syncConnectedChannels(env) {
   const tasks = [
-    ['google_business', syncGoogleBusiness],
-    ['search_console', syncSearchConsole],
-    ['facebook', syncFacebookPages],
+    ['google_business', syncGoogleBusiness, () => discoverGoogleProfiles(env, 'google_business')],
+    ['search_console', syncSearchConsole, () => discoverGoogleProfiles(env, 'search_console')],
+    ['facebook', syncFacebookPages, () => discoverFacebookPages(env)],
   ];
   const results = [];
 
-  for (const [provider, task] of tasks) {
+  for (const [provider, task, discover] of tasks) {
     try {
+      let discoveredProfiles = null;
+      try {
+        discoveredProfiles = await discover();
+      } catch (error) {
+        const message = syncErrorText(error);
+        console.error('channel discovery failed', provider, error);
+        await recordSyncOutcome(env, provider, '', {
+          status: 'error',
+          error: `discovery: ${message}`,
+          metadata: { phase: 'discovery' },
+        });
+        results.push({
+          provider,
+          phase: 'discovery',
+          error: message,
+          errors: [{ profileKey: 'provider', error: `discovery: ${message}` }],
+        });
+        continue;
+      }
+
       const result = await task(env);
       const errors = Array.isArray(result.errors) ? result.errors : [];
       const successfulProfiles =
@@ -478,9 +498,13 @@ export async function syncConnectedChannels(env) {
           derivedProfiles: result.derivedProfiles || 0,
           successfulDerivedProfiles: result.successfulDerivedProfiles || 0,
           errorCount: errors.length,
+          discoveredProfiles: Array.isArray(discoveredProfiles) ? discoveredProfiles.length : null,
         },
       });
-      results.push(result);
+      results.push({
+        ...result,
+        discoveredProfiles: Array.isArray(discoveredProfiles) ? discoveredProfiles.length : null,
+      });
     } catch (error) {
       const message = syncErrorText(error);
       console.error('channel sync failed', provider, error);
