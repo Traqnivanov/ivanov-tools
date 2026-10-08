@@ -102,3 +102,50 @@
 2. If approved, deploy this repair.
 3. Run one normal channel sync and inspect exact Facebook metric errors + Google Business discovery result.
 4. Only then change Facebook metric names if Meta confirms deprecation/unavailability; re-run QA before final merge/deploy completion.
+
+
+## Analytics Facebook current metrics validation — 08.10.2026
+- Fundamental channel correctness repair PR #131 is merged; stable production Worker version remains 112 after diagnostics.
+- One-shot live diagnostic proved Google Business is working: 2 connected profiles (Лом + София), both sync `ok`, 98 points total for 01–07.10.2026, no provider/profile errors.
+- Exact Facebook root cause confirmed from Meta: legacy `page_impressions` and `page_fan_adds` both return `(#100) The value must be a valid insights metric` on both Pages.
+- Branch `fix/facebook-current-metrics-20261008` replaces those legacy metrics with:
+  - `page_media_view` → `MEDIA_VIEWS`
+  - `page_post_engagements` → `ENGAGEMENTS`
+  - `page_daily_follows` → `DAILY_FOLLOWS`
+  - `page_views_total` → `PAGE_VIEWS`
+- Live one-shot validation with the exact new metric set succeeded for both Facebook Pages: provider `ok`, 2/2 successful profiles, 56 points, zero metric errors.
+- Validation totals for 01–07.10.2026:
+  - Лом: MEDIA_VIEWS 11,387; ENGAGEMENTS 987; DAILY_FOLLOWS 4; PAGE_VIEWS 141.
+  - София: MEDIA_VIEWS 14; ENGAGEMENTS 0; DAILY_FOLLOWS 0; PAGE_VIEWS 1.
+- Additional date bug confirmed and fixed: Meta daily `end_time` represents the end boundary of the day, so storing its calendar date directly created future/off-by-one rows. Sync now stores `end_time - 1 day`, uses completed Europe/Sofia days only, and validated latest day is 07.10.2026 (no 08/09.10 future rows).
+- Legacy `IMPRESSIONS` / `FAN_ADDS` rows are removed by the refreshed Facebook sync; current metric rows are now in D1 from the validation run.
+- Dashboard labels/logic are aligned to the current metric keys: Преглеждания, Взаимодействия, Нови последователи, Посещения на страницата. Facebook comparison uses Media Views / Engagements / Daily Follows.
+- Temporary diagnostic route was removed from the branch after validation. Production Worker was restored to stable version 112 after the one-shot test.
+- Search Console returned separate 403 permission errors during the diagnostic; that is outside this Facebook + Google Business repair scope and must be handled separately.
+
+## Analytics current metrics NEXT
+1. Final diff/parse review of `fix/facebook-current-metrics-20261008`.
+2. Draft PR for Owner review.
+3. Do not merge/deploy until Owner approval.
+4. After approved merge/deploy, run one normal sync and verify dashboard values match D1 current metrics.
+
+
+## Analytics Facebook current metrics validation — 08.10.2026
+- Branch: `fix/facebook-current-metrics-20261008`, based on main after PR #131.
+- Live one-shot validation completed against production bindings/D1.
+- Facebook now uses current working daily metrics: `page_media_view`, `page_post_engagements`, `page_daily_follows`, `page_views_total`.
+- Storage keys/UI: MEDIA_VIEWS, ENGAGEMENTS, DAILY_FOLLOWS, PAGE_VIEWS.
+- Facebook day alignment was corrected to completed Sofia days; stored latest day is 07.10 when validation ran on 08.10.
+- Validation result: both Facebook pages status OK, 28 points each / 56 total, no metric errors.
+- Lom 01–07.10: MEDIA_VIEWS 11387, ENGAGEMENTS included, DAILY_FOLLOWS 4, PAGE_VIEWS 141. Sofia: MEDIA_VIEWS 14, DAILY_FOLLOWS 0, PAGE_VIEWS 1; engagement remains 0.
+- Legacy IMPRESSIONS/FAN_ADDS rows are removed by the new refresh path; future refreshes rebuild the selected completed-day range.
+- Google Business also validated successfully in the same one-shot sync: 2 profiles discovered, 2 synced, 98 points, provider status OK.
+- Search Console is a separate issue: Google returns 403 insufficient permission for both discovered properties; do not mix that fix into Facebook/Business completion.
+- Static JS parse PASS for all modified Facebook/frontend files.
+- Temporary diagnostic endpoint/version must not remain in final production. Final branch has normal /health and no diagnostic route.
+
+## Analytics Facebook/Business NEXT
+1. Merge the current-metrics branch.
+2. Promote the clean non-diagnostic Worker build.
+3. Verify production /health, cron 17 3 * * *, Facebook/GBP sync health and dashboard values.
+4. Treat Search Console 403 as a separate follow-up.

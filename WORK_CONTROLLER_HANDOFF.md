@@ -84,3 +84,23 @@ Firebase правило: не прави профилактични промен
 - Fundamental repair completed in branch: full API errors, pagination, safe empty discovery, two-miss stale policy, discovery-failure sync fallback, service-area-aware Google city mapping, stale-range refresh behavior, accurate summary/UI health, unified channel-api module cache.
 - All modified JS files parse successfully.
 - No production changes in this branch yet.
+
+
+## Facebook current-metrics handoff — 08.10.2026
+- Current branch: `fix/facebook-current-metrics-20261008`.
+- Meta live proof: `page_impressions` and `page_fan_adds` are invalid metrics (Graph error #100) for both connected Pages.
+- Exact replacement set has been live-tested successfully: `page_media_view`, `page_post_engagements`, `page_daily_follows`, `page_views_total`.
+- Live result: Facebook provider `ok`, 2/2 Pages, 56 points, zero errors for 01–07.10.2026.
+- Date handling was also fixed: Meta `end_time` must be shifted back one day; completed Europe/Sofia days only. No future-day rows remain after validation.
+- Google Business is confirmed working independently: 2 profiles, 98 points, both `ok`.
+- Temporary diagnostic route is removed. Production was restored to stable Worker version 112 after validation.
+- Do not merge this branch until Owner explicitly approves the clean PR.
+
+
+## Analytics Facebook/Business final validation — 08.10.2026
+- Facebook current metrics were live-validated successfully: page_media_view, page_post_engagements, page_daily_follows, page_views_total.
+- Both Facebook pages synced OK with no metric errors; completed-day alignment ends at 07.10 for an 08.10 run.
+- Google Business is now fully discovered and syncing: 2 profiles (Lom and Sofia), both OK.
+- Search Console remains separate: 403 insufficient permission.
+- Final branch: `fix/facebook-current-metrics-20261008`. It contains no diagnostic endpoint.
+- Before declaring done: merge branch, deploy clean build, verify /health + cron + D1 health.

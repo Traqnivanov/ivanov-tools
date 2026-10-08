@@ -48,9 +48,10 @@ function totals(rows) {
     sums.set(row.metric, (sums.get(row.metric) || 0) + Number(row.value || 0));
   }
   return {
-    impressions: sums.get('IMPRESSIONS') || 0,
+    mediaViews: sums.get('MEDIA_VIEWS') || 0,
     engagements: sums.get('ENGAGEMENTS') || 0,
-    fanAdds: sums.get('FAN_ADDS') || 0,
+    dailyFollows: sums.get('DAILY_FOLLOWS') || 0,
+    pageViews: sums.get('PAGE_VIEWS') || 0,
     present,
   };
 }
@@ -67,10 +68,10 @@ function setCardMetrics(card, values, hasData) {
   const nodes = card.querySelectorAll('.business-kpis .channel-metric strong');
   const metric = (key, value) => hasData && values.present?.has(key) ? fmt(value) : '—';
   const output = [
-    metric('IMPRESSIONS', values.impressions),
+    metric('MEDIA_VIEWS', values.mediaViews),
     metric('ENGAGEMENTS', values.engagements),
-    metric('FAN_ADDS', values.fanAdds),
-    '—',
+    metric('DAILY_FOLLOWS', values.dailyFollows),
+    metric('PAGE_VIEWS', values.pageViews),
   ];
   output.forEach((value, index) => { if (nodes[index]) nodes[index].textContent = value; });
 }
@@ -88,16 +89,18 @@ function setCardNote(card, text) {
 function facebookDataNote(values, period, hasData) {
   if (!hasData) return `Връзката е активна, но за ${period.from} – ${period.to} още няма синхронизирани Facebook дневни данни.`;
   const available = [];
-  if (values.present?.has('IMPRESSIONS')) available.push(`показвания ${fmt(values.impressions)}`);
+  if (values.present?.has('MEDIA_VIEWS')) available.push(`преглеждания ${fmt(values.mediaViews)}`);
   if (values.present?.has('ENGAGEMENTS')) available.push(`взаимодействия ${fmt(values.engagements)}`);
-  if (values.present?.has('FAN_ADDS')) available.push(`нови последователи ${fmt(values.fanAdds)}`);
+  if (values.present?.has('DAILY_FOLLOWS')) available.push(`нови последователи ${fmt(values.dailyFollows)}`);
+  if (values.present?.has('PAGE_VIEWS')) available.push(`посещения на страницата ${fmt(values.pageViews)}`);
   const missing = [];
-  if (!values.present?.has('IMPRESSIONS')) missing.push('показвания');
+  if (!values.present?.has('MEDIA_VIEWS')) missing.push('преглеждания');
   if (!values.present?.has('ENGAGEMENTS')) missing.push('взаимодействия');
-  if (!values.present?.has('FAN_ADDS')) missing.push('нови последователи');
+  if (!values.present?.has('DAILY_FOLLOWS')) missing.push('нови последователи');
+  if (!values.present?.has('PAGE_VIEWS')) missing.push('посещения на страницата');
   const availableText = available.length ? `Налични: ${available.join(' · ')}.` : 'Има редове от Meta, но няма разпознат показател.';
   const missingText = missing.length ? ` Meta не е върнал: ${missing.join(', ')}.` : '';
-  return `Facebook данни за ${period.from} – ${period.to}. ${availableText}${missingText} „Кликове към сайта" все още не е свързан показател.`;
+  return `Facebook данни за ${period.from} – ${period.to}. ${availableText}${missingText}`;
 }
 
 function compareValue(cityValues, key, metricName) {
@@ -115,9 +118,9 @@ function updateFacebookComparison(shell, cityValues) {
   if (!compare) return;
   const values = compare.querySelectorAll('.business-compare-grid strong');
   const output = [
-    compareValue(cityValues, 'impressions', 'IMPRESSIONS'),
+    compareValue(cityValues, 'mediaViews', 'MEDIA_VIEWS'),
     compareValue(cityValues, 'engagements', 'ENGAGEMENTS'),
-    '—',
+    compareValue(cityValues, 'dailyFollows', 'DAILY_FOLLOWS'),
   ];
   output.forEach((value, index) => { if (values[index]) values[index].textContent = value; });
   const note = compare.querySelector('.card-note');

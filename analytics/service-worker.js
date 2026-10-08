@@ -1,4 +1,4 @@
-const CACHE_NAME = "ivanov-analytics-v86-correct1";
+const CACHE_NAME = "ivanov-analytics-v87-fbcurrent1";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -18,7 +18,7 @@ const APP_SHELL = [
   "./ingest-health.js?v=20260829-stage5az",
   "./summary-loader.js?v=20260829-stage5bb",
   "./summary-final.js?v=20260829-stage5bb",
-  "./navigation.js?v=20260827-stage1d",
+  "./navigation.js?v=20261008-fbcurrent1",
   "./mobile-fixes.js?v=20260829-stage5ay",
   "./summary-channels.js?v=20261008-correct1",
   "./summary-storage.js?v=20260829-stage5bg",
@@ -28,7 +28,7 @@ const APP_SHELL = [
   "./channel-api.js?v=20261008-correct1",
   "./channels-live.js?v=20261008-correct1",
   "./business-live.js?v=20261008-correct1",
-  "./facebook-live.js?v=20261008-correct1",
+  "./facebook-live.js?v=20261008-fbcurrent1",
   "./search-console-live.js?v=20261008-correct1",
   "./firebase-config.js?v=20260818-5",
   "./sites.js?v=20260818-5",
