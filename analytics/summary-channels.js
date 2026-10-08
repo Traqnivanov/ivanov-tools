@@ -1,4 +1,4 @@
-import { loadChannelStatus } from './channel-api.js?v=20260829-stage5e';
+import { loadChannelStatus, syncHealthFor } from './channel-api.js?v=20261008-correct1';
 
 const view=document.querySelector('#view');
 let latestChannelStatus=null;
@@ -16,7 +16,10 @@ function liveStatusFor(key,status){
   const provider=key==='business'?'google_business':key==='search'?'search_console':key==='facebook'?'facebook':null;
   if(!provider)return null;
   const connection=(status.connections||[]).find(item=>item.provider===provider);
-  let profiles=(status.profiles||[]).filter(item=>item.provider===provider);
+  const health=syncHealthFor(status,provider);
+  if(health?.last_status==='error')return 'Sync проблем';
+  if(health?.last_status==='partial')return 'Частичен sync';
+  let profiles=(status.profiles||[]).filter(item=>item.provider===provider&&item.status==='connected');
   let partialSearch=false;
   if(provider==='search_console'){
     const siteProfiles=profiles.filter(item=>String(item.profile_key||'').startsWith('sc-city:'));
