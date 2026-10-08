@@ -1,7 +1,7 @@
 import { getApps } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import { CHANNEL_WORKER_BASE } from './channel-config.js?v=20260827-stage1f';
-import { loadChannelStatus, syncHealthFor, syncHealthSummary } from './channel-api.js?v=20260918-sync1';
+import { loadChannelStatus, syncHealthFor, syncHealthSummary } from './channel-api.js?v=20261008-correct1';
 
 let renderToken = 0;
 let loadSequence = 0;
@@ -151,9 +151,19 @@ async function loadBusiness(shell) {
     const profileCity = businessCityForCard(city);
     const profile = profiles.find(item => cityForProfile(item) === profileCity);
     if (!profile) {
-      setCardState(card, 'Няма профил', false);
+      const syncProblem = ['error', 'partial'].includes(providerHealth?.last_status);
+      const healthText = syncHealthSummary(providerHealth);
+      setCardState(
+        card,
+        syncProblem ? (providerHealth.last_status === 'partial' ? 'Частичен sync' : 'Sync проблем') : 'Няма профил',
+        false,
+      );
       setCardMetrics(card, {}, false);
-      setCardNote(card, `Няма открит свързан Google Business профил за ${profileCity}.`);
+      setCardNote(
+        card,
+        `Няма открит свързан Google Business профил за ${profileCity}.` +
+          (healthText ? ` ${healthText}.` : ''),
+      );
       cityValues.set(profileCity, { hasData: false, values: {} });
       continue;
     }
