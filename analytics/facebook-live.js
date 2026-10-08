@@ -42,13 +42,16 @@ function fmt(value) {
 
 function totals(rows) {
   const sums = new Map();
+  const present = new Set();
   for (const row of rows || []) {
+    present.add(row.metric);
     sums.set(row.metric, (sums.get(row.metric) || 0) + Number(row.value || 0));
   }
   return {
     impressions: sums.get('IMPRESSIONS') || 0,
     engagements: sums.get('ENGAGEMENTS') || 0,
     fanAdds: sums.get('FAN_ADDS') || 0,
+    present,
   };
 }
 
@@ -62,9 +65,13 @@ function setCardState(card, text, connected = true) {
 
 function setCardMetrics(card, values, hasData) {
   const nodes = card.querySelectorAll('.business-kpis .channel-metric strong');
-  const output = hasData
-    ? [values.impressions, values.engagements, values.fanAdds, '—'].map(value => (value === '—' ? value : fmt(value)))
-    : ['—', '—', '—', '—'];
+  const metric = (key, value) => hasData && values.present?.has(key) ? fmt(value) : '—';
+  const output = [
+    metric('IMPRESSIONS', values.impressions),
+    metric('ENGAGEMENTS', values.engagements),
+    metric('FAN_ADDS', values.fanAdds),
+    '—',
+  ];
   output.forEach((value, index) => { if (nodes[index]) nodes[index].textContent = value; });
 }
 
@@ -76,6 +83,45 @@ function setCardNote(card, text) {
     card.appendChild(note);
   }
   note.textContent = text;
+}
+
+function facebookDataNote(values, period, hasData) {
+  if (!hasData) return `Връзката е активна, но за ${period.from} – ${period.to} още няма синхронизирани Facebook дневни данни.`;
+  const available = [];
+  if (values.present?.has('IMPRESSIONS')) available.push(`показвания ${fmt(values.impressions)}`);
+  if (values.present?.has('ENGAGEMENTS')) available.push(`взаимодействия ${fmt(values.engagements)}`);
+  if (values.present?.has('FAN_ADDS')) available.push(`нови последователи ${fmt(values.fanAdds)}`);
+  const missing = [];
+  if (!values.present?.has('IMPRESSIONS')) missing.push('показвания');
+  if (!values.present?.has('ENGAGEMENTS')) missing.push('взаимодействия');
+  if (!values.present?.has('FAN_ADDS')) missing.push('нови последователи');
+  const availableText = available.length ? `Налични: ${available.join(' · ')}.` : 'Има редове от Meta, но няма разпознат показател.';
+  const missingText = missing.length ? ` Meta не е върнал: ${missing.join(', ')}.` : '';
+  return `Facebook данни за ${period.from} – ${period.to}. ${availableText}${missingText} „Кликове към сайта" все още не е свързан показател.`;
+}
+
+function compareValue(cityValues, key, metricName) {
+  const lom = cityValues.get('Лом');
+  const sofia = cityValues.get('София');
+  if (!lom?.values?.present?.has(metricName) || !sofia?.values?.present?.has(metricName)) return '—';
+  const a = Number(lom.values[key] || 0);
+  const b = Number(sofia.values[key] || 0);
+  if (a === b) return `Равни · ${fmt(a)}`;
+  return a > b ? `Лом · ${fmt(a)}` : `София · ${fmt(b)}`;
+}
+
+function updateFacebookComparison(shell, cityValues) {
+  const compare = shell.querySelector('.business-compare');
+  if (!compare) return;
+  const values = compare.querySelectorAll('.business-compare-grid strong');
+  const output = [
+    compareValue(cityValues, 'impressions', 'IMPRESSIONS'),
+    compareValue(cityValues, 'engagements', 'ENGAGEMENTS'),
+    '—',
+  ];
+  output.forEach((value, index) => { if (values[index]) values[index].textContent = value; });
+  const note = compare.querySelector('.card-note');
+  if (note) note.textContent = 'Сравняват се само показатели, които Meta реално е върнал и за двете страници.';
 }
 
 async function loadFacebook(shell) {
@@ -96,6 +142,7 @@ async function loadFacebook(shell) {
   }
 
   const period = range();
+  const cityValues = new Map();
 
   for (const card of cards) {
     const city = cardCity(card);
@@ -104,6 +151,7 @@ async function loadFacebook(shell) {
       setCardState(card, 'Няма страница', false);
       setCardMetrics(card, {}, false);
       setCardNote(card, `Няма открита свързана Facebook страница за ${city || 'този град'}.`);
+      cityValues.set(city, { hasData: false, values: { present: new Set() } });
       continue;
     }
 
@@ -116,13 +164,11 @@ async function loadFacebook(shell) {
 
     setCardState(card, 'Свързано', true);
     setCardMetrics(card, values, hasData);
-    setCardNote(
-      card,
-      hasData
-        ? `Facebook данни за ${period.from} – ${period.to}. „Кликове към сайта" все още не е свързан показател.`
-        : `Връзката е активна, но за ${period.from} – ${period.to} още няма синхронизирани Facebook дневни данни.`,
-    );
+    setCardNote(card, facebookDataNote(values, period, hasData));
+    cityValues.set(city, { hasData, values });
   }
+
+  updateFacebookComparison(shell, cityValues);
 }
 
 function decorate() {
