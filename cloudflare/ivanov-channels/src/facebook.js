@@ -110,6 +110,29 @@ async function connectedFacebookPageCount(env) {
   return Number(row?.count || 0);
 }
 
+async function markMissingFacebookPages(env, foundKeys) {
+  if (!foundKeys.length) return;
+  const placeholders = foundKeys.map(() => '?').join(',');
+  const missing = await env.DB.prepare(
+    `SELECT profile_key, metadata_json FROM channel_profiles
+     WHERE provider='facebook' AND status='connected'
+       AND profile_key NOT IN (${placeholders})`,
+  ).bind(...foundKeys).all();
+
+  const now = new Date().toISOString();
+  for (const row of missing.results || []) {
+    let metadata = {};
+    try { metadata = JSON.parse(row.metadata_json || '{}'); } catch (_) {}
+    const misses = Number(metadata.discoveryMisses || 0) + 1;
+    metadata.discoveryMisses = misses;
+    metadata.lastDiscoveryMissAt = now;
+    const status = misses >= 2 ? 'stale' : 'connected';
+    await env.DB.prepare(
+      "UPDATE channel_profiles SET status=?, metadata_json=?, updated_at=? WHERE provider='facebook' AND profile_key=?",
+    ).bind(status, JSON.stringify(metadata), now, row.profile_key).run();
+  }
+}
+
 export async function discoverFacebookPages(env) {
   const userToken = await storedUserToken(env);
   const existingConnected = await connectedFacebookPageCount(env);
@@ -135,11 +158,7 @@ export async function discoverFacebookPages(env) {
   }
 
   if (found.length) {
-    const now = new Date().toISOString();
-    const placeholders = found.map(() => '?').join(',');
-    await env.DB.prepare(
-      `UPDATE channel_profiles SET status='stale', updated_at=? WHERE provider='facebook' AND profile_key NOT IN (${placeholders})`,
-    ).bind(now, ...found).run();
+    await markMissingFacebookPages(env, found);
   }
   return found;
 }
