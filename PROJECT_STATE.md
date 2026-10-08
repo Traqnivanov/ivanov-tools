@@ -40,3 +40,19 @@
 
 ## Firebase gate
 `serviceArea`, `customArea` и `websiteKey` се записват в съществуващите документи на колекцията `receipts`; в репото няма отделна схема/миграция. При новия flow websiteKey остава съществуващото поле, но се изчислява автоматично от serviceArea. Firebase не се пипа профилактично. След финално Owner одобрение и merge се прави една контролирана реална проба от телефон: създаване → редактиране → двата PDF. Ако записът и редактирането работят, Firebase остава без промяна. Само ако реалният тест покаже проблем с permissions/rules/съвместимост, първо се прави конкретен анализ и предложение, после се чака отделно Owner разрешение преди промяна на Firebase правила или данни.
+
+
+## Analytics side task — 08.10.2026
+- Read-only production audit confirmed public analytics ingest/D1/cron are active.
+- Facebook OAuth and two page profiles are connected. Production D1 contains Facebook daily data through 08.10.2026, but currently only the ENGAGEMENTS metric is present; missing Meta metrics must not be rendered as numeric zero.
+- Branch `fix/analytics-facebook-visible-metrics-20261008`: Facebook cards now render a number only for metrics actually returned by Meta; unavailable metrics render `—`. The Facebook Lom/Sofia comparison is populated only when the metric exists for both pages. The first metric label is aligned with the stored IMPRESSIONS metric and the module cache key is bumped.
+- Isolated QA: JavaScript parse PASS for `analytics/facebook-live.js` and `analytics/navigation.js`; representative rows with ENGAGEMENTS-only render `— / real engagement count / — / —`.
+- Google Business OAuth exists, but production D1 has zero google_business profiles and zero google_business daily rows. Do not keep waiting silently; next backend diagnostic must expose the exact discovery/sync error.
+- Search Console profiles remain marked connected but their latest production daily rows are 02.09.2026; this is a separate sync failure to diagnose.
+- Draft PR #124 contains useful sync-health work, but as of 08.10 it has diverged from main (18 commits ahead / 32 behind). Do not merge it directly. Rebuild the approved diagnostic subset cleanly on current main after the Facebook UI task.
+- No production, D1 schema/data, Cloudflare bindings/secrets/cron, public tracker or public site was changed in this side task.
+
+## Analytics NEXT
+1. Draft PR for the Facebook visibility-only fix → Owner visual review → separate merge permission.
+2. Then create a fresh current-main sync-health branch using the reviewed concepts from #124, not a direct merge of #124.
+3. With sync-health available, identify exact Google Business discovery error and Search Console sync error before proposing any production/API change.
