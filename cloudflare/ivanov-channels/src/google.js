@@ -40,7 +40,12 @@ async function tokenRequest(params) {
     body: new URLSearchParams(params),
   });
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(`google_token_${response.status}_${body.error || 'unknown'}`);
+  if (!response.ok) {
+    const detail = String(body.error_description || '').replace(/\s+/g, ' ').trim().slice(0, 400);
+    throw new Error(
+      [`google_token_${response.status}_${body.error || 'unknown'}`, detail].filter(Boolean).join(' | ')
+    );
+  }
   return body;
 }
 
@@ -125,6 +130,7 @@ function cityFromLocation(location) {
   return normalizeKnownCity(location?.storefrontAddress?.locality)
     || normalizeKnownCity(location?.title)
     || normalizeKnownCity(location?.websiteUri)
+    || normalizeKnownCity(JSON.stringify(location?.serviceArea || {}))
     || null;
 }
 
@@ -225,11 +231,15 @@ export async function discoverGoogleBusinessProfiles(env) {
         websiteUri: location.websiteUri || null,
         placeId: location.metadata?.placeId || null,
         serviceArea: location.serviceArea || null,
-        citySource: location?.storefrontAddress?.locality
+        citySource: normalizeKnownCity(location?.storefrontAddress?.locality)
           ? 'storefrontAddress.locality'
-          : cityFromLocation(location)
-            ? (normalizeKnownCity(location?.title) ? 'title' : 'websiteUri')
-            : 'unresolved',
+          : normalizeKnownCity(location?.title)
+            ? 'title'
+            : normalizeKnownCity(location?.websiteUri)
+              ? 'websiteUri'
+              : normalizeKnownCity(JSON.stringify(location?.serviceArea || {}))
+                ? 'serviceArea'
+                : 'unresolved',
       },
     };
     await upsertProfile(env, 'google_business', profile);
