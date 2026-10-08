@@ -54,3 +54,15 @@ Draft PR → Owner преглед → отделно merge разрешение 
 Firebase правило: не прави профилактични промени. `websiteKey` остава същото поле, но за нов/редактиран запис се изчислява автоматично от `serviceArea`; няма repo-side schema migration. След final merge направи една контролирана реална проба. Ако save/edit работят, Firebase остава без промяна. Ако има rules/permissions проблем, първо доклад и конкретно предложение, после отделно Owner разрешение.
 
 Няма разрешение за автоматично счетоводно обвързване на Бележки и Авансов отчет.
+
+
+## Analytics side task handoff — 08.10.2026
+- Separate branch: `fix/analytics-facebook-visible-metrics-20261008`.
+- Scope is dashboard-only: `analytics/facebook-live.js`, `analytics/navigation.js`, `analytics/index.html` plus state/handoff documentation.
+- Reason: production D1 has Facebook ENGAGEMENTS data through 08.10, but the UI treated absent Meta metrics as 0 and the Facebook comparison template was not populated.
+- Implemented: only returned Meta metrics get numeric values; absent metrics show `—`; available metrics are named in the note; Lom/Sofia comparison uses only metrics present for both pages; cache key bumped.
+- QA: JS parse PASS; representative ENGAGEMENTS-only data renders the real engagement number and dashes for unavailable metrics.
+- Do not merge without Owner approval. No production/Cloudflare/D1 changes were made.
+- Google Business: OAuth token exists, but there are zero discovered google_business profiles and zero daily rows.
+- Search Console: connected records exist, but latest daily data is 02.09.2026.
+- PR #124 is useful conceptually but diverged from current main (18 ahead / 32 behind); do not merge it directly. Reimplement the sync-health subset cleanly from current main after this Facebook task.
