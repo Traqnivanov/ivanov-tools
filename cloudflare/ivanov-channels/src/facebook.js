@@ -180,6 +180,14 @@ function dailyUpsertStatement(env, profileKey, day, metric, value) {
   `).bind(profileKey, day, metric, Number(value) || 0, new Date().toISOString());
 }
 
+function deleteMetricRangeStatement(env, profileKey, metric, since, until) {
+  const from = new Date(since * 1000).toISOString().slice(0, 10);
+  const to = new Date(until * 1000).toISOString().slice(0, 10);
+  return env.DB.prepare(
+    "DELETE FROM channel_daily WHERE provider='facebook' AND profile_key=? AND metric=? AND day>=? AND day<=?",
+  ).bind(profileKey, metric, from, to);
+}
+
 function metricKey(name) {
   if (name === 'page_impressions') return 'IMPRESSIONS';
   if (name === 'page_post_engagements') return 'ENGAGEMENTS';
@@ -222,6 +230,8 @@ export async function syncFacebookPages(env, days = 7) {
 
       const statements = [];
       for (const metric of PAGE_METRICS) {
+        const storageMetric = metricKey(metric);
+        statements.push(deleteMetricRangeStatement(env, page.profile_key, storageMetric, since, until));
         try {
           const body = await fetchPageMetric(page.external_id, metric, pageToken, since, until);
           for (const series of body.data || []) {
