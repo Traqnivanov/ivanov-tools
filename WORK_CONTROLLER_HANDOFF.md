@@ -76,3 +76,11 @@ Firebase правило: не прави профилактични промен
 - Production has not been changed. Migration file is additive but has NOT been applied.
 - Before production: Owner must explicitly approve deploy/migration.
 - Deployment sequence after approval: D1 migration → Worker/dashboard deploy → verify health/status → one owner-only sync → inspect exact provider/profile errors.
+
+
+## Analytics Facebook + Google Business repair handoff — 08.10.2026
+- Branch: `fix/analytics-channel-correctness-20261008`.
+- Do not change Facebook metric names by guess. Current D1 has only ENGAGEMENTS; new detailed Meta errors are required first.
+- Fundamental repair completed in branch: full API errors, pagination, safe empty discovery, two-miss stale policy, discovery-failure sync fallback, service-area-aware Google city mapping, stale-range refresh behavior, accurate summary/UI health, unified channel-api module cache.
+- All modified JS files parse successfully.
+- No production changes in this branch yet.
