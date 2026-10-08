@@ -128,3 +128,24 @@
 2. Draft PR for Owner review.
 3. Do not merge/deploy until Owner approval.
 4. After approved merge/deploy, run one normal sync and verify dashboard values match D1 current metrics.
+
+
+## Analytics Facebook current metrics validation — 08.10.2026
+- Branch: `fix/facebook-current-metrics-20261008`, based on main after PR #131.
+- Live one-shot validation completed against production bindings/D1.
+- Facebook now uses current working daily metrics: `page_media_view`, `page_post_engagements`, `page_daily_follows`, `page_views_total`.
+- Storage keys/UI: MEDIA_VIEWS, ENGAGEMENTS, DAILY_FOLLOWS, PAGE_VIEWS.
+- Facebook day alignment was corrected to completed Sofia days; stored latest day is 07.10 when validation ran on 08.10.
+- Validation result: both Facebook pages status OK, 28 points each / 56 total, no metric errors.
+- Lom 01–07.10: MEDIA_VIEWS 11387, ENGAGEMENTS included, DAILY_FOLLOWS 4, PAGE_VIEWS 141. Sofia: MEDIA_VIEWS 14, DAILY_FOLLOWS 0, PAGE_VIEWS 1; engagement remains 0.
+- Legacy IMPRESSIONS/FAN_ADDS rows are removed by the new refresh path; future refreshes rebuild the selected completed-day range.
+- Google Business also validated successfully in the same one-shot sync: 2 profiles discovered, 2 synced, 98 points, provider status OK.
+- Search Console is a separate issue: Google returns 403 insufficient permission for both discovered properties; do not mix that fix into Facebook/Business completion.
+- Static JS parse PASS for all modified Facebook/frontend files.
+- Temporary diagnostic endpoint/version must not remain in final production. Final branch has normal /health and no diagnostic route.
+
+## Analytics Facebook/Business NEXT
+1. Merge the current-metrics branch.
+2. Promote the clean non-diagnostic Worker build.
+3. Verify production /health, cron 17 3 * * *, Facebook/GBP sync health and dashboard values.
+4. Treat Search Console 403 as a separate follow-up.
