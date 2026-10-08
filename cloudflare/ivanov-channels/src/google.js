@@ -173,7 +173,6 @@ async function upsertProfile(env, provider, profile) {
 }
 
 async function markMissingProfilesStale(env, provider, profileKeys, { keepDerived = false } = {}) {
-  const now = new Date().toISOString();
   const filters = ["provider=?", "status='connected'"];
   const bindings = [provider];
   if (keepDerived) filters.push("profile_key NOT LIKE 'sc-city:%'");
@@ -181,9 +180,29 @@ async function markMissingProfilesStale(env, provider, profileKeys, { keepDerive
     filters.push(`profile_key NOT IN (${profileKeys.map(() => '?').join(',')})`);
     bindings.push(...profileKeys);
   }
-  await env.DB.prepare(
-    `UPDATE channel_profiles SET status='stale', updated_at=? WHERE ${filters.join(' AND ')}`,
-  ).bind(now, ...bindings).run();
+
+  const missing = await env.DB.prepare(
+    `SELECT profile_key, metadata_json FROM channel_profiles WHERE ${filters.join(' AND ')}`,
+  ).bind(...bindings).all();
+
+  const now = new Date().toISOString();
+  for (const row of missing.results || []) {
+    let metadata = {};
+    try { metadata = JSON.parse(row.metadata_json || '{}'); } catch (_) {}
+    const misses = Number(metadata.discoveryMisses || 0) + 1;
+    metadata.discoveryMisses = misses;
+    metadata.lastDiscoveryMissAt = now;
+
+    if (misses >= 2) {
+      await env.DB.prepare(
+        "UPDATE channel_profiles SET status='stale', metadata_json=?, updated_at=? WHERE provider=? AND profile_key=?",
+      ).bind(JSON.stringify(metadata), now, provider, row.profile_key).run();
+    } else {
+      await env.DB.prepare(
+        "UPDATE channel_profiles SET metadata_json=?, updated_at=? WHERE provider=? AND profile_key=?",
+      ).bind(JSON.stringify(metadata), now, provider, row.profile_key).run();
+    }
+  }
 }
 
 export async function discoverGoogleBusinessProfiles(env) {
