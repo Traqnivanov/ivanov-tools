@@ -66,3 +66,13 @@ Firebase правило: не прави профилактични промен
 - Google Business: OAuth token exists, but there are zero discovered google_business profiles and zero daily rows.
 - Search Console: connected records exist, but latest daily data is 02.09.2026.
 - PR #124 is useful conceptually but diverged from current main (18 ahead / 32 behind); do not merge it directly. Reimplement the sync-health subset cleanly from current main after this Facebook task.
+
+
+## Analytics sync-health handoff — 08.10.2026
+- Current branch: `fix/analytics-sync-health-20261008`; main already contains PR #129 Facebook visibility fix.
+- Do not merge old PR #124 directly.
+- This branch adds clean current-main sync health plus automatic rediscovery before sync.
+- Root cause confirmed: old cron never rediscovered Google Business profiles; OAuth could remain present with zero profiles forever.
+- Production has not been changed. Migration file is additive but has NOT been applied.
+- Before production: Owner must explicitly approve deploy/migration.
+- Deployment sequence after approval: D1 migration → Worker/dashboard deploy → verify health/status → one owner-only sync → inspect exact provider/profile errors.
