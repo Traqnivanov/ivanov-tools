@@ -3,7 +3,30 @@ import { recordSyncOutcome, syncErrorText } from './sync-health.js';
 
 const GRAPH_VERSION = 'v21.0';
 const SCOPE = 'pages_show_list,pages_read_engagement,read_insights,business_management';
-const PAGE_METRICS = ['page_impressions', 'page_post_engagements', 'page_fan_adds'];
+const PAGE_METRICS = ['page_media_view', 'page_post_engagements', 'page_daily_follows', 'page_views_total'];
+
+const SOFIA_DAY_FORMATTER = new Intl.DateTimeFormat('sv-SE', {
+  timeZone: 'Europe/Sofia',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+function sofiaDay(date = new Date()) {
+  return SOFIA_DAY_FORMATTER.format(date);
+}
+
+function shiftDay(value, days) {
+  const [year, month, day] = value.split('-').map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1, day + days));
+  return shifted.toISOString().slice(0, 10);
+}
+
+function completeDayRange(days) {
+  const end = shiftDay(sofiaDay(), -1);
+  const start = shiftDay(end, -(days - 1));
+  return { start, end, until: shiftDay(end, 1) };
+}
 
 function callbackUrl(env) {
   return `${env.PUBLIC_BASE_URL}/oauth/callback/facebook`;
@@ -180,19 +203,25 @@ function dailyUpsertStatement(env, profileKey, day, metric, value) {
   `).bind(profileKey, day, metric, Number(value) || 0, new Date().toISOString());
 }
 
-function deleteMetricRangeStatement(env, profileKey, metric, since, until) {
-  const from = new Date(since * 1000).toISOString().slice(0, 10);
-  const to = new Date(until * 1000).toISOString().slice(0, 10);
+function deleteMetricRangeStatement(env, profileKey, metric, start, end) {
   return env.DB.prepare(
     "DELETE FROM channel_daily WHERE provider='facebook' AND profile_key=? AND metric=? AND day>=? AND day<=?",
-  ).bind(profileKey, metric, from, to);
+  ).bind(profileKey, metric, start, end);
 }
 
 function metricKey(name) {
-  if (name === 'page_impressions') return 'IMPRESSIONS';
+  if (name === 'page_media_view') return 'MEDIA_VIEWS';
   if (name === 'page_post_engagements') return 'ENGAGEMENTS';
-  if (name === 'page_fan_adds') return 'FAN_ADDS';
+  if (name === 'page_daily_follows') return 'DAILY_FOLLOWS';
+  if (name === 'page_views_total') return 'PAGE_VIEWS';
   return name.toUpperCase();
+}
+
+function facebookPointDay(endTime) {
+  const date = new Date(endTime);
+  if (Number.isNaN(date.getTime())) return null;
+  date.setUTCDate(date.getUTCDate() - 1);
+  return date.toISOString().slice(0, 10);
 }
 
 async function fetchPageMetric(pageId, metric, pageToken, since, until) {
@@ -210,8 +239,9 @@ export async function syncFacebookPages(env, days = 7) {
   const pages = await connectedFacebookPages(env);
   if (!pages.length) return { provider, profiles: 0, successfulProfiles: 0, points: 0, errors: [] };
 
-  const until = Math.floor(Date.now() / 1000);
-  const since = until - days * 86400;
+  const range = completeDayRange(days);
+  const since = range.start;
+  const until = range.until;
   let points = 0;
   let successfulProfiles = 0;
   const errors = [];
@@ -228,16 +258,23 @@ export async function syncFacebookPages(env, days = 7) {
         env.TOKEN_ENCRYPTION_KEY,
       );
 
-      const statements = [];
+      const statements = [
+        env.DB.prepare(
+          "DELETE FROM channel_daily WHERE provider='facebook' AND profile_key=? AND day>?",
+        ).bind(page.profile_key, range.end),
+        env.DB.prepare(
+          "DELETE FROM channel_daily WHERE provider='facebook' AND profile_key=? AND metric IN ('IMPRESSIONS','FAN_ADDS')",
+        ).bind(page.profile_key),
+      ];
       for (const metric of PAGE_METRICS) {
         const storageMetric = metricKey(metric);
-        statements.push(deleteMetricRangeStatement(env, page.profile_key, storageMetric, since, until));
+        statements.push(deleteMetricRangeStatement(env, page.profile_key, storageMetric, range.start, range.end));
         try {
           const body = await fetchPageMetric(page.external_id, metric, pageToken, since, until);
           for (const series of body.data || []) {
             for (const point of series.values || []) {
-              const day = String(point.end_time || '').slice(0, 10);
-              if (!day) continue;
+              const day = facebookPointDay(point.end_time);
+              if (!day || day < range.start || day > range.end) continue;
               statements.push(dailyUpsertStatement(env, page.profile_key, day, metricKey(series.name), point.value));
               pagePoints++;
             }
@@ -257,7 +294,7 @@ export async function syncFacebookPages(env, days = 7) {
           status: 'error',
           error,
           points: pagePoints,
-          metadata: { since, until, metricErrors: pageErrors },
+          metadata: { range, metricErrors: pageErrors },
         });
         continue;
       }
@@ -270,13 +307,13 @@ export async function syncFacebookPages(env, days = 7) {
           status: 'partial',
           error,
           points: pagePoints,
-          metadata: { since, until, metricErrors: pageErrors },
+          metadata: { range, metricErrors: pageErrors },
         });
       } else {
         await recordSyncOutcome(env, provider, page.profile_key, {
           status: 'ok',
           points: pagePoints,
-          metadata: { since, until },
+          metadata: { range },
         });
       }
     } catch (error) {
@@ -286,7 +323,7 @@ export async function syncFacebookPages(env, days = 7) {
         status: 'error',
         error: message,
         points: pagePoints,
-        metadata: { since, until },
+        metadata: { range },
       });
     }
   }
