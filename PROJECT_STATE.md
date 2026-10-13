@@ -215,3 +215,43 @@
 2. Draft PR for Owner review.
 3. Merge only after separate Owner approval.
 4. Then handle the separate „issued/finalized receipt“ audit item; do not mix it into this PR.
+
+
+## Receipts issued/finalized task — 13.10.2026
+- Branch: `fix/receipts-issued-finalized`, based exactly on main `7b442b36d171d1b94e5953c2b317a1b5c06b678a` after merged PR #135.
+- Goal: once a receipt is intentionally issued, the same numbered document must not be silently edited into different content.
+- State model:
+  - `draft`: editable; no client PDF.
+  - `issued`: finalized/locked; client PDFs available; edit blocked.
+  - `annulled`: preserved in history; edit/client PDF blocked.
+  - legacy missing `status`: not auto-migrated; remains editable until Owner explicitly finalizes it.
+- Form behavior:
+  - Save = „Запази чернова“.
+  - Existing PDF actions in the form become „Финализирай + PDF“ and require a confirmation explaining that the receipt will be locked.
+  - Canceling that confirmation leaves the already-saved record as a draft and generates no PDF.
+- View behavior:
+  - draft/legacy: Edit + Finalize + Annul; no active client PDF buttons.
+  - issued: Digital PDF + Official PDF + Annul; no Edit.
+  - annulled: historical read-only view.
+- Finalization preserves the same record/id, number and content and adds `status:'issued'` + `issuedAt`.
+- Annulment of an issued record still works and preserves `issuedAt` for history.
+- Save-time and edit-time guards independently reject issued receipts.
+- Digital and Official PDF rendering function bodies are byte-identical to main. No PDF visual/layout change.
+- Firebase rules/schema/migrations are unchanged. The new status fields are additive fields on the existing receipt document only when the Owner saves/finalizes/annuls in actual use.
+- QA PASS:
+  - app JavaScript parse;
+  - draft → issued preserves id/number/content and adds issued timestamp;
+  - issued Digital/Official download gate works;
+  - draft PDF gate blocks;
+  - issued edit guard blocks;
+  - issued save guard blocks;
+  - form „Finalize + PDF“ finalizes before generating;
+  - canceling finalize confirmation leaves draft and generates no PDF;
+  - issued → annulled preserves issued history metadata.
+- No real Firebase write performed in QA.
+
+### NEXT
+1. Final branch diff review.
+2. Draft PR for Owner review.
+3. Merge only after separate Owner approval.
+4. Then take the separate validation item: required date + zero-amount rules. Do not mix it into this PR.
