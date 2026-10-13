@@ -718,7 +718,7 @@ function renderForm() {
       ${descField}
       ${termField}
       <div class="fg full">
-        <label>${tc.sumLabel}</label>
+        <label>${tc.sumLabel}${(currentType === 'АВ' || currentType === 'РМ') ? ' <span class="opt-badge">може празно — за ръчно попълване</span>' : ''}</label>
         <div class="amount-row">
           <input type="number" id="fAmount" placeholder="0.00" min="0.01" step="0.01" oninput="updateWords();updateRemaining()">
           <span style="padding:10px 8px;font-size:.85rem;color:var(--muted);">EUR</span>
