@@ -80,6 +80,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--dark);min
 .receipt-item.active{background:#fffbf0;border-left:3px solid var(--gold);}
 .receipt-item.annulled{opacity:.62;background:#fafafa;}
 .receipt-item.annulled.active{background:#fff5f5;border-left-color:#c0392b;}
+.receipt-item.issued .ri-meta{color:#1a7a52;font-weight:700;}
 .type-badge{font-size:.62rem;font-weight:800;padding:3px 7px;border-radius:6px;flex-shrink:0;letter-spacing:.04em;}
 .b-АВ{background:var(--green-bg);color:var(--green);}
 .b-РМ{background:var(--blue-bg);color:var(--blue);}
@@ -161,7 +162,11 @@ textarea{resize:vertical;min-height:68px;}
 .view-desc-box{background:#f8fafc;border-left:3px solid var(--mid);border-radius:0 10px 10px 0;padding:10px 14px;margin-bottom:14px;}
 .view-note-box{background:var(--gold-lite);border-left:3px solid var(--gold);border-radius:0 10px 10px 0;padding:10px 14px;margin-bottom:14px;font-size:.86rem;color:var(--dark);}
 .annulled-banner{background:#fdecea;border:1px solid #f5c6c6;border-left:4px solid #c0392b;border-radius:0 10px 10px 0;padding:10px 14px;margin-bottom:14px;color:#8b1e16;font-size:.86rem;font-weight:700;}
+.issued-banner{background:#e6f7ef;border:1px solid #b9e4cf;border-left:4px solid #1a7a52;border-radius:0 10px 10px 0;padding:10px 14px;margin-bottom:14px;color:#145c3f;font-size:.86rem;font-weight:700;}
+.draft-banner{background:#fff8e1;border:1px solid #f3df9b;border-left:4px solid var(--gold-dim);border-radius:0 10px 10px 0;padding:10px 14px;margin-bottom:14px;color:#7a5600;font-size:.84rem;font-weight:600;}
 .annulled-note{color:var(--muted);font-size:.84rem;line-height:1.5;}
+.btn-issue{background:#e6f7ef;color:#145c3f;border:1.5px solid #9fd6bb;border-radius:12px;padding:12px 18px;font-weight:700;font-size:.85rem;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.btn-issue:hover{background:#d8f0e4;}
 .divider{height:1px;background:var(--border);margin:16px 0;}
 @media(max-width:600px){
   .header{padding:18px;gap:12px;flex-wrap:wrap;}
@@ -419,6 +424,12 @@ async function saveReceipt(data) {
 function isAnnulled(r) {
   return r?.status === 'annulled';
 }
+function isIssued(r) {
+  return r?.status === 'issued';
+}
+function isDraft(r) {
+  return r?.status === 'draft';
+}
 
 function nextNumber(type) {
   const nums = allReceipts.filter(r => r.type===type).map(r => {
@@ -458,11 +469,11 @@ function renderList() {
     return;
   }
   list.innerHTML = items.map(r=>`
-    <div class="receipt-item${r.id===selectedId?' active':''}${isAnnulled(r)?' annulled':''}" onclick="selectReceipt('${r.id}')">
+    <div class="receipt-item${r.id===selectedId?' active':''}${isAnnulled(r)?' annulled':''}${isIssued(r)?' issued':''}" onclick="selectReceipt('${r.id}')">
       <span class="type-badge b-${r.type}">${r.number||r.type}</span>
       <div class="ri-info">
         <div class="ri-name">${r.client||'—'}</div>
-        <div class="ri-meta">${r.date||''}${isAnnulled(r)?' · АНУЛИРАНА':''}</div>
+        <div class="ri-meta">${r.date||''}${isAnnulled(r)?' · АНУЛИРАНА':isIssued(r)?' · ИЗДАДЕНА':isDraft(r)?' · ЧЕРНОВА':''}</div>
       </div>
       <div class="ri-amount">${fmtNum(amountEUR(r))} EUR</div>
     </div>`).join('');
@@ -493,6 +504,8 @@ function renderView(r) {
   }
 
   const annulled = isAnnulled(r);
+  const issued = isIssued(r);
+  const draft = isDraft(r);
 
   document.getElementById('rightPanel').innerHTML = `
     <div class="view-header">
@@ -502,7 +515,13 @@ function renderView(r) {
         <div class="view-date">${r.date||''}${hasContract(r) ? '&nbsp;·&nbsp;Договор №: '+(r.contractNo||'—') : ''}</div>
       </div>
     </div>
-    ${annulled ? '<div class="annulled-banner">АНУЛИРАНА БЕЛЕЖКА · номерът се запазва и не се използва повторно.</div>' : ''}
+    ${annulled
+      ? '<div class="annulled-banner">АНУЛИРАНА БЕЛЕЖКА · номерът се запазва и не се използва повторно.</div>'
+      : issued
+        ? '<div class="issued-banner">ИЗДАДЕНА БЕЛЕЖКА · съдържанието е заключено.</div>'
+        : draft
+          ? '<div class="draft-banner">ЧЕРНОВА · можеш да редактираш. Клиентски PDF се издава след финализиране.</div>'
+          : '<div class="draft-banner">СТАР ЗАПИС · редактирането е разрешено, докато не го финализираш като издаден.</div>'}
     <div class="view-grid">
       <div><div class="vg-label">Клиент</div><div class="vg-value">${r.client}</div></div>
       <div><div class="vg-label">Обект / Адрес</div><div class="vg-value">${r.object}</div></div>
@@ -516,14 +535,65 @@ function renderView(r) {
     </div>
     ${extra}
     <div class="divider"></div>
-    ${annulled ? '<div class="annulled-note">Бележката остава в историята. Не може да се редактира или да се генерира отново като действащ PDF.</div>' : `
+    ${annulled ? '<div class="annulled-note">Бележката остава в историята. Не може да се редактира или да се генерира отново като действащ PDF.</div>' : issued ? `
+    <div class="action-row">
+      <button class="btn-pdf-d" onclick="downloadReceiptPDF('${r.id}','digital')">🎨 Дигитален PDF</button>
+      <button class="btn-pdf-o" onclick="downloadReceiptPDF('${r.id}','official')">📄 Официален PDF</button>
+      <button class="btn-del" onclick="doAnnul('${r.id}')">🚫 Анулирай</button>
+    </div>` : `
     <div class="action-row">
       <button class="btn-save" onclick="editReceipt('${r.id}')">✏️ Редактирай</button>
-      <button class="btn-pdf-d" onclick="generateDigitalPDF('${r.id}')">🎨 Дигитален PDF</button>
-      <button class="btn-pdf-o" onclick="generateOfficialPDF('${r.id}')">📄 Официален PDF</button>
+      <button class="btn-issue" onclick="doFinalize('${r.id}')">✓ Финализирай</button>
       <button class="btn-del" onclick="doAnnul('${r.id}')">🚫 Анулирай</button>
     </div>`}
   `;
+}
+
+// ── FINALIZE ──
+async function finalizeReceipt(id) {
+  const r = allReceipts.find(x=>x.id===id);
+  if (!r || isAnnulled(r) || isIssued(r)) return false;
+  try {
+    const issued = {...r, status:'issued', issuedAt:new Date().toISOString()};
+    await saveReceipt(issued);
+    const idx = allReceipts.findIndex(x=>x.id===id);
+    if (idx >= 0) allReceipts[idx] = issued;
+    selectedId = id;
+    renderList();
+    renderView(issued);
+    showToast('✓ Финализирана — '+(issued.number||'бележка'));
+    return true;
+  } catch(e) {
+    showToast('Грешка при финализиране!');
+    console.error(e);
+    return false;
+  }
+}
+
+async function doFinalize(id) {
+  const r = allReceipts.find(x=>x.id===id);
+  if (!r || isAnnulled(r) || isIssued(r)) return;
+  if (!confirm('Финализиране на '+(r.number||'тази бележка')+'?\n\nСлед това съдържанието няма да може да се редактира. PDF ще се генерира само от финализирания запис.')) return;
+  await finalizeReceipt(id);
+}
+
+async function downloadReceiptPDF(id, pdfType) {
+  const r = allReceipts.find(x=>x.id===id);
+  if (!r || isAnnulled(r)) {
+    showToast('⚠ Анулирана бележка няма действащ PDF.');
+    return;
+  }
+  if (!isIssued(r)) {
+    showToast('⚠ Финализирай бележката преди PDF.');
+    return;
+  }
+  try {
+    if (pdfType === 'digital') await generateDigitalPDF(id);
+    else await generateOfficialPDF(id);
+  } catch(e) {
+    showToast('Грешка при PDF!');
+    console.error(e);
+  }
 }
 
 // ── ANNUL ──
@@ -658,9 +728,9 @@ function renderForm() {
     </div>
 
     <div class="action-row">
-      <button class="btn-save" onclick="doSave()">💾 Запази</button>
-      <button class="btn-pdf-d" onclick="doSaveAndPDF('digital')">🎨 Дигитален PDF</button>
-      <button class="btn-pdf-o" onclick="doSaveAndPDF('official')">📄 Официален PDF</button>
+      <button class="btn-save" onclick="doSave()">💾 Запази чернова</button>
+      <button class="btn-pdf-d" onclick="doSaveAndPDF('digital')">🎨 Финализирай + Дигитален PDF</button>
+      <button class="btn-pdf-o" onclick="doSaveAndPDF('official')">📄 Финализирай + Официален PDF</button>
       <button onclick="cancelForm()" style="background:none;border:1.5px solid var(--border);color:var(--muted);border-radius:10px;padding:10px 18px;font-size:.85rem;font-weight:600;cursor:pointer;font-family:inherit;">✕ Откажи</button>
     </div>`;
 }
@@ -713,6 +783,10 @@ function editReceipt(id) {
   if (!r) return;
   if (isAnnulled(r)) {
     showToast('⚠ Анулирана бележка не може да се редактира.');
+    return;
+  }
+  if (isIssued(r)) {
+    showToast('⚠ Издадена бележка е заключена. При грешка я анулирай.');
     return;
   }
   selectedId = id;
@@ -773,6 +847,10 @@ function collectFormData() {
       showToast('⚠ Анулирана бележка не може да се редактира.');
       return null;
     }
+    if (isIssued(existing)) {
+      showToast('⚠ Издадена бележка е заключена. При грешка я анулирай.');
+      return null;
+    }
     if (!existing || existing.type !== currentType) {
       showToast('⚠ Типът на съществуваща бележка не може да се променя!');
       return null;
@@ -801,6 +879,7 @@ function collectFormData() {
     receiptsAttached: currentType === 'РМ' && document.getElementById('fReceiptsAttached').checked,
     date: fromInputDate(document.getElementById('fDate').value),
     amount, currency: 'EUR',
+    status: 'draft',
     amountWords: amount > 0 ? amountInWords(amount, 'EUR') : '',
     note: (document.getElementById('fNote').value||'').trim()
   };
@@ -824,6 +903,7 @@ async function doSave() {
       const existing = allReceipts.find(x=>x.id===selectedId);
       data.number = existing ? existing.number : data.number;
       data.createdAt = existing?.createdAt;
+      data.issuedAt = existing?.issuedAt || undefined;
       await saveReceipt(data);
       const idx = allReceipts.findIndex(x=>x.id===selectedId);
       if (idx >= 0) allReceipts[idx] = data;
@@ -843,10 +923,12 @@ async function doSave() {
 async function doSaveAndPDF(pdfType) {
   const id = await doSave();
   if (!id) return;
-  try {
-    if (pdfType === 'digital') await generateDigitalPDF(id);
-    else await generateOfficialPDF(id);
-  } catch(e) { showToast('Грешка при PDF!'); console.error(e); }
+  const r = allReceipts.find(x=>x.id===id);
+  if (!r || isAnnulled(r)) return;
+  if (!confirm('За клиентски PDF '+(r.number||'бележката')+' ще бъде финализирана.\n\nСлед финализиране съдържанието няма да може да се редактира. Продължи?')) return;
+  const ok = isIssued(r) ? true : await finalizeReceipt(id);
+  if (!ok) return;
+  await downloadReceiptPDF(id,pdfType);
 }
 
 // ── DIGITAL PDF ──
@@ -1286,6 +1368,8 @@ window.doSaveAndPDF=doSaveAndPDF;
 window.editReceipt=editReceipt;
 window.generateDigitalPDF=generateDigitalPDF;
 window.generateOfficialPDF=generateOfficialPDF;
+window.doFinalize=doFinalize;
+window.downloadReceiptPDF=downloadReceiptPDF;
 window.doAnnul=doAnnul;
 </script>
 
