@@ -746,6 +746,13 @@ function collectFormData() {
   if (!client) { showToast('⚠ Въведи клиент!'); return null; }
   if (!object) { showToast('⚠ Въведи обект!'); return null; }
   const tc = TYPES[currentType];
+  if (selectedId) {
+    const existing = allReceipts.find(x=>x.id===selectedId);
+    if (!existing || existing.type !== currentType) {
+      showToast('⚠ Типът на съществуваща бележка не може да се променя!');
+      return null;
+    }
+  }
   if (tc.descField) {
     const desc = (document.getElementById('fDesc').value||'').trim();
     if (!desc) { showToast('⚠ Въведи описание!'); return null; }
