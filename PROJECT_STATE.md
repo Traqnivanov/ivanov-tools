@@ -255,3 +255,39 @@
 2. Draft PR for Owner review.
 3. Merge only after separate Owner approval.
 4. Then take the separate validation item: required date + zero-amount rules. Do not mix it into this PR.
+
+
+## Receipts required date / amount validation — 13.10.2026
+- Branch: `fix/receipts-required-date-amount`, based exactly on main `d9ce9f61a906e330f9ca47c6b0f9679ca4c7203d` after merged PR #136.
+- Owner approved the next audit item: required date + zero-amount rules.
+- Rules implemented:
+  - Date is required for all four receipt types.
+  - РЕ (завършен етап) and ДР (допълнителна работа) require a real amount > 0.
+  - АВ (аванс) and РМ (материали) may leave the amount empty only for the existing manual-fill PDF flow.
+  - Explicitly entered 0 / 0.00 is rejected for every type; blank and zero are no longer treated as the same input.
+  - The АВ/RМ amount label explicitly says the amount may be left blank for manual filling.
+  - For АВ, an empty/manual-fill amount cannot be combined with automatic total/prior-payment remaining calculation.
+  - Previous payments cannot be entered without a positive total.
+- Finalization has an independent validation gate, so a legacy/draft record cannot bypass the new date/amount rules by using Finalize directly from the view.
+- Existing manual-fill behavior in both PDF generators remains untouched.
+- Digital and Official PDF rendering function bodies are byte-identical to main.
+- Firebase rules/schema/migrations and real data are untouched.
+- QA PASS:
+  - app JavaScript parse;
+  - date required in UI and runtime validation;
+  - АВ blank amount PASS for manual-fill when no automatic remainder fields are used;
+  - РМ blank amount PASS for manual-fill;
+  - РЕ/ДР blank or zero BLOCKED;
+  - explicit zero BLOCKED for АВ/РМ too;
+  - positive amounts PASS;
+  - АВ blank + total/prior BLOCKED to avoid a false “remaining after this advance”;
+  - prior payment without total BLOCKED;
+  - valid АВ total/prior/amount computes correct remaining;
+  - finalization gate blocks legacy missing date, РЕ/ДР zero, and inconsistent АВ remainder data.
+- No real Firestore writes were used during QA.
+
+### NEXT
+1. Final branch diff review.
+2. Draft PR for Owner review.
+3. Merge only after separate Owner approval.
+4. After merge, next product audit item is guarantee support (with/without guarantee) versus search/history UX; decide order separately.
