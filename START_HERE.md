@@ -5,6 +5,6 @@ Repo: Traqnivanov/ivanov-tools. Този проект е личният набо
 
 Потвърдено: PR #127 е слят в main с merge commit a9bd2f75b0ad399ed2ee526a6c0a1714be35bc6e. Footer-ът на двата PDF е публикуван.
 
-CURRENT TASK: branch fix/receipts-lock-type-on-edit, based on main after merged PR #133. При редакция на вече съществуваща бележка типът ѝ трябва да остане неизменен (АВ/РМ/РЕ/ДР), за да няма документ с номер от един тип и съдържание от друг.
+CURRENT TASK: branch fix/receipts-annul-numbering, based on main after merged PR #134. Целта е издадена/съществуваща бележка да не се изтрива физически и номерът ѝ да не може да бъде използван повторно. Вместо „Изтрий“ се използва „Анулирай“: записът остава в историята със същия номер и се маркира като анулиран.
 
-Обхватът е само receipts.html + документация. PDF кодът, Firebase rules/schema/реални данни, автоматичният сайт по район и останалите инструменти не се пипат. След QA → draft PR → Owner преглед → отделно merge разрешение.
+Обхватът е само receipts.html + документация. PDF layout/rendering кодът, Firebase rules, автоматичният сайт по район и останалите инструменти не се променят. Реален Firestore запис не се прави по време на QA. След QA → draft PR → Owner преглед → отделно merge разрешение.
