@@ -550,9 +550,35 @@ function renderView(r) {
 }
 
 // ── FINALIZE ──
+function receiptIssueValidationError(r) {
+  if (!(r?.date||'').trim()) return 'Липсва дата.';
+  const amount = Number(r.amount);
+  if ((r.type === 'РЕ' || r.type === 'ДР') && (!Number.isFinite(amount) || amount <= 0)) {
+    return 'За този тип бележка сумата трябва да е по-голяма от 0.';
+  }
+  if ((r.type === 'АВ' || r.type === 'РМ') && r.amount != null && r.amount !== '' &&
+      (!Number.isFinite(amount) || amount < 0)) {
+    return 'Сумата не може да е отрицателна.';
+  }
+  if (r.type === 'АВ') {
+    const total = Number(r.contractTotal) || 0;
+    const prior = Number(r.priorPaid) || 0;
+    if (prior > 0 && total <= 0) return 'Липсва обща стойност за предишните плащания.';
+    if ((!Number.isFinite(amount) || amount <= 0) && (total > 0 || prior > 0)) {
+      return 'За автоматичен остатък трябва да има въведена сума на аванса.';
+    }
+  }
+  return '';
+}
+
 async function finalizeReceipt(id) {
   const r = allReceipts.find(x=>x.id===id);
   if (!r || isAnnulled(r) || isIssued(r)) return false;
+  const issueError = receiptIssueValidationError(r);
+  if (issueError) {
+    showToast('⚠ '+issueError);
+    return false;
+  }
   try {
     const issued = {...r, status:'issued', issuedAt:new Date().toISOString()};
     await saveReceipt(issued);
@@ -694,15 +720,15 @@ function renderForm() {
       </div>
       <div class="fg">
         <label>Дата</label>
-        <input type="date" id="fDate" value="${todayInput()}">
+        <input type="date" id="fDate" value="${todayInput()}" required>
       </div>
       ${tc.descField ? '<div class="fg"></div>' : '<div class="fg"></div>'}
       ${descField}
       ${termField}
       <div class="fg full">
-        <label>${tc.sumLabel}</label>
+        <label>${tc.sumLabel}${(currentType === 'АВ' || currentType === 'РМ') ? ' <span class="opt-badge">може празно — за ръчно попълване</span>' : ''}</label>
         <div class="amount-row">
-          <input type="number" id="fAmount" placeholder="0.00" min="0" step="0.01" oninput="updateWords();updateRemaining()">
+          <input type="number" id="fAmount" placeholder="0.00" min="0.01" step="0.01" oninput="updateWords();updateRemaining()">
           <span style="padding:10px 8px;font-size:.85rem;color:var(--muted);">EUR</span>
         </div>
         <div class="words-box" id="wordsBox">–</div>
@@ -837,9 +863,11 @@ function updateWords() {
 function collectFormData() {
   const client = (document.getElementById('fClient').value||'').trim();
   const object = (document.getElementById('fObject').value||'').trim();
-  const amtStr = document.getElementById('fAmount').value;
+  const amtStr = (document.getElementById('fAmount').value||'').trim();
+  const dateInput = document.getElementById('fDate').value;
   if (!client) { showToast('⚠ Въведи клиент!'); return null; }
   if (!object) { showToast('⚠ Въведи обект!'); return null; }
+  if (!dateInput) { showToast('⚠ Въведи дата!'); return null; }
   const tc = TYPES[currentType];
   if (selectedId) {
     const existing = allReceipts.find(x=>x.id===selectedId);
@@ -860,7 +888,16 @@ function collectFormData() {
     const desc = (document.getElementById('fDesc').value||'').trim();
     if (!desc) { showToast('⚠ Въведи описание!'); return null; }
   }
-  const amount = parseFloat(amtStr) || 0;
+  const amountRequired = currentType === 'РЕ' || currentType === 'ДР';
+  if (amountRequired && !amtStr) {
+    showToast('⚠ Въведи сума!');
+    return null;
+  }
+  const amount = amtStr ? Number(amtStr) : 0;
+  if (amtStr && (!Number.isFinite(amount) || amount <= 0)) {
+    showToast('⚠ Сумата трябва да е по-голяма от 0!');
+    return null;
+  }
   const serviceArea = document.getElementById('fArea').value;
   const customArea = document.getElementById('fCustomArea').value.trim();
   const websiteKey = autoSiteKey(serviceArea);
@@ -877,7 +914,7 @@ function collectFormData() {
     hasContract: withContract, contractNo: withContract ? contractNo : '',
     serviceArea, customArea: serviceArea === 'Друго' ? customArea : '', websiteKey,
     receiptsAttached: currentType === 'РМ' && document.getElementById('fReceiptsAttached').checked,
-    date: fromInputDate(document.getElementById('fDate').value),
+    date: fromInputDate(dateInput),
     amount, currency: 'EUR',
     status: 'draft',
     amountWords: amount > 0 ? amountInWords(amount, 'EUR') : '',
@@ -888,6 +925,14 @@ function collectFormData() {
   if (tc.totalField) {
     const tot = parseFloat(document.getElementById('fTotal')?.value) || 0;
     const prior = parseFloat(document.getElementById('fPriorPaid')?.value) || 0;
+    if (prior > 0 && tot <= 0) {
+      showToast('⚠ Въведи общата стойност преди предишни плащания!');
+      return null;
+    }
+    if (!amtStr && (tot > 0 || prior > 0)) {
+      showToast('⚠ За автоматичен остатък въведи сумата на аванса.');
+      return null;
+    }
     if (tot > 0 && prior + amount > tot) { showToast('⚠ Плащанията надвишават общата стойност!'); return null; }
     if (tot > 0) { data.contractTotal = tot; data.priorPaid = prior; data.remaining = parseFloat((tot - prior - amount).toFixed(2)); }
   }
