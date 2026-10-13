@@ -126,3 +126,10 @@ Safety result:
 - Physical printer validation is still required because the reported defect is print-specific.
 
 NEXT: final diff review → draft PR → Owner review. Merge only after separate Owner approval.
+
+
+### Owner print validation — 13.10.2026
+- Real-printer test of the adjusted Digital PDF header: PASS.
+- Owner response: “Ок е така, merge”.
+- Merge of PR #133 is explicitly authorized.
+- After merge, verify main contains the PR and do not make any further PDF/layout changes without a new Owner request.
