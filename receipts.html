@@ -917,6 +917,14 @@ function collectFormData() {
   if (tc.totalField) {
     const tot = parseFloat(document.getElementById('fTotal')?.value) || 0;
     const prior = parseFloat(document.getElementById('fPriorPaid')?.value) || 0;
+    if (prior > 0 && tot <= 0) {
+      showToast('⚠ Въведи общата стойност преди предишни плащания!');
+      return null;
+    }
+    if (!amtStr && (tot > 0 || prior > 0)) {
+      showToast('⚠ За автоматичен остатък въведи сумата на аванса.');
+      return null;
+    }
     if (tot > 0 && prior + amount > tot) { showToast('⚠ Плащанията надвишават общата стойност!'); return null; }
     if (tot > 0) { data.contractTotal = tot; data.priorPaid = prior; data.remaining = parseFloat((tot - prior - amount).toFixed(2)); }
   }
