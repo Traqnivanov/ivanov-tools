@@ -903,7 +903,6 @@ async function doSave() {
       const existing = allReceipts.find(x=>x.id===selectedId);
       data.number = existing ? existing.number : data.number;
       data.createdAt = existing?.createdAt;
-      data.issuedAt = existing?.issuedAt || undefined;
       await saveReceipt(data);
       const idx = allReceipts.findIndex(x=>x.id===selectedId);
       if (idx >= 0) allReceipts[idx] = data;
