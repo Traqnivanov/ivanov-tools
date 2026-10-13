@@ -5,6 +5,6 @@ Repo: Traqnivanov/ivanov-tools. Този проект е личният набо
 
 Потвърдено: PR #127 е слят в main с merge commit a9bd2f75b0ad399ed2ee526a6c0a1714be35bc6e. Footer-ът на двата PDF е публикуван.
 
-CURRENT TASK: branch fix/receipts-auto-site-by-area. Owner отмени отделния избор на сайт в „Бележки“. За нов/редактиран запис районът автоматично определя сайта; English/Deutsch не се предлагат за нов избор. Старите записи запазват историческия websiteKey при view/PDF, но при edit+save се нормализират по района с предупреждение при mismatch.
+CURRENT TASK: branch fix/receipts-lock-type-on-edit, based on main after merged PR #133. При редакция на вече съществуваща бележка типът ѝ трябва да остане неизменен (АВ/РМ/РЕ/ДР), за да няма документ с номер от един тип и съдържание от друг.
 
-PDF дизайнът от #127 не се променя. Firebase rules/schema/реални данни не се пипат в тази задача. След QA → draft PR → Owner преглед → отделно merge разрешение → реален телефонен тест на новия автоматичен flow. После отделната EUR задача за avansov-otchet.html.
+Обхватът е само receipts.html + документация. PDF кодът, Firebase rules/schema/реални данни, автоматичният сайт по район и останалите инструменти не се пипат. След QA → draft PR → Owner преглед → отделно merge разрешение.

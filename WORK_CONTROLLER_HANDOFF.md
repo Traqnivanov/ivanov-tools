@@ -133,3 +133,24 @@ NEXT: final diff review → draft PR → Owner review. Merge only after separate
 - Owner response: “Ок е така, merge”.
 - Merge of PR #133 is explicitly authorized.
 - After merge, verify main contains the PR and do not make any further PDF/layout changes without a new Owner request.
+
+
+## Receipts type-lock handoff — 13.10.2026
+Current branch: `fix/receipts-lock-type-on-edit`, from main `55bdc9cb4cd878e73a66b64650dc01516c104881`.
+
+Approved scope only:
+- Existing receipt type is immutable during Edit.
+- UI disables all type buttons and states that the type is locked.
+- `switchType()` has a guard for edit mode.
+- Save path independently rejects an existing-record type mismatch.
+- New receipt creation still permits choosing/changing the type.
+- Do not change numbering, delete/annul behavior, statuses, zero-amount rules, guarantee, search, PDF layout, Firebase or other tools in this task.
+
+QA completed:
+- app JS parse PASS;
+- create-mode type switch PASS;
+- edit-mode type lock PASS;
+- save invariant PASS;
+- Digital/Official PDF code section byte-identical to main.
+
+NEXT: draft PR → Owner review → separate merge approval. Then take the numbering/annulment audit item as a separate task.
