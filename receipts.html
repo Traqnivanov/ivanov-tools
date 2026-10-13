@@ -78,6 +78,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--dark);min
 .receipt-item{padding:11px 18px;border-bottom:1px solid #f0f4f8;cursor:pointer;transition:background .15s;display:flex;gap:10px;align-items:center;}
 .receipt-item:hover{background:#f8fafc;}
 .receipt-item.active{background:#fffbf0;border-left:3px solid var(--gold);}
+.receipt-item.annulled{opacity:.62;background:#fafafa;}
+.receipt-item.annulled.active{background:#fff5f5;border-left-color:#c0392b;}
 .type-badge{font-size:.62rem;font-weight:800;padding:3px 7px;border-radius:6px;flex-shrink:0;letter-spacing:.04em;}
 .b-АВ{background:var(--green-bg);color:var(--green);}
 .b-РМ{background:var(--blue-bg);color:var(--blue);}
@@ -158,6 +160,8 @@ textarea{resize:vertical;min-height:68px;}
 .view-amount-words{font-size:.8rem;color:var(--muted);font-style:italic;margin-top:4px;}
 .view-desc-box{background:#f8fafc;border-left:3px solid var(--mid);border-radius:0 10px 10px 0;padding:10px 14px;margin-bottom:14px;}
 .view-note-box{background:var(--gold-lite);border-left:3px solid var(--gold);border-radius:0 10px 10px 0;padding:10px 14px;margin-bottom:14px;font-size:.86rem;color:var(--dark);}
+.annulled-banner{background:#fdecea;border:1px solid #f5c6c6;border-left:4px solid #c0392b;border-radius:0 10px 10px 0;padding:10px 14px;margin-bottom:14px;color:#8b1e16;font-size:.86rem;font-weight:700;}
+.annulled-note{color:var(--muted);font-size:.84rem;line-height:1.5;}
 .divider{height:1px;background:var(--border);margin:16px 0;}
 @media(max-width:600px){
   .header{padding:18px;gap:12px;flex-wrap:wrap;}
@@ -412,9 +416,8 @@ async function saveReceipt(data) {
   return id;
 }
 
-async function deleteReceipt(id) {
-  const { collection, doc, deleteDoc } = window._fsLib;
-  await deleteDoc(doc(collection(window._db,'receipts'), id));
+function isAnnulled(r) {
+  return r?.status === 'annulled';
 }
 
 function nextNumber(type) {
@@ -455,11 +458,11 @@ function renderList() {
     return;
   }
   list.innerHTML = items.map(r=>`
-    <div class="receipt-item${r.id===selectedId?' active':''}" onclick="selectReceipt('${r.id}')">
+    <div class="receipt-item${r.id===selectedId?' active':''}${isAnnulled(r)?' annulled':''}" onclick="selectReceipt('${r.id}')">
       <span class="type-badge b-${r.type}">${r.number||r.type}</span>
       <div class="ri-info">
         <div class="ri-name">${r.client||'—'}</div>
-        <div class="ri-meta">${r.date||''}</div>
+        <div class="ri-meta">${r.date||''}${isAnnulled(r)?' · АНУЛИРАНА':''}</div>
       </div>
       <div class="ri-amount">${fmtNum(amountEUR(r))} EUR</div>
     </div>`).join('');
@@ -489,6 +492,8 @@ function renderView(r) {
     extra += `<div class="view-note-box"><span style="font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:3px;">Забележка</span>${r.note}</div>`;
   }
 
+  const annulled = isAnnulled(r);
+
   document.getElementById('rightPanel').innerHTML = `
     <div class="view-header">
       <span class="type-badge b-${r.type}" style="font-size:.75rem;padding:5px 10px;">${r.number||r.type}</span>
@@ -497,6 +502,7 @@ function renderView(r) {
         <div class="view-date">${r.date||''}${hasContract(r) ? '&nbsp;·&nbsp;Договор №: '+(r.contractNo||'—') : ''}</div>
       </div>
     </div>
+    ${annulled ? '<div class="annulled-banner">АНУЛИРАНА БЕЛЕЖКА · номерът се запазва и не се използва повторно.</div>' : ''}
     <div class="view-grid">
       <div><div class="vg-label">Клиент</div><div class="vg-value">${r.client}</div></div>
       <div><div class="vg-label">Обект / Адрес</div><div class="vg-value">${r.object}</div></div>
@@ -510,23 +516,34 @@ function renderView(r) {
     </div>
     ${extra}
     <div class="divider"></div>
+    ${annulled ? '<div class="annulled-note">Бележката остава в историята. Не може да се редактира или да се генерира отново като действащ PDF.</div>' : `
     <div class="action-row">
       <button class="btn-save" onclick="editReceipt('${r.id}')">✏️ Редактирай</button>
       <button class="btn-pdf-d" onclick="generateDigitalPDF('${r.id}')">🎨 Дигитален PDF</button>
       <button class="btn-pdf-o" onclick="generateOfficialPDF('${r.id}')">📄 Официален PDF</button>
-      <button class="btn-del" onclick="doDelete('${r.id}')">🗑 Изтрий</button>
-    </div>`;
+      <button class="btn-del" onclick="doAnnul('${r.id}')">🚫 Анулирай</button>
+    </div>`}
+  `;
 }
 
-// ── DELETE ──
-async function doDelete(id) {
-  if (!confirm('Изтриване на тази бележка?')) return;
-  await deleteReceipt(id);
-  allReceipts = allReceipts.filter(x=>x.id!==id);
-  selectedId = null;
-  renderList();
-  document.getElementById('rightPanel').innerHTML = `<div class="empty-state"><div class="es-icon">📝</div><div class="es-text">Изберете бележка или създайте нова.</div></div>`;
-  showToast('Бележката е изтрита.');
+// ── ANNUL ──
+async function doAnnul(id) {
+  const r = allReceipts.find(x=>x.id===id);
+  if (!r || isAnnulled(r)) return;
+  if (!confirm('Анулиране на '+(r.number||'тази бележка')+'?\n\nЗаписът ще остане в историята и номерът няма да се използва повторно.')) return;
+  try {
+    const annulled = {...r, status:'annulled', annulledAt:new Date().toISOString()};
+    await saveReceipt(annulled);
+    const idx = allReceipts.findIndex(x=>x.id===id);
+    if (idx >= 0) allReceipts[idx] = annulled;
+    selectedId = id;
+    renderList();
+    renderView(annulled);
+    showToast('Анулирана — '+(annulled.number||'бележка'));
+  } catch(e) {
+    showToast('Грешка при анулиране!');
+    console.error(e);
+  }
 }
 
 // ── FORM ──
@@ -694,6 +711,10 @@ function updateRemaining() {
 function editReceipt(id) {
   const r = allReceipts.find(x=>x.id===id);
   if (!r) return;
+  if (isAnnulled(r)) {
+    showToast('⚠ Анулирана бележка не може да се редактира.');
+    return;
+  }
   selectedId = id;
   currentType = r.type;
   renderList();
@@ -748,6 +769,10 @@ function collectFormData() {
   const tc = TYPES[currentType];
   if (selectedId) {
     const existing = allReceipts.find(x=>x.id===selectedId);
+    if (isAnnulled(existing)) {
+      showToast('⚠ Анулирана бележка не може да се редактира.');
+      return null;
+    }
     if (!existing || existing.type !== currentType) {
       showToast('⚠ Типът на съществуваща бележка не може да се променя!');
       return null;
@@ -1261,7 +1286,7 @@ window.doSaveAndPDF=doSaveAndPDF;
 window.editReceipt=editReceipt;
 window.generateDigitalPDF=generateDigitalPDF;
 window.generateOfficialPDF=generateOfficialPDF;
-window.doDelete=doDelete;
+window.doAnnul=doAnnul;
 </script>
 
 <!-- ── BOTTOM NAV ── -->

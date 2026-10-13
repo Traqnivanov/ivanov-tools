@@ -185,3 +185,33 @@
 2. Draft PR for Owner review.
 3. Merge only after separate Owner approval.
 4. After this task, next audit item is numbering / annulment logic; do not combine it into this PR.
+
+
+## Receipts annulment / numbering task — 13.10.2026
+- Branch: `fix/receipts-annul-numbering`, based exactly on main `7fd9f24839085c3360cc078d616f09038d2f90fc` after merged PR #134.
+- Owner approved the next audit repair: preserve numbering by replacing permanent delete with annulment.
+- Implemented in `receipts.html`:
+  - permanent delete path removed from the UI and application logic;
+  - active receipt action is now „Анулирай“ with explicit confirmation;
+  - annulment keeps the same Firestore document/id, number and content and adds `status:'annulled'` + `annulledAt`;
+  - annulled records remain in `allReceipts`, so `nextNumber()` continues above them and does not reuse their number;
+  - list/view clearly mark annulled receipts;
+  - annulled receipt cannot be edited and active PDF buttons are not exposed for it;
+  - save-time guard also rejects editing an annulled record.
+- Legacy records without `status` are treated as active.
+- Digital and Official PDF generator function bodies are byte-identical to main; no PDF layout/rendering change.
+- Firestore rules/schema/migration are unchanged. No real Firebase write/delete was used during QA.
+- QA PASS:
+  - app JS parse;
+  - isolated annulment keeps record count unchanged and preserves number/id/content;
+  - existing annulled number remains counted by `nextNumber()`;
+  - edit and save guards block annulled record;
+  - active receipt flow remains separate.
+- Historical caveat: a number from a record that was physically deleted before this change cannot be reconstructed from the current collection. From this change forward, annulled records preserve the sequence.
+- Residual concurrency caveat: numbering is still derived client-side from the loaded receipt list. Two simultaneous new receipts from separate tabs/devices could theoretically choose the same next number; solving that requires a separate atomic-counter/transaction design and is NOT included in this task.
+
+### NEXT
+1. Final diff review.
+2. Draft PR for Owner review.
+3. Merge only after separate Owner approval.
+4. Then handle the separate „issued/finalized receipt“ audit item; do not mix it into this PR.

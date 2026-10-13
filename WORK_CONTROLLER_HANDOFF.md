@@ -154,3 +154,32 @@ QA completed:
 - Digital/Official PDF code section byte-identical to main.
 
 NEXT: draft PR → Owner review → separate merge approval. Then take the numbering/annulment audit item as a separate task.
+
+
+## Receipts annulment / numbering handoff — 13.10.2026
+Current branch: `fix/receipts-annul-numbering`, based on main `7fd9f24839085c3360cc078d616f09038d2f90fc`.
+
+Approved scope:
+- Replace permanent receipt deletion with annulment.
+- Preserve the original receipt document/id and number.
+- Annulled records stay in history and remain part of numbering so their number is not reused.
+- Mark annulled state visibly and block editing/normal PDF actions from the UI.
+- No PDF rendering/layout changes, no Firebase rules/migration changes, no real-data QA writes.
+
+Implementation:
+- `status:'annulled'` and `annulledAt` are written only when Owner actually annuls a receipt.
+- Legacy missing status = active.
+- `deleteReceipt()` / `doDelete()` application path removed; `doAnnul()` saves the existing record with annulled state.
+- `nextNumber()` intentionally sees all records including annulled ones.
+- `editReceipt()` and `collectFormData()` independently block annulled records.
+
+QA:
+- JavaScript parse PASS.
+- Isolated annulment PASS: no removal from array, same number/id, status set, history rerendered.
+- Numbering PASS: with АВ-002 annulled, next remains АВ-003.
+- Edit/save guards PASS.
+- Digital/Official PDF generator bodies byte-identical to main.
+
+Known residual risk: simultaneous creation on two tabs/devices can still race because numbering is client-side. Do not solve that in this branch without a new Owner decision; atomic counters/transactions would expand data logic.
+
+NEXT: draft PR → Owner review → separate merge approval. Next product item after merge is issued/finalized state, separately.
