@@ -161,3 +161,11 @@
 - Static safety checks PASS: one shared Digital PDF generator, all four receipt types use it, Official PDF code is outside the changed lines, no positions or data fields changed.
 - Limitation: physical printer output cannot be validated inside the repository tooling. A real print remains the final acceptance test for the print-specific defect.
 - NEXT: documentation commit → final branch diff review → draft PR for Owner review. No merge/live change without separate Owner approval.
+
+
+### Owner validation / merge authorization — 13.10.2026
+- Owner printed the isolated test PDF on the real printer and confirmed the adjusted Digital PDF header is readable: “Ок е така”.
+- Owner explicitly authorized merge of PR #133.
+- Physical-print acceptance: PASS for the corrected small header text.
+- No further PDF layout changes are included.
+- NEXT after merge: verify PR #133 is merged into main and stop; no additional production changes.
