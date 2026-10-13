@@ -149,3 +149,23 @@
 2. Promote the clean non-diagnostic Worker build.
 3. Verify production /health, cron 17 3 * * *, Facebook/GBP sync health and dashboard values.
 4. Treat Search Console 403 as a separate follow-up.
+
+
+## Digital PDF print-header fix — 13.10.2026
+- Owner reported from a real physical print that the small text in the dark header of the colored Digital PDF is too low-contrast to read reliably on paper.
+- Branch: `fix/receipts-digital-print-header`, based exactly on main `f01b4271531a9caefbb653f2b1269b27c5091c4a`.
+- Scope is intentionally minimal and only in `receipts.html` → shared `generateDigitalPDF()` header used by all four receipt types.
+- Changed only the small header typography: left subtitle 7 pt → 8 pt; right contact/site lines 7.5 pt → 8.5 pt; both from `MUTED #6b85a0` to light `#e2e8f0`.
+- Header coordinates, dark background, logo, type bar, content, footer, pagination, receipt data logic, automatic site logic, Official PDF and Firebase are unchanged.
+- Diff check against main: `receipts.html` only, 2 additions / 2 deletions. Branch is 1 commit ahead and 0 behind before documentation-only follow-up.
+- Static safety checks PASS: one shared Digital PDF generator, all four receipt types use it, Official PDF code is outside the changed lines, no positions or data fields changed.
+- Limitation: physical printer output cannot be validated inside the repository tooling. A real print remains the final acceptance test for the print-specific defect.
+- NEXT: documentation commit → final branch diff review → draft PR for Owner review. No merge/live change without separate Owner approval.
+
+
+### Owner validation / merge authorization — 13.10.2026
+- Owner printed the isolated test PDF on the real printer and confirmed the adjusted Digital PDF header is readable: “Ок е така”.
+- Owner explicitly authorized merge of PR #133.
+- Physical-print acceptance: PASS for the corrected small header text.
+- No further PDF layout changes are included.
+- NEXT after merge: verify PR #133 is merged into main and stop; no additional production changes.
