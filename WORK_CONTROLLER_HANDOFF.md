@@ -213,3 +213,26 @@ Safety:
 QA PASS: parse, draft→issued transition, issued PDF gate, draft PDF block, edit/save lock, finalize+PDF order, cancel behavior, issued→annulled history.
 
 NEXT: draft PR → Owner review → separate merge approval. After merge, handle required date + amount validation separately.
+
+
+## Receipts date / amount validation handoff — 13.10.2026
+Current branch: `fix/receipts-required-date-amount`, based on main after PR #136.
+
+Approved scope:
+- Require date on every receipt.
+- Close the zero/blank amount inconsistency without changing PDF rendering.
+- РЕ/ДР require amount > 0.
+- АВ/РМ may leave amount blank only for the existing “fill by hand” PDF behavior.
+- An explicitly entered zero is not accepted.
+- For АВ, blank amount cannot coexist with automatic contract-total/prior-paid/remaining calculation; otherwise the printed remaining would be wrong after a handwritten amount.
+- Prior paid requires a positive total.
+
+Safety:
+- Runtime collection validation and finalization validation both enforce the rules.
+- Legacy/draft records cannot bypass the rules by finalizing directly.
+- Digital/Official PDF render functions are byte-identical with main.
+- No Firebase rules/migration changes and no real-data QA writes.
+
+QA PASS across all four types, including missing date, blank/zero/positive amounts, АВ remainder combinations and finalization gate.
+
+NEXT: draft PR → Owner review → separate merge approval. Do not add guarantee/search in this branch.
