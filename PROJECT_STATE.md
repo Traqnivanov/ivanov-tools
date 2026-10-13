@@ -169,3 +169,19 @@
 - Physical-print acceptance: PASS for the corrected small header text.
 - No further PDF layout changes are included.
 - NEXT after merge: verify PR #133 is merged into main and stop; no additional production changes.
+
+
+## Receipts type-lock task — 13.10.2026
+- Branch: `fix/receipts-lock-type-on-edit`, based exactly on main `55bdc9cb4cd878e73a66b64650dc01516c104881`.
+- Owner approved the first post-audit repair: an existing receipt must keep its original type during Edit.
+- Implemented in `receipts.html`: all type buttons are disabled while editing, the UI shows that the type is locked, `switchType()` refuses a type change when `selectedId` exists, and `collectFormData()` rejects any mismatched existing type as a second safety gate.
+- New receipt creation still allows normal type switching.
+- PDF section from `// ── DIGITAL PDF ──` onward is byte-identical to main. Firebase/data/site logic is unchanged.
+- QA PASS: app inline JavaScript parses; new-form switch changes АВ→РМ and rerenders once; edit-mode switch attempt leaves type unchanged and does not rerender; disabled binding + lock note present; save invariant blocks mismatched type; branch is based on current main.
+- No main/live merge yet.
+
+### NEXT
+1. Final diff review.
+2. Draft PR for Owner review.
+3. Merge only after separate Owner approval.
+4. After this task, next audit item is numbering / annulment logic; do not combine it into this PR.
