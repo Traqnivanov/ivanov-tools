@@ -183,3 +183,33 @@ QA:
 Known residual risk: simultaneous creation on two tabs/devices can still race because numbering is client-side. Do not solve that in this branch without a new Owner decision; atomic counters/transactions would expand data logic.
 
 NEXT: draft PR → Owner review → separate merge approval. Next product item after merge is issued/finalized state, separately.
+
+
+## Receipts issued/finalized handoff — 13.10.2026
+Current branch: `fix/receipts-issued-finalized`, based on main after PR #135.
+
+Approved audit objective: prevent an already-issued numbered receipt from being silently edited into different content.
+
+Implemented model:
+- Draft = editable, no client PDF.
+- Issued = explicit finalization, locked content, PDFs available.
+- Annulled = historical, no edit/client PDF.
+- Legacy receipts with no status are not auto-migrated or locked; they can be explicitly finalized by Owner when appropriate.
+
+Important UX:
+- Form Save becomes „Запази чернова“.
+- „Финализирай + Digital/Official PDF“ first saves the draft, then asks for explicit finalization confirmation, then finalizes and generates the PDF.
+- If Owner cancels finalization, the draft remains saved and no PDF is produced.
+- View of a draft/legacy record has Edit + Finalize + Annul.
+- View of an issued record has only the two PDF actions + Annul.
+- Edit/save both have issued-state guards.
+
+Safety:
+- PDF rendering/layout function bodies are byte-identical to main.
+- No Firebase rules/migration changes.
+- No real Firestore QA writes.
+- Existing annulment/number-preservation behavior remains intact.
+
+QA PASS: parse, draft→issued transition, issued PDF gate, draft PDF block, edit/save lock, finalize+PDF order, cancel behavior, issued→annulled history.
+
+NEXT: draft PR → Owner review → separate merge approval. After merge, handle required date + amount validation separately.
