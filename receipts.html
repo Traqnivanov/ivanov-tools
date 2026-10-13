@@ -838,9 +838,9 @@ async function generateDigitalPDF(id) {
   doc.setFont(F,'bold'); doc.setFontSize(22); col(WHITE); doc.text('IVANOV',M,18);
   const iW = doc.getTextWidth('IVANOV ');
   col(GOLD); doc.text('REMONTI',M+iW,18);
-  doc.setFont(F,'normal'); doc.setFontSize(7); col(MUTED);
+  doc.setFont(F,'normal'); doc.setFontSize(8); col('#e2e8f0');
   doc.text('СТРОИТЕЛНИ УСЛУГИ',M,24.5);
-  doc.setFontSize(7.5); col(MUTED);
+  doc.setFontSize(8.5); col('#e2e8f0');
   doc.text('0877 810 418',W-M,13,{align:'right'});
   doc.text('ivanovremontibg@gmail.com',W-M,19,{align:'right'});
   doc.text(receiptWebsite(r),W-M,25,{align:'right'});
