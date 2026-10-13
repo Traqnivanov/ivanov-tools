@@ -560,6 +560,14 @@ function receiptIssueValidationError(r) {
       (!Number.isFinite(amount) || amount < 0)) {
     return 'Сумата не може да е отрицателна.';
   }
+  if (r.type === 'АВ') {
+    const total = Number(r.contractTotal) || 0;
+    const prior = Number(r.priorPaid) || 0;
+    if (prior > 0 && total <= 0) return 'Липсва обща стойност за предишните плащания.';
+    if ((!Number.isFinite(amount) || amount <= 0) && (total > 0 || prior > 0)) {
+      return 'За автоматичен остатък трябва да има въведена сума на аванса.';
+    }
+  }
   return '';
 }
 
