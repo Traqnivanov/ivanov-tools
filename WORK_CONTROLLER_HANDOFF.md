@@ -104,3 +104,25 @@ Firebase правило: не прави профилактични промен
 - Search Console remains separate: 403 insufficient permission.
 - Final branch: `fix/facebook-current-metrics-20261008`. It contains no diagnostic endpoint.
 - Before declaring done: merge branch, deploy clean build, verify /health + cron + D1 health.
+
+
+## Digital PDF physical-print readability — 13.10.2026
+Owner supplied a real printed Digital PDF showing that the small header subtitle/contact/site text becomes effectively unreadable on paper although it looks acceptable on screen.
+
+Current isolated branch: `fix/receipts-digital-print-header` from main `f01b4271531a9caefbb653f2b1269b27c5091c4a`.
+
+Approved scope:
+- `receipts.html`, shared `generateDigitalPDF()` header only.
+- Subtitle: 7 pt → 8 pt.
+- Phone/email/site: 7.5 pt → 8.5 pt.
+- These small header lines: `MUTED #6b85a0` → `#e2e8f0`.
+- Do NOT change header geometry, logo, content blocks, footer, pagination, receipt/site logic, Official PDF, Firebase or other tools.
+
+Safety result:
+- Code diff before docs: exactly 2 additions / 2 deletions in `receipts.html`.
+- Shared Digital PDF generator means the fix applies to Аванс, Средства за материали, Завършен етап and Допълнителна работа together.
+- Official PDF is untouched.
+- Main/production is untouched.
+- Physical printer validation is still required because the reported defect is print-specific.
+
+NEXT: final diff review → draft PR → Owner review. Merge only after separate Owner approval.
