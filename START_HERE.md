@@ -5,6 +5,4 @@ Repo: Traqnivanov/ivanov-tools. Този проект е личният набо
 
 Потвърдено: PR #127 е слят в main с merge commit a9bd2f75b0ad399ed2ee526a6c0a1714be35bc6e. Footer-ът на двата PDF е публикуван.
 
-CURRENT TASK: branch fix/receipts-issued-finalized, based on main after merged PR #135. Целта е клиентски документ да не може да бъде тихо променян със същия номер след издаване. Нов/редактиран запис се пази като чернова; при „Финализирай“ става издаден и съдържанието се заключва. Клиентски PDF се генерира само от финализиран запис.
-
-Обхватът е receipts.html + документация. PDF rendering/layout функциите остават byte-identical с main; няма Firebase rules/migration промяна и няма реални Firestore QA записи. Старите записи без status не се мигрират автоматично и остават редактирани до изрично финализиране. След QA → draft PR → Owner преглед → отделно merge разрешение.
+CURRENT TASK: `fix/receipts-date-amount-validation`, based on main after merged PR #136. Owner approved required date and 0 EUR only in drafts. Save validates the calendar date and nonnegative finite amount; finalization requires a valid stored date and positive amount. Four receipt types share the checks. PDF rendering/layout remains unchanged. See latest State/Handoff section for QA and NEXT: draft PR review → separate Owner merge approval → phone check.
