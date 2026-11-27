@@ -549,10 +549,30 @@ function renderView(r) {
   `;
 }
 
+// Calendar validation shared by form save and stored-record finalization.
+function validReceiptDate(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || '');
+  if (!match || Number(match[1]) < 1) return false;
+  const date = new Date(0);
+  date.setUTCFullYear(Number(match[1]), Number(match[2])-1, Number(match[3]));
+  return date.getUTCFullYear() === Number(match[1]) &&
+    date.getUTCMonth() === Number(match[2])-1 && date.getUTCDate() === Number(match[3]);
+}
+
 // ── FINALIZE ──
 async function finalizeReceipt(id) {
   const r = allReceipts.find(x=>x.id===id);
   if (!r || isAnnulled(r) || isIssued(r)) return false;
+  const dateISO = typeof r.date === 'string' ? r.date.split('.').reverse().join('-') : '';
+  if (!validReceiptDate(dateISO)) {
+    showToast('⚠ Въведи валидна дата чрез редакция на черновата.');
+    return false;
+  }
+  const amount = Number(r.amount);
+  if (!Number.isFinite(amount) || amount <= 0 || amountEUR(r) <= 0) {
+    showToast('⚠ За финализиране сумата трябва да е над 0 EUR. Редактирай черновата.');
+    return false;
+  }
   try {
     const issued = {...r, status:'issued', issuedAt:new Date().toISOString()};
     await saveReceipt(issued);
@@ -693,8 +713,8 @@ function renderForm() {
         <input type="text" id="fObject" placeholder="бул. Витоша 48, ап. 7, София">
       </div>
       <div class="fg">
-        <label>Дата</label>
-        <input type="date" id="fDate" value="${todayInput()}">
+        <label>Дата *</label>
+        <input type="date" id="fDate" required value="${todayInput()}">
       </div>
       ${tc.descField ? '<div class="fg"></div>' : '<div class="fg"></div>'}
       ${descField}
@@ -706,6 +726,7 @@ function renderForm() {
           <span style="padding:10px 8px;font-size:.85rem;color:var(--muted);">EUR</span>
         </div>
         <div class="words-box" id="wordsBox">–</div>
+        <div class="field-warning">0 EUR е допустимо само за чернова. За финализиране въведи сума над 0 EUR.</div>
       </div>
       ${tc.totalField ? `
       <div class="fg">
@@ -860,7 +881,10 @@ function collectFormData() {
     const desc = (document.getElementById('fDesc').value||'').trim();
     if (!desc) { showToast('⚠ Въведи описание!'); return null; }
   }
-  const amount = parseFloat(amtStr) || 0;
+  const dateInput = document.getElementById('fDate').value;
+  if (!validReceiptDate(dateInput)) { showToast('⚠ Въведи валидна дата!'); return null; }
+  const amount = amtStr.trim() === '' ? 0 : Number(amtStr);
+  if (!Number.isFinite(amount) || amount < 0) { showToast('⚠ Сумата трябва да е число, равно или по-голямо от 0 EUR!'); return null; }
   const serviceArea = document.getElementById('fArea').value;
   const customArea = document.getElementById('fCustomArea').value.trim();
   const websiteKey = autoSiteKey(serviceArea);
@@ -877,7 +901,7 @@ function collectFormData() {
     hasContract: withContract, contractNo: withContract ? contractNo : '',
     serviceArea, customArea: serviceArea === 'Друго' ? customArea : '', websiteKey,
     receiptsAttached: currentType === 'РМ' && document.getElementById('fReceiptsAttached').checked,
-    date: fromInputDate(document.getElementById('fDate').value),
+    date: fromInputDate(dateInput),
     amount, currency: 'EUR',
     status: 'draft',
     amountWords: amount > 0 ? amountInWords(amount, 'EUR') : '',

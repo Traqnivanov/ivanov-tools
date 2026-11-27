@@ -213,3 +213,15 @@ Safety:
 QA PASS: parse, draft→issued transition, issued PDF gate, draft PDF block, edit/save lock, finalize+PDF order, cancel behavior, issued→annulled history.
 
 NEXT: draft PR → Owner review → separate merge approval. After merge, handle required date + amount validation separately.
+
+
+## Receipt date / amount validation — 27.11.2026
+- Owner approved: 0 EUR may be saved as a draft, but cannot be finalized. Date is required.
+- Branch: `fix/receipts-date-amount-validation`, based on main after merged PR #136 (`d9ce9f61a906e330f9ca47c6b0f9679ca4c7203d`).
+- `collectFormData()` rejects missing/impossible calendar dates, negative and non-finite amounts. Empty amount remains 0 for preparing drafts.
+- Shared `finalizeReceipt()` validates the stored date and requires a finite positive amount (also positive after legacy BGN conversion). Both history finalization and Finalize + PDF use this gate.
+- Invalid finalization leaves the draft editable and does not write or generate a client PDF. Legacy records are not migrated; invalid legacy drafts require Edit before finalization.
+- Form labels date as required and explains the zero-amount draft rule.
+- QA: 158 isolated runtime assertions PASS across all four types, calendar dates/leap years, draft saves, legacy/draft finalization, both PDF paths. Application JavaScript parses. Entire DIGITAL PDF section onward is byte-identical to base.
+- No real Firebase access/writes, rules/schema changes, production changes or physical phone test.
+- NEXT: Owner review of draft PR → separate merge approval → phone check in actual use. Do not merge automatically.
